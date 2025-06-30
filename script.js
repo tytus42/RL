@@ -839,37 +839,6 @@ function setupEventListeners() {
     });
 }
 
-// === Inicjalizacja gry ===
-// Pamiętaj, aby zdefiniować swoją tablicę `allCards` przed wywołaniem tych funkcji!
-// Np. dodaj te karty, aby przetestować mechanikę Mściciela:
-/*
-const allCards = [
-    // ... inne karty
-    {
-        id: 'golem_1',
-        name: 'Golem',
-        type: 'Unit',
-        power: 3,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: ['avenger'],
-        summons: 'golem_fiend_1', // ID karty, którą przyzywa
-        isHero: false
-    },
-    {
-        id: 'golem_fiend_1',
-        name: 'Większy Golem',
-        type: 'Unit',
-        power: 9,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: [],
-        isHero: false,
-        isToken: true // Oznacza, że karta nie może być w talii startowej
-    },
-    // ... inne karty
-];
-*/
 
 setupGame();
 setupEventListeners();
