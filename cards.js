@@ -7,7 +7,38 @@ const allCards = [
     { id: 'zoltan_chivay_1', name: 'Zoltan Chivay', type: 'Unit', power: 5, isHero: false, faction: 'Neutral', row: 'melee', abilities: 'scorch_row' },
     { id: 'avallach_1', name: 'Avallac\'h', type: 'Unit', power: 0, isHero: false, faction: 'Neutral', row: 'melee', abilities: 'spy' },
     { id: 'vesemir_1', name: 'Vesemir', type: 'Unit', power: 6, isHero: false, faction: 'Neutral', row: ['melee', 'ranged'], abilities: ['agile', 'morale_boost'] },
-    
+    {
+    id: 'wyzwolenie_sily_1',
+    name: 'Wyzwolenie siły',
+    type: 'Special',
+    faction: 'Neutral',
+    abilities: ['Wyzwolenie siły'] // <-- Zdolność aktywująca mechanikę
+},
+    // Przykład karty ze zdolnością "Mściciel"
+{
+    id: 'golem_1',
+    name: 'Golem',
+    type: 'Unit',
+    power: 3,
+    faction: 'Neutral',
+    row: 'melee',
+    abilities: ['avenger'],
+    summons: 'golem_fiend_1', // <-- NOWA WŁAŚCIWOŚĆ: ID karty, którą przyzywa
+    isHero: false
+},
+
+// Karta-token, przyzywana przez Golema
+{
+    id: 'golem_fiend_1',
+    name: 'Większy Golem',
+    type: 'Unit',
+    power: 9,
+    faction: 'Neutral',
+    row: 'melee',
+    abilities: [],
+    isHero: false,
+    isToken: true // <-- NOWA WŁAŚCIWOŚĆ: Oznacza, że karta nie może być w talii startowej
+},
     // === KARTY SPECJALNE (NEUTRALNE) ===
     { id: 'scorch_fire_rain_1', name: 'Deszcz Ognia', type: 'Special', faction: 'Neutral', abilities: 'scorch_strongest' },
     { id: 'scorch_fire_rain_2', name: 'Deszcz Ognia', type: 'Special', faction: 'Neutral', abilities: 'scorch_strongest' },
@@ -52,4 +83,27 @@ const allCards = [
     { id: 'harpy_1', name: 'Harpia', type: 'Unit', power: 2, isHero: false, faction: 'Monsters', row: 'ranged' },
     // --- Oblężnicze (Siege) ---
     { id: 'fiend_1', name: 'Bies', type: 'Unit', power: 6, isHero: false, faction: 'Monsters', row: 'siege' },
+    {
+    id: 'kasacz_1',
+    name: 'Kąsacz',
+    type: 'Unit',
+    power: 4,
+    faction: 'Monsters',
+    row: 'melee',
+    abilities: ['Moc'], // <-- Zdolność "Moc"
+    transformId: 'wsciekly_kasacz_1', // <-- ID karty, w którą się zamieni
+    isHero: false
+},
+{
+    id: 'wsciekly_kasacz_1', // <-- ID musi pasować do 'transformId' z poprzedniej karty
+    name: 'Wściekły Kąsacz',
+    type: 'Unit',
+    power: 8,
+    faction: 'Monsters',
+    row: 'melee',
+    abilities: [], // Zazwyczaj ulepszona wersja nie ma już specjalnych zdolności
+    isHero: false,
+    isToken: true // <-- Ważne, aby nie można było jej dobrać
+},
+
 ];
