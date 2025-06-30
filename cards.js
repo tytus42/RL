@@ -3,33 +3,16 @@ const allCards = [
     { id: 'ciri_1', name: 'Ciri', type: 'Unit', power: 15, isHero: true, faction: 'Neutral', row: 'melee' },
     { id: 'geralt_of_rivia_1', name: 'Geralt z Rivii', type: 'Unit', power: 15, isHero: true, faction: 'Neutral', row: 'melee' },
     { id: 'dandelion_1', name: 'Jaskier', type: 'Unit', power: 2, isHero: false, faction: 'Neutral', row: 'melee', ability: 'morale_boost' },
-    { id: 'zoltan_chivay_1', name: 'Zoltan Chivay', type: 'Unit', power: 5, isHero: false, faction: 'Neutral', row: 'melee', ability: 'scorch_row' }, // ZMIANA
+    { id: 'dandelion_2', name: 'Jaskier', type: 'Unit', power: 2, isHero: false, faction: 'Neutral', row: 'melee', ability: 'morale_boost' },
+    { id: 'zoltan_chivay_1', name: 'Zoltan Chivay', type: 'Unit', power: 5, isHero: false, faction: 'Neutral', row: 'melee', ability: 'scorch_row' },
     { id: 'avallach_1', name: 'Avallac\'h', type: 'Unit', power: 0, isHero: false, faction: 'Neutral', row: 'melee', ability: 'spy' },
     { id: 'vesemir_1', name: 'Vesemir', type: 'Unit', power: 6, isHero: false, faction: 'Neutral', row: 'melee' },
     
     // === KARTY SPECJALNE (NEUTRALNE) ===
-    { 
-    id: 'scorch_fire_rain_1', 
-    name: 'Deszcz Ognia', // Nowa nazwa
-    type: 'Special', 
-    faction: 'Neutral', 
-    ability: 'scorch_strongest' // Dedykowana nazwa zdolności
-},
-{ 
-    id: 'scorch_fire_rain_2', 
-    name: 'Deszcz Ognia', // Nowa nazwa
-    type: 'Special', 
-    faction: 'Neutral', 
-    ability: 'scorch_strongest' // Dedykowana nazwa zdolności
-},
-    { 
-    id: 'commanders_horn_1', 
-    name: 'Róg Dowódcy', 
-    type: 'Special', 
-    faction: 'Neutral', 
-    ability: 'horn' // <-- KLUCZOWA ZMIANA
-},
-    { id: 'commander_horn_2', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', ability: 'horn'     },
+    { id: 'scorch_fire_rain_1', name: 'Deszcz Ognia', type: 'Special', faction: 'Neutral', ability: 'scorch_strongest' },
+    { id: 'scorch_fire_rain_2', name: 'Deszcz Ognia', type: 'Special', faction: 'Neutral', ability: 'scorch_strongest' },
+    { id: 'commanders_horn_1', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', ability: 'horn' },
+    { id: 'commander_horn_2', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', ability: 'horn' },
     { id: 'decoy_1', name: 'Wabik', type: 'Special', faction: 'Neutral', ability: 'decoy' },
     { id: 'decoy_2', name: 'Wabik', type: 'Special', faction: 'Neutral', ability: 'decoy' },
     
