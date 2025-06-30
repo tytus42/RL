@@ -49,7 +49,7 @@ function executeGlobalScorch() {
     [players.player1, players.player2].forEach(player => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             player.board[rowType].forEach(card => {
-                if (card.type === 'Unit' && !card.isHero) {
+                if (card.type === 'Unit' && !card.isHero && !card.isSpecialUnit) {
                     // Dodajemy informację o właścicielu i rzędzie, przyda się później
                     wszystkieJednostkiNaPlanszy.push({ card, owner: player, row: rowType });
                 }
@@ -297,7 +297,7 @@ function executeDecoySwap(player, targetCardInstance) {
         const decoyCardIndex = player.availableCards.findIndex(c => c.ability === 'decoy');
         if (decoyCardIndex > -1) { 
             const [decoyCard] = player.availableCards.splice(decoyCardIndex, 1);
-            const decoyUnit = { ...decoyCard, instanceId: Date.now() + Math.random(), power: 0, type: 'Unit', name: 'Wabik' };
+            const decoyUnit = { ...decoyCard, instanceId: Date.now() + Math.random(), power: 0, type: 'Unit', name: 'Wabik', isSpecialUnit: true };
             boardRow.push(decoyUnit);
         }
         
