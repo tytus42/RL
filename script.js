@@ -45,36 +45,28 @@ function addLogEntry(message) {
 }
 
 // ==================================================================
-// === NOWA FUNKCJA DLA MECHANIKI "WYZWOLENIE SIŁY" ===
+// === NOWA FUNKCJA CENTRALNA DLA MECHANIKI AVENGER ===
 // ==================================================================
 /**
- * Przechodzi przez wszystkie jednostki gracza na planszy i transformuje te,
- * które posiadają zdolność "Moc".
- * @param {object} player - Gracz, który zagrał kartę "Wyzwolenie siły".
+ * Centralna funkcja do obsługi usuwania karty z pola bitwy.
+ * Sprawdza, czy karta ma zdolność 'avenger' przed przeniesieniem jej na cmentarz.
+ * @param {object} player - Gracz, do którego należy karta.
+ * @param {object} card - Instancja karty do usunięcia.
+ * @param {string} rowKey - Rząd, z którego karta jest usuwana.
+ * @param {number} originalIndex - Pierwotny indeks karty w rzędzie, potrzebny do wstawienia nowej.
  */
-function executePowerRelease(player) {
-    addLogEntry(`${player.name} uwalnia moc swoich jednostek!`);
-    ['melee', 'ranged', 'siege'].forEach(rowType => {
-        // Tworzymy nową tablicę dla rzędu, aby uniknąć problemów z modyfikacją podczas iteracji
-        const newRow = [];
-        player.board[rowType].forEach(card => {
-            // Sprawdź, czy karta ma zdolność "Moc" i ID karty do transformacji
-            if (card.abilities && card.abilities.includes('Moc') && card.transformId) {
-                const transformedCardInfo = getCardDetailsById(card.transformId);
-                if (transformedCardInfo) {
-                    addLogEntry(`${card.name} transformuje w ${transformedCardInfo.name}!`);
-                    const newCard = { ...transformedCardInfo, instanceId: Date.now() + Math.random() };
-                    newRow.push(newCard); // Dodaj nową, silniejszą kartę
-                } else {
-                    newRow.push(card); // W razie błędu, zachowaj starą kartę
-                }
-            } else {
-                newRow.push(card); // Jeśli karta nie ma zdolności, po prostu ją przepisz
-            }
-        });
-        // Zastąp stary rząd nowym, z przetransformowanymi jednostkami
-        player.board[rowType] = newRow;
-    });
+function handleCardRemoval(player, card, rowKey, originalIndex) {
+    if (card.abilities && card.abilities.includes('avenger') && card.summons) {
+        addLogEntry(`Mściciel aktywowany! ${card.name} zostaje zastąpiony!`);
+        const summonedCardInfo = getCardDetailsById(card.summons);
+        if (summonedCardInfo) {
+            const newUnit = { ...summonedCardInfo, instanceId: Date.now() + Math.random() };
+            player.board[rowKey].splice(originalIndex, 0, newUnit);
+            addLogEntry(`Na jego miejsce pojawia się: ${newUnit.name}!`);
+        }
+    } else {
+        player.graveyard.push(card);
+    }
 }
 
 
@@ -117,7 +109,7 @@ function executeGlobalScorch() {
             if (cardIndex > -1) {
                 const [destroyedCard] = owner.board[row].splice(cardIndex, 1);
                 addLogEntry(`- Zniszczono: ${destroyedCard.name} (${owner.name}).`);
-                owner.graveyard.push(destroyedCard);
+                handleCardRemoval(owner, destroyedCard, row, cardIndex);
             }
         });
     } else {
@@ -573,7 +565,7 @@ function executeRowScorch(player, cardRow) {
             if (index > -1) {
                 const [destroyedCard] = opponent.board[cardRow].splice(index, 1);
                 addLogEntry(`Szeregowy deszcz ognia zniszczył kartę: ${destroyedCard.name}.`);
-                opponent.graveyard.push(destroyedCard);
+                handleCardRemoval(opponent, destroyedCard, cardRow, index);
             }
         });
     } else {
@@ -699,24 +691,17 @@ function endRound() {
     
     if (checkGameOver()) return;
 
-    const avengersForNextRound = { player1: [], player2: [] };
-
     [players.player1, players.player2].forEach(p => {
-        const playerKey = (p === players.player1) ? 'player1' : 'player2';
-        
         ['melee', 'ranged', 'siege'].forEach(rowType => {
-            p.board[rowType].forEach(card => {
-                if (card.abilities && card.abilities.includes('avenger') && card.summons) {
-                    addLogEntry(`Mściciel ${card.name} (${p.name}) przetrwał rundę i zostanie ulepszony.`);
-                    avengersForNextRound[playerKey].push({ cardId: card.summons, row: rowType });
+            while (p.board[rowType].length > 0) {
+                const cardToRemove = p.board[rowType][0];
+                const originalIndex = 0;
+                p.board[rowType].splice(originalIndex, 1);
+                if (!cardToRemove.isHero) {
+                    handleCardRemoval(p, cardToRemove, rowType, originalIndex);
                 }
-                if (!card.isHero) {
-                    p.graveyard.push(card);
-                }
-            });
-            p.board[rowType] = [];
+            }
         });
-
         p.board.horns = { melee: null, ranged: null, siege: null };
         if (p.commander) p.commander.activatedThisRound = false;
     });
@@ -727,21 +712,6 @@ function endRound() {
     isFirstMoveOfRound = true; 
     activePlayer = null;
     addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
-
-    [players.player1, players.player2].forEach(p => {
-        const playerKey = (p === players.player1) ? 'player1' : 'player2';
-        if (avengersForNextRound[playerKey].length > 0) {
-            addLogEntry(`${p.name} przywołuje wzmocnione jednostki!`);
-            avengersForNextRound[playerKey].forEach(avengerInfo => {
-                const summonedCardDetails = getCardDetailsById(avengerInfo.cardId);
-                if (summonedCardDetails) {
-                    const newUnit = { ...summonedCardDetails, instanceId: Date.now() + Math.random() };
-                    p.board[avengerInfo.row].push(newUnit);
-                    addLogEntry(`- Na polu bitwy pojawia się ${newUnit.name}!`);
-                }
-            });
-        }
-    });
 
     updateAllControls();
 }
@@ -839,6 +809,66 @@ function setupEventListeners() {
     });
 }
 
+// === Inicjalizacja gry ===
+// Pamiętaj, aby zdefiniować swoją tablicę `allCards` przed wywołaniem tych funkcji!
+// Np. dodaj te karty, aby przetestować mechaniki
+/*
+const allCards = [
+    // ... inne karty
+    {
+        id: 'golem_1',
+        name: 'Golem',
+        type: 'Unit',
+        power: 3,
+        faction: 'Neutral',
+        row: 'melee',
+        abilities: ['avenger'],
+        summons: 'golem_fiend_1',
+        isHero: false
+    },
+    {
+        id: 'golem_fiend_1',
+        name: 'Większy Golem',
+        type: 'Unit',
+        power: 9,
+        faction: 'Neutral',
+        row: 'melee',
+        abilities: [],
+        isHero: false,
+        isToken: true
+    },
+    {
+        id: 'kasacz_1',
+        name: 'Kąsacz',
+        type: 'Unit',
+        power: 4,
+        faction: 'Monsters',
+        row: 'melee',
+        abilities: ['Moc'],
+        transformId: 'wsciekly_kasacz_1',
+        isHero: false
+    },
+    {
+        id: 'wsciekly_kasacz_1',
+        name: 'Wściekły Kąsacz',
+        type: 'Unit',
+        power: 8,
+        faction: 'Monsters',
+        row: 'melee',
+        abilities: [],
+        isHero: false,
+        isToken: true
+    },
+    {
+        id: 'wyzwolenie_sily_1',
+        name: 'Wyzwolenie siły',
+        type: 'Special',
+        faction: 'Neutral',
+        abilities: ['Wyzwolenie siły']
+    },
+    // ... inne karty
+];
+*/
 
 setupGame();
 setupEventListeners();
