@@ -263,11 +263,83 @@ button, select {
 .row.rain-effect::after { background: linear-gradient(rgba(100, 149, 237, 0.3), rgba(100, 149, 237, 0.1)); opacity: 1; }
 .row.fear-effect::after { background: radial-gradient(circle, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.5)); opacity: 1; }
 
-/* Media Queries */
+/* === POCZĄTEK POPRAWKI === */
+/* Media Queries dla responsywności */
 @media screen and (max-width: 900px) {
     #battlefield-screen {
         grid-template-columns: 1fr;
         grid-template-rows: auto;
-        grid-template-areas: "side-column" "main-board" "history";
+        grid-template-areas:
+            "side-column"
+            "main-board"
+            "history";
+    }
+    .bottom-bar {
+        flex-direction: column;
     }
 }
+
+@media screen and (max-width: 640px) {
+    body {
+        padding: 5px;
+        font-size: 14px;
+    }
+
+    .game-screen {
+        padding: 10px;
+    }
+
+    h1 { font-size: 1.8em; }
+    h2 { font-size: 1.3em; }
+
+    .player-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .player-controls .card-play-section {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .player-controls select, .player-controls button {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 4px 0;
+        padding: 10px;
+        font-size: 1em;
+    }
+
+    .card-on-board {
+        width: 65px;
+        height: 98px;
+    }
+    
+    .card-power-container {
+        width: 20px;
+        height: 20px;
+    }
+
+    .power-value {
+        font-size: 0.9em;
+    }
+
+    .card-row-icon {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .ability-icon {
+        font-size: 0.8em;
+    }
+
+    .card-name {
+        font-size: 0.6em;
+    }
+
+    .row {
+        min-height: 115px;
+        gap: 4px;
+    }
+}
+/* === KONIEC POPRAWKI === */
