@@ -1,16 +1,11 @@
-/* === POCZĄTEK POPRAWKI === */
 @font-face {
   font-family: 'GothicFont'; /* Nazwa, której będziemy używać w CSS */
   src: url('Gothic_II_NK.ttf') format('truetype');
 }
-/* === KONIEC POPRAWKI === */
-
 
 /* --- General Body & Container Styles --- */
 body {
-    /* === POCZĄTEK POPRAWKI === */
-    font-family: 'GothicFont', serif; /* Zastosowanie nowego fontu */
-    /* === KONIEC POPRAWKI === */
+    font-family: 'GothicFont', serif;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -53,12 +48,9 @@ button { background-color: #b98e59; color: #fff; border: 1px solid #d4af81; padd
 button:hover { background-color: #c99e69; border-color: #fff; transform: translateY(-2px); }
 button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; transform: none; border-color: #666; }
 
-/* === POCZĄTEK POPRAWKI === */
-/* Zastosowanie fontu do przycisków i list wyboru */
 button, select {
     font-family: 'GothicFont', sans-serif;
 }
-/* === KONIEC POPRAWKI === */
 
 /* --- Battlefield Screen Specifics --- */
 #battlefield-screen {
@@ -89,7 +81,7 @@ button, select {
 .crystal-coin { width: 24px; height: 24px; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6)); }
 .row-container { display: flex; gap: 8px; align-items: stretch; flex: 1; }
 .row-score { flex-shrink: 0; width: 50px; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #444; border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 1.8em; font-weight: bold; color: #ffd700; }
-.row { flex-grow: 1; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #888; border-radius: 5px; min-height: 140px; display: flex; align-items: center; padding: 8px; gap: 8px; flex-wrap: wrap; position: relative; justify-content: flex-start; }
+.row { flex-grow: 1; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #888; border-radius: 5px; min-height: 155px; display: flex; align-items: center; padding: 8px; gap: 8px; flex-wrap: wrap; position: relative; justify-content: flex-start; }
 .horn-slot { flex-shrink: 0; width: 90px; background-color: rgba(0, 0, 0, 0.2); border: 2px dashed #7f8c8d; border-radius: 5px; display: flex; justify-content: center; align-items: center; padding: 5px; }
 .horn-slot.active { border-color: #e67e22; }
 .row h3 { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255, 255, 255, 0.1); font-size: 1.5em; pointer-events: none; white-space: nowrap; }
@@ -244,7 +236,7 @@ button, select {
     background: linear-gradient(145deg, #e67e22, #d35400);
 }
 .horn-card-styled .main-icon {
-    font-size: 2.5em; /* Większa ikona rogu */
+    font-size: 2.5em;
 }
 
 .targetable {
@@ -263,7 +255,7 @@ button, select {
 .row.rain-effect::after { background: linear-gradient(rgba(100, 149, 237, 0.3), rgba(100, 149, 237, 0.1)); opacity: 1; }
 .row.fear-effect::after { background: radial-gradient(circle, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.5)); opacity: 1; }
 
-/* === POCZĄTEK POPRAWKI === */
+/* === POCZĄTEK POPRAWKI DLA URZĄDZEŃ MOBILNYCH === */
 /* Media Queries dla responsywności */
 @media screen and (max-width: 900px) {
     #battlefield-screen {
@@ -288,6 +280,10 @@ button, select {
     .game-screen {
         padding: 10px;
     }
+    
+    .player-sidebar {
+        padding: 10px;
+    }
 
     h1 { font-size: 1.8em; }
     h2 { font-size: 1.3em; }
@@ -300,10 +296,12 @@ button, select {
     .player-controls .card-play-section {
         flex-direction: column;
         width: 100%;
+        gap: 5px;
     }
     
     .player-controls select, .player-controls button {
         width: 100%;
+        min-width: 0; /* Usunięcie minimalnej szerokości */
         box-sizing: border-box;
         margin: 4px 0;
         padding: 10px;
