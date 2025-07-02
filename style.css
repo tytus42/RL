@@ -1,4 +1,8 @@
 /* --- General Body & Container Styles --- */
+@font-face {
+  font-family: 'GothicFont'; /* Nazwa, której będziesz używać w CSS */
+  src: url('GII_-_Die_Nacht_des_Raben.ttf') format('truetype');
+}
 body {
     font-family: 'Georgia', serif; /* Bardziej "książkowa" czcionka */
     display: flex;
