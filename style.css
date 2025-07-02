@@ -1,16 +1,22 @@
-/* --- General Body & Container Styles --- */
+/* === POCZĄTEK POPRAWKI === */
 @font-face {
-  font-family: 'GothicFont'; /* Nazwa, której będziesz używać w CSS */
+  font-family: 'GothicFont'; /* Nazwa, której będziemy używać w CSS */
   src: url('Gothic_II_NK.ttf') format('truetype');
 }
+/* === KONIEC POPRAWKI === */
+
+
+/* --- General Body & Container Styles --- */
 body {
+    /* === POCZĄTEK POPRAWKI === */
     font-family: 'GothicFont', serif; /* Zastosowanie nowego fontu */
+    /* === KONIEC POPRAWKI === */
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
     background-color: #1e2124;
-    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); /* Drewniana tekstura */
+    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
     color: #f0f0f0;
     margin: 0;
     padding: 20px;
@@ -19,7 +25,7 @@ body {
 }
 
 .game-screen {
-    background-color: rgba(40, 44, 52, 0.85); /* Lekko przezroczyste tło */
+    background-color: rgba(40, 44, 52, 0.85);
     backdrop-filter: blur(5px);
     border: 2px solid #a47b4a;
     border-radius: 10px;
@@ -46,6 +52,13 @@ h3 { font-size: 1.2em; margin-bottom: 10px; color: #d1c8b7; }
 button { background-color: #b98e59; color: #fff; border: 1px solid #d4af81; padding: 12px 25px; border-radius: 5px; font-size: 1.1em; cursor: pointer; transition: all 0.3s ease; margin: 5px; text-shadow: 1px 1px 2px #000; }
 button:hover { background-color: #c99e69; border-color: #fff; transform: translateY(-2px); }
 button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; transform: none; border-color: #666; }
+
+/* === POCZĄTEK POPRAWKI === */
+/* Zastosowanie fontu do przycisków i list wyboru */
+button, select {
+    font-family: 'GothicFont', sans-serif;
+}
+/* === KONIEC POPRAWKI === */
 
 /* --- Battlefield Screen Specifics --- */
 #battlefield-screen {
@@ -76,7 +89,7 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
 .crystal-coin { width: 24px; height: 24px; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6)); }
 .row-container { display: flex; gap: 8px; align-items: stretch; flex: 1; }
 .row-score { flex-shrink: 0; width: 50px; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #444; border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 1.8em; font-weight: bold; color: #ffd700; }
-.row { flex-grow: 1; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #888; border-radius: 5px; min-height: 155px; display: flex; align-items: center; padding: 8px; gap: 8px; flex-wrap: wrap; position: relative; justify-content: flex-start; }
+.row { flex-grow: 1; background-color: rgba(0, 0, 0, 0.2); border: 1px solid #888; border-radius: 5px; min-height: 140px; display: flex; align-items: center; padding: 8px; gap: 8px; flex-wrap: wrap; position: relative; justify-content: flex-start; }
 .horn-slot { flex-shrink: 0; width: 90px; background-color: rgba(0, 0, 0, 0.2); border: 2px dashed #7f8c8d; border-radius: 5px; display: flex; justify-content: center; align-items: center; padding: 5px; }
 .horn-slot.active { border-color: #e67e22; }
 .row h3 { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255, 255, 255, 0.1); font-size: 1.5em; pointer-events: none; white-space: nowrap; }
@@ -187,16 +200,13 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
     text-align: center;
 }
 
-/* === POCZĄTEK POPRAWKI === */
 .card-name {
     font-size: 0.7em;
     font-weight: bold;
-    line-height: 1.2; /* Lekko zwiększony odstęp między liniami */
+    line-height: 1.2;
     color: #fff;
     text-shadow: 1px 1px 2px #000;
-    /* Usunięto właściwości zawijania tekstu */
 }
-/* === KONIEC POPRAWKI === */
 
 .card-description {
     font-size: 0.6em;
