@@ -1,7 +1,7 @@
 /* --- General Body & Container Styles --- */
 @font-face {
   font-family: 'GothicFont'; /* Nazwa, której będziesz używać w CSS */
-  src: url('GII_-_Die_Nacht_des_Raben.ttf') format('truetype');
+  src: url('Gothic_II_NK.ttf') format('truetype');
 }
 body {
     font-family: 'GothicFont', serif; /* Zastosowanie nowego fontu */
