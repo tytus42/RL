@@ -4,7 +4,7 @@
   src: url('GII_-_Die_Nacht_des_Raben.ttf') format('truetype');
 }
 body {
-    font-family: 'Georgia', serif; /* Bardziej "książkowa" czcionka */
+    font-family: 'GothicFont', serif; /* Zastosowanie nowego fontu */
     display: flex;
     justify-content: center;
     align-items: flex-start;
