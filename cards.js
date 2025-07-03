@@ -1,169 +1,226 @@
 const allCards = [
     // ==================================================================
+    // === DOWÓDCY (LEADERS)
+    // ==================================================================
+    {
+        id: 'foltest_bronze',
+        name: 'Foltest',
+        type: 'Leader',
+        faction: 'Northern Realms',
+        description: 'Zniszcz najsilniejszą/najsilniejsze jednostki oblężnicze wroga, jeśli suma ich siły wynosi 10 lub więcej.'
+    },
+    {
+        id: 'foltest_silver',
+        name: 'Foltest',
+        type: 'Leader',
+        faction: 'Northern Realms',
+        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
+    },
+    {
+        id: 'foltest_gold',
+        name: 'Foltest',
+        type: 'Leader',
+        faction: 'Northern Realms',
+        description: 'Podwaja siłę wszystkich twoich jednostek oblężniczych (chyba że Róg Dowódcy już na nie działa).'
+    },
+    {
+        id: 'eredin_bronze',
+        name: 'Eredin',
+        type: 'Leader',
+        faction: 'Monsters',
+        description: 'Wybierz dowolną kartę pogody z talii i zagraj ją natychmiast.'
+    },
+    {
+        id: 'eredin_silver',
+        name: 'Eredin',
+        type: 'Leader',
+        faction: 'Monsters',
+        description: 'Odrzuć 2 karty i dobierz 1 nową.'
+    },
+    {
+        id: 'eredin_gold',
+        name: 'Eredin',
+        type: 'Leader',
+        faction: 'Monsters',
+        description: 'Podwaja siłę wszystkich twoich jednostek walczących w zwarciu (chyba że Róg Dowódcy już na nie działa).'
+    },
+    {
+        id: 'francesca_bronze',
+        name: 'Francesca Findabair',
+        type: 'Leader',
+        faction: 'Scoia\'tael',
+        description: 'Przesuń jednostki z rzędu oblężniczego do rzędu dystansowego.'
+    },
+    {
+        id: 'francesca_silver',
+        name: 'Francesca Findabair',
+        type: 'Leader',
+        faction: 'Scoia\'tael',
+        description: 'Zniszcz najsilniejszą/najsilniejsze jednostki dystansowe wroga, jeśli suma ich siły wynosi 10 lub więcej.'
+    },
+    {
+        id: 'francesca_gold',
+        name: 'Francesca Findabair',
+        type: 'Leader',
+        faction: 'Scoia\'tael',
+        description: 'Podwaja siłę wszystkich twoich jednostek dystansowych (chyba że Róg Dowódcy już na nie działa).'
+    },
+    {
+        id: 'emhyr_bronze',
+        name: 'Emhyr var Emreis',
+        type: 'Leader',
+        faction: 'Nilfgaardian Empire',
+        description: 'Dobierz kartę z cmentarza przeciwnika.'
+    },
+    {
+        id: 'emhyr_silver',
+        name: 'Emhyr var Emreis',
+        type: 'Leader',
+        faction: 'Nilfgaardian Empire',
+        description: 'Anuluj zdolność dowódcy przeciwnika.'
+    },
+    {
+        id: 'emhyr_gold',
+        name: 'Emhyr var Emreis',
+        type: 'Leader',
+        faction: 'Nilfgaardian Empire',
+        description: 'Wybierz losową jednostkę z ręki przeciwnika.'
+    },
+    {
+        id: 'crach_an_craite_bronze',
+        name: 'Crach an Craite',
+        type: 'Leader',
+        faction: 'Skellige',
+        description: 'Przetasuj do 2 kart z cmentarza z powrotem do talii.'
+    },
+    {
+        id: 'crach_an_craite_silver',
+        name: 'Crach an Craite',
+        type: 'Leader',
+        faction: 'Skellige',
+        description: 'Niszczy jednostki osłabione przez pogodę.'
+    },
+
+    // ==================================================================
     // === KARTY NEUTRALNE
     // ==================================================================
+    { id: 'geralt_of_rivia', name: 'Geralt z Rivii', type: 'Unit', power: 15, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Jeśli mam wybierać między jednym złem a drugim, wolę nie wybierać wcale.' },
+    { id: 'ciri', name: 'Ciri', type: 'Unit', power: 15, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Będzie z tobą po kres świata.' },
+    { id: 'yennefer_of_vengerberg', name: 'Yennefer z Vengerbergu', type: 'Unit', power: 7, faction: 'Neutral', row: 'ranged', abilities: ['medic'], isHero: true, description: 'Nigdy nie tęsknię za porankami. Albo budzę się tuż przed południem, albo wcale.' },
+    { id: 'triss_merigold', name: 'Triss Merigold', type: 'Unit', power: 7, faction: 'Neutral', row: 'ranged', abilities: [], isHero: true, description: 'Nie potrafię być dla ciebie tylko przyjaciółką, Geralt.' },
+    { id: 'avallach', name: "Avallac'h", type: 'Unit', power: 0, faction: 'Neutral', row: 'melee', abilities: ['spy'], isHero: true, description: 'Wiedzący, który podróżuje między światami.' },
+    { id: 'villentretenmerth', name: 'Villentretenmerth', type: 'Unit', power: 7, faction: 'Neutral', row: 'melee', abilities: ['scorch_row'], isHero: false, description: 'Złoty smok, rzadszy niż diament.' },
+    { id: 'vesemir', name: 'Vesemir', type: 'Unit', power: 6, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Najstarszy i najbardziej doświadczony wiedźmin z Kaer Morhen.' },
+    { id: 'zoltan_chivay', name: 'Zoltan Chivay', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Co, u licha? Dalej, na pohybel skurwysynom!' },
+    { id: 'emiel_regis', name: 'Emiel Regis', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Wampiry wyższe mają niezwykłe zdolności regeneracyjne.' },
+    { id: 'dandelion', name: 'Jaskier', type: 'Unit', power: 2, faction: 'Neutral', row: 'melee', abilities: ['morale_boost'], isHero: false, description: 'Jaskier, ty to wiesz, jak człowiekowi humor poprawić.' },
     
-    // --- Jednostki Neutralne ---
-    { 
-        id: 'ciri_1', 
-        name: 'Ciri', 
-        type: 'Unit', 
-        power: 15, 
-        isHero: true, 
-        faction: 'Neutral', 
-        row: 'melee',
-        abilities: [],
-        description: 'Będzie z tobą po kres świata.'
-    },
-    { 
-        id: 'geralt_of_rivia_1', 
-        name: 'Geralt z Rivii', 
-        type: 'Unit', 
-        power: 15, 
-        isHero: true, 
-        faction: 'Neutral', 
-        row: 'melee',
-        abilities: [],
-        description: 'Jeśli mam wybierać między jednym złem a drugim, wolę nie wybierać wcale.'
-    },
-    { 
-        id: 'dandelion_1', 
-        name: 'Jaskier', 
-        type: 'Unit', 
-        power: 2, 
-        isHero: false, 
-        faction: 'Neutral', 
-        row: 'melee', 
-        abilities: ['morale_boost'],
-        description: 'Jaskier, ty to wiesz, jak człowiekowi humor poprawić.'
-    },
-    { 
-        id: 'zoltan_chivay_1', 
-        name: 'Zoltan Chivay', 
-        type: 'Unit', 
-        power: 5, 
-        isHero: false, 
-        faction: 'Neutral', 
-        row: 'melee', 
-        abilities: ['scorch_row'],
-        description: 'Co, u licha? Dalej, na pohybel skurwysynom!'
-    },
-    { 
-        id: 'avallach_1', 
-        name: 'Avallac\'h', 
-        type: 'Unit', 
-        power: 0, 
-        isHero: true, // Szpiedzy-bohaterowie są standardem
-        faction: 'Neutral', 
-        row: 'melee', 
-        abilities: ['spy'],
-        description: 'Wiedzący, który podróżuje między światami.'
-    },
-    { 
-        id: 'vesemir_1', 
-        name: 'Vesemir', 
-        type: 'Unit', 
-        power: 6, 
-        isHero: false, 
-        faction: 'Neutral', 
-        row: ['melee', 'ranged'], 
-        abilities: ['agile'],
-        description: 'Najstarszy i najbardziej doświadczony wiedźmin z Kaer Morhen.'
-    },
-    {
-        id: 'golem_1',
-        name: 'Golem',
-        type: 'Unit',
-        power: 3,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: ['avenger'],
-        summons: 'golem_fiend_1',
-        isHero: false,
-        description: 'Większy niż wygląda.'
-    },
-    {
-        id: 'golem_fiend_1',
-        name: 'Większy Golem',
-        type: 'Unit',
-        power: 9,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: [],
-        isHero: false,
-        isToken: true
-    },
-
-    // --- Karty Specjalne Neutralne ---
-    { id: 'scorch_fire_rain_1', name: 'Deszcz Ognia', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'] },
-    { id: 'commanders_horn_1', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'] },
-    { id: 'decoy_1', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'] },
-    { id: 'wyzwolenie_sily_1', name: 'Wyzwolenie siły', type: 'Special', faction: 'Neutral', abilities: ['Wyzwolenie siły'] },
-
-    // --- Karty Pogody ---
-    { id: 'biting_frost_1', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect' },
-    { id: 'impenetrable_fog_1', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect' },
-    { id: 'torrential_rain_1', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'],  effectClass: 'rain-effect' },
-    { id: 'fear_1', name: 'Strach', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged', 'siege'], effectClass: 'fear-effect' },
-    { id: 'clear_sky_1', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null },
-
+    // ==================================================================
+    // === KARTY SPECJALNE
+    // ==================================================================
+    { id: 'scorch', name: 'Pożoga', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'], description: 'Zniszcz najsilniejszą/najsilniejsze karty na polu bitwy.' },
+    { id: 'commanders_horn', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'], description: 'Podwaja siłę wszystkich jednostek w rzędzie. Działa jednorazowo.' },
+    { id: 'decoy', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'], description: 'Zamień na jednostkę na polu bitwy, aby wróciła na rękę.' },
+    { id: 'biting_frost', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki w zwarciu na 1.' },
+    { id: 'impenetrable_fog', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki dystansowej na 1.' },
+    { id: 'torrential_rain', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'], effectClass: 'rain-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie oblężniczym na 1.' },
+    { id: 'clear_weather', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null, description: 'Usuwa wszystkie efekty pogodowe.' },
 
     // ==================================================================
     // === KRÓLESTWA PÓŁNOCY (NORTHERN REALMS)
     // ==================================================================
-
-    // --- Dowódcy ---
-    { id: 'foltest_1', name: 'Foltest: Król Temerii', type: 'Leader', faction: 'Northern Realms', description: '' },
-
-    // --- Jednostki ---
-    { id: 'yennefer_of_vengerberg_1', name: 'Yennefer z Vengerbergu', type: 'Unit', power: 7, isHero: true, faction: 'Northern Realms', row: 'ranged', abilities:['medic'], description: '' },
-    { id: 'triss_merigold_1', name: 'Triss Merigold', type: 'Unit', power: 7, isHero: true, faction: 'Northern Realms', row: 'ranged', abilities:[], description: '' },
-    { id: 'blue_stripes_commando_1', name: 'Komandos Niebieskich Pasów', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], baseId: 'blue_stripes_commando', description: '' },
-    { id: 'blue_stripes_commando_2', name: 'Komandos Niebieskich Pasów', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], baseId: 'blue_stripes_commando', description: '' },
-    { id: 'blue_stripes_commando_3', name: 'Komandos Niebieskich Pasów', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], baseId: 'blue_stripes_commando', description: '' },
-    { id: 'catapult_1', name: 'Katapulta', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], baseId: 'catapult', description: '' },
-    { id: 'catapult_2', name: 'Katapulta', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], baseId: 'catapult', description: '' },
-    { id: 'field_medic_1', name: 'Felczer', type: 'Unit', power: 5, isHero: false, faction: 'Northern Realms', row: 'ranged', abilities: ['medic'], description: '' },
-    
+    { id: 'john_natalis', name: 'Jan Natalis', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true },
+    { id: 'vernon_roche', name: 'Vernon Roche', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true },
+    { id: 'philippa_eilhart', name: 'Filippa Eilhart', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: true },
+    { id: 'esterad_thyssen', name: 'Esterad Thyssen', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true },
+    { id: 'keira_metz', name: 'Keira Metz', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false },
+    { id: 'siegfried_of_denesle', name: 'Zygfryd z Denesle', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false },
+    { id: 'yarpen_zigrin', name: 'Yarpen Zigrin', type: 'Unit', power: 2, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false },
+    { id: 'sheldon_skaggs', name: 'Sheldon Skaggs', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false },
+    { id: 'prince_stennis', name: 'Książę Stennis', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: ['spy'], isHero: false },
+    { id: 'thaler', name: 'Talar', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['spy'], isHero: false },
+    { id: 'dun_banner_medic', name: 'Medyk Chorągwi Burej', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'siege', abilities: ['medic'], isHero: false },
+    { id: 'blue_stripes_commando', name: 'Komandos Niebieskich Pasów', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], baseId: 'blue_stripes_commando' },
+    { id: 'catapult', name: 'Katapulta', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], baseId: 'catapult' },
+    { id: 'trebuchet', name: 'Trebusz', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false },
+    { id: 'ballista', name: 'Balista', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false },
+    { id: 'siege_tower', name: 'Wieża oblężnicza', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false },
 
     // ==================================================================
     // === POTWORY (MONSTERS)
     // ==================================================================
-
-    // --- Dowódcy ---
-    { id: 'eredin_1', name: 'Eredin', type: 'Leader', faction: 'Monsters', description: 'Wybierz kartę Pogody z talii i zagraj ją natychmiast.' },
-
-    // --- Jednostki ---
-    { id: 'imlerith_1', name: 'Imlerith', type: 'Unit', power: 10, isHero: true, faction: 'Monsters', row: 'melee', abilities: [], description: '' },
-    { id: 'nekker_1', name: 'Nekker', type: 'Unit', power: 2, isHero: false, faction: 'Monsters', row: 'melee', abilities: ['muster'], description: '' },
-    { id: 'nekker_2', name: 'Nekker', type: 'Unit', power: 2, isHero: false, faction: 'Monsters', row: 'melee', abilities: ['muster'], description: '' },
-    { id: 'nekker_3', name: 'Nekker', type: 'Unit', power: 2, isHero: false, faction: 'Monsters', row: 'melee', abilities: ['muster'], description: '' },
-    { id: 'ghoul_1', name: 'Ghul', type: 'Unit', power: 1, isHero: false, faction: 'Monsters', row: 'melee', abilities: ['muster'], description: '' },
-    { id: 'ghoul_2', name: 'Ghul', type: 'Unit', power: 1, isHero: false, faction: 'Monsters', row: 'melee', abilities: ['muster'], description: '' },
-    { id: 'wyvern_1', name: 'Wiwerna', type: 'Unit', power: 5, isHero: false, faction: 'Monsters', row: 'ranged', abilities: [], description: '' },
-    { id: 'harpy_1', name: 'Harpia', type: 'Unit', power: 2, isHero: false, faction: 'Monsters', row: 'ranged', abilities: [], description: '' },
-    { id: 'fiend_1', name: 'Bies', type: 'Unit', power: 6, isHero: false, faction: 'Monsters', row: 'siege', abilities: [], description: '' },
-    {
-        id: 'kasacz_1',
-        name: 'Kąsacz',
-        type: 'Unit',
-        power: 4,
-        faction: 'Monsters',
-        row: 'melee',
-        abilities: ['Moc'],
-        transformId: 'wsciekly_kasacz_1',
-        isHero: false,
-        description: 'Głodny.'
-    },
-    {
-        id: 'wsciekly_kasacz_1',
-        name: 'Wściekły Kąsacz',
-        type: 'Unit',
-        power: 8,
-        faction: 'Monsters',
-        row: 'melee',
-        abilities: [],
-        isHero: false,
-        isToken: true
-    },
-];
+    { id: 'imlerith', name: 'Imlerith', type: 'Unit', power: 10, faction: 'Monsters', row: 'melee', abilities: [], isHero: true },
+    { id: 'leshen', name: 'Leszy', type: 'Unit', power: 10, faction: 'Monsters', row: 'ranged', abilities: [], isHero: true },
+    { id: 'draug', name: 'Draug', type: 'Unit', power: 10, faction: 'Monsters', row: 'melee', abilities: [], isHero: true },
+    { id: 'kayran', name: 'Keyran', type: 'Unit', power: 8, faction: 'Monsters', row: ['melee', 'ranged'], abilities: ['agile', 'morale_boost'], isHero: true },
+    { id: 'werewolf', name: 'Wilkołak', type: 'Unit', power: 5, faction: 'Monsters', row: 'melee', abilities: [], isHero: false },
+    { id: 'fiend', name: 'Bies', type: 'Unit', power: 6, faction: 'Monsters', row: 'melee', abilities: [], isHero: false },
+    { id: 'griffin', name: 'Gryf', type: 'Unit', power: 5, faction: 'Monsters', row: 'melee', abilities: [], isHero: false },
+    { id: 'forktail', name: 'Widłogon', type: 'Unit', power: 5, faction: 'Monsters', row: 'melee', abilities: [], isHero: false },
+    { id: 'plague_maiden', name: 'Morowa Dziewica', type: 'Unit', power: 5, faction: 'Monsters', row: 'melee', abilities: [], isHero: false },
+    { id: 'earth_elemental', name: 'Żywiołak ziemi', type: 'Unit', power: 6, faction: 'Monsters', row: 'siege', abilities: [], isHero: false },
+    { id: 'fire_elemental', name: 'Żywiołak ognia', type: 'Unit', power: 6, faction: 'Monsters', row: 'siege', abilities: [], isHero: false },
+    { id: 'celaeno_harpy', name: 'Harpia Celeano', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'gargoyle', name: 'Gargulec', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'cockatrice', name: 'Kuroliszek', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'harpy', name: 'Harpia', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'ghoul', name: 'Ghul', type: 'Unit', power: 1, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'ghoul' },
+    { id: 'nekker', name: 'Nekker', type: 'Unit', power: 2, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'nekker' },
+    { id: 'foglet', name: 'Mglak', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'wyvern', name: 'Wiwerna', type: 'Unit', power: 2, faction: 'Monsters', row: 'ranged', abilities: [], isHero: false },
+    { id: 'vampire_bruxa', name: 'Wampir: Bruxa', type: 'Unit', power: 4, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'vampire' },
+    { id: 'vampire_fleder', name: 'Wampir: Fleder', type: 'Unit', power: 4, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'vampire' },
+    { id: 'vampire_garkain', name: 'Wampir: Garkain', type: 'Unit', power: 4, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'vampire' },
+    { id: 'vampire_ekimmara', name: 'Wampir: Ekimma', type: 'Unit', power: 4, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'vampire' },
+    { id: 'arachas', name: 'Arachas', type: 'Unit', power: 4, faction: 'Monsters', row: 'ranged', abilities: ['muster'], baseId: 'arachas' },
+    { id: 'arachas_behemoth', name: 'Behemot', type: 'Unit', power: 6, faction: 'Monsters', row: 'siege', abilities: ['muster'], baseId: 'arachas' },
+    
+    // ==================================================================
+    // === NILFGAARD
+    // ==================================================================
+    { id: 'letho_of_gulet', name: 'Letho z Gulety', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'melee', abilities: [], isHero: true },
+    { id: 'menno_coehoorn', name: 'Menno Coehoorn', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['medic'], isHero: true },
+    { id: 'moorvran_voorhis', name: 'Morvran Voorhis', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'siege', abilities: [], isHero: true },
+    { id: 'tibor_eggebracht', name: 'Tibor Eggebracht', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: true },
+    { id: 'albrich', name: 'Albrich', type: 'Unit', power: 2, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'assire_var_anahid', name: 'Assire var Anahid', type: 'Unit', power: 6, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'cynthia', name: 'Cynthia', type: 'Unit', power: 4, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'fringilla_vigo', name: 'Fringilla Vigo', type: 'Unit', power: 6, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'shilard_fitz_oesterlen', name: 'Shilard Fitz-Oesterlen', type: 'Unit', power: 7, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['spy'], isHero: false },
+    { id: 'stefan_skellen', name: 'Stefan Skellen', type: 'Unit', power: 9, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['spy'], isHero: false },
+    { id: 'vattier_de_rideaux', name: 'Vattier de Rideaux', type: 'Unit', power: 4, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['spy'], isHero: false },
+    { id: 'vanhemar', name: 'Vanhemar', type: 'Unit', power: 4, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'renuald_aep_matsen', name: 'Renuald aep Matsen', type: 'Unit', power: 5, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'cahir_aep_ceallach', name: 'Cahir aep Ceallach', type: 'Unit', power: 6, faction: 'Nilfgaardian Empire', row: 'melee', abilities: [], isHero: false },
+    { id: 'puttkammer', name: 'Puttkammer', type: 'Unit', power: 3, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'sweers', name: 'Sweers', type: 'Unit', power: 2, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'vremde', name: 'Vremde', type: 'Unit', power: 2, faction: 'Nilfgaardian Empire', row: 'melee', abilities: [], isHero: false },
+    { id: 'zerrikanian_fire_scorpion', name: 'Skorpion', type: 'Unit', power: 5, faction: 'Nilfgaardian Empire', row: 'siege', abilities: [], isHero: false },
+    { id: 'rotten_mangonel', name: 'Zgniła Mangonela', type: 'Unit', power: 3, faction: 'Nilfgaardian Empire', row: 'siege', abilities: [], isHero: false },
+    { id: 'black_infantry_archer', name: 'Łucznik', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'ranged', abilities: [], isHero: false },
+    { id: 'heavy_zerrikanian_fire_scorpion', name: 'Ciężki Skorpion', type: 'Unit', power: 10, faction: 'Nilfgaardian Empire', row: 'siege', abilities: [], isHero: false },
+    { id: 'impera_brigade_guard', name: 'Gwardzista', type: 'Unit', power: 3, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'impera_brigade' },
+    { id: 'nausicaa_cavalry_rider', name: 'Jeździec', type: 'Unit', power: 2, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'nausicaa_cavalry' },
+    { id: 'young_emissary', name: 'Młody Emisariusz', type: 'Unit', power: 5, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'young_emissary' },
+    
+    // ==================================================================
+    // === SCOIA'TAEL
+    // ==================================================================
+    { id: 'isengrim_faolitarna', name: 'Isengrim Faolitarna', type: 'Unit', power: 10, faction: 'Scoia\'tael', row: 'melee', abilities: ['morale_boost'], isHero: true },
+    { id: 'eithne', name: 'Eithne', type: 'Unit', power: 10, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: true },
+    { id: 'saskia', name: 'Saskia', type: 'Unit', power: 9, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: true },
+    { id: 'iorveth', name: 'Iorweth', type: 'Unit', power: 10, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: true },
+    { id: 'yaevinn', name: 'Yaevinn', type: 'Unit', power: 6, faction: 'Scoia\'tael', row: ['melee', 'ranged'], abilities: ['agile'], isHero: false },
+    { id: 'riordain', name: 'Riordain', type: 'Unit', power: 1, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: false },
+    { id: 'toruviel', name: 'Toruviel', type: 'Unit', power: 2, faction: 'Scoia\'tael', row: 'melee', abilities: [], isHero: false },
+    { id: 'ciaran_aep_easnillien', name: 'Ciaran aep Easnillien', type: 'Unit', power: 3, faction: 'Scoia\'tael', row: ['melee', 'ranged'], abilities: ['agile'], isHero: false },
+    { id: 'filavandrel_aen_fidhail', name: 'Filavandrel aen Fidhail', type: 'Unit', power: 6, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: false },
+    { id: 'dennis_cranmer', name: 'Dennis Cranmer', type: 'Unit', power: 6, faction: 'Scoia\'tael', row: 'melee', abilities: [], isHero: false },
+    { id: 'dol_blathanna_archer', name: 'Łucznik', type: 'Unit', power: 6, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: false },
+    { id: 'havekar_smuggler', name: 'Przemytnik', type: 'Unit', power: 5, faction: 'Scoia\'tael', row: 'melee', abilities: ['muster'], baseId: 'havekar' },
+    { id: 'vrihedd_brigade_recruit', name: 'Rekrut', type: 'Unit', power: 4, faction: 'Scoia\'tael', row: 'ranged', abilities: [], isHero: false },
+    { id: 'elven_skirmisher', name: 'Harocwnik', type: 'Unit', power: 2, faction: 'Scoia\'tael', row: 'ranged', abilities: ['muster'], baseId: 'elven_skirmisher' },
+    { id: 'dwarven_skirmisher', name: 'Zoltan', type: 'Unit', power: 3, faction: 'Scoia\'tael', row: 'melee', abilities: ['muster'], baseId: 'dwarven_skirmisher' },
+    { id: 'havekar_healer', name: 'Medyk', type: 'Unit', power: 0, faction: 'Scoia\'tael', row: 'ranged', abilities: ['medic'], isHero: false },
+    
+    // =========================================
