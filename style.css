@@ -14,9 +14,9 @@ body {
     background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
     color: #f0f0f0;
     margin: 0;
-    padding: 10px; /* Zmniejszony padding dla mobile */
+    padding: 10px;
     box-sizing: border-box;
-    overflow-x: hidden; /* Zapobiega poziomemu scrollowaniu */
+    overflow-x: hidden;
 }
 
 .game-screen {
@@ -129,19 +129,19 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
 .card-name { font-size: 0.7em; font-weight: bold; line-height: 1.2; color: #fff; text-shadow: 1px 1px 2px #000; }
 .card-description { font-size: 0.6em; color: #ddd; font-style: italic; margin-bottom: 2px; }
 
+/* === POCZĄTEK POPRAWKI === */
 /* Style frakcji */
-.faction-neutral { background: linear-gradient(145deg, #a9a9a9, #696969); }
-.faction-neutral .card-left-column { background-color: rgba(0,0,0,0.2); }
-.faction-neutral .card-right-column { background-color: rgba(255,255,255,0.1); }
-.faction-neutral .card-name { color: #2c3e50; text-shadow: none; }
-.faction-monsters { background: linear-gradient(145deg, #c0392b, #8e44ad); }
-.faction-monsters .card-left-column { background-color: rgba(0,0,0,0.3); }
-.faction-monsters .card-right-column { background-color: rgba(0,0,0,0.1); }
-.faction-monsters .card-name { color: #fff; }
+.faction-neutral { background: linear-gradient(145deg, #a47b4a, #5a3a1a); }
+.faction-monsters { background: linear-gradient(145deg, #c0392b, #96281b); }
 .faction-northern-realms { background: linear-gradient(145deg, #3498db, #2980b9); }
-.faction-northern-realms .card-left-column { background-color: rgba(0,0,0,0.2); }
-.faction-northern-realms .card-right-column { background-color: rgba(255,255,255,0.1); }
-.faction-northern-realms .card-name { color: #fff; }
+.faction-scoia-tael { background: linear-gradient(145deg, #27ae60, #1e8449); }
+.faction-nilfgaardian-empire { background: linear-gradient(145deg, #2c3e50, #000000); }
+.faction-skellige { background: linear-gradient(145deg, #8e44ad, #5e3370); }
+
+.card-left-column { background-color: rgba(0,0,0,0.3); }
+.card-right-column { background-color: rgba(0,0,0,0.1); }
+.card-name { color: #fff; }
+/* === KONIEC POPRAWKI === */
 
 /* Specjalne style dla kart */
 .hero-card { border: 2px solid #ffd700; }
@@ -165,7 +165,6 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
 .row.rain-effect::after { background: linear-gradient(rgba(100, 149, 237, 0.3), rgba(100, 149, 237, 0.1)); opacity: 1; }
 .row.fear-effect::after { background: radial-gradient(circle, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.5)); opacity: 1; }
 
-/* === POCZĄTEK POPRAWKI DLA URZĄDZEŃ MOBILNYCH === */
 /* Media Queries dla responsywności */
 @media screen and (max-width: 1200px) {
     #battlefield-screen {
@@ -243,4 +242,3 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
         font-size: 0.55em;
     }
 }
-/* === KONIEC POPRAWKI === */
