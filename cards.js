@@ -8,7 +8,7 @@ const allCards = [
         type: 'Leader',
         faction: 'Northern Realms',
         abilities: [],
-        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
+        description: 'Zniszcz najsilniejszą/najsilniejsze jednostki oblężnicze wroga, jeśli suma ich siły wynosi 10 lub więcej.'
     },
     {
         id: 'foltest_silver',
@@ -16,7 +16,7 @@ const allCards = [
         type: 'Leader',
         faction: 'Northern Realms',
         abilities: [],
-        description: 'Anuluje zdolność dowódcy przeciwnika.'
+        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
     },
     {
         id: 'foltest_gold',
@@ -116,218 +116,26 @@ const allCards = [
     },
 
     // ==================================================================
-// === KARTY NEUTRALNE
-// ==================================================================
-{
-    id: 'cirilla_fiona_elen_riannon',
-    name: 'Cirilla Fiona Elen Riannon',
-    type: 'Unit',
-    power: 15,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: true,
-    isToken: false,
-    description: ''
-},
-{
-    id: 'cow_1',
-    name: 'Cow',
-    type: 'Unit',
-    power: 0,
-    faction: 'Neutral',
-    row: 'ranged',
-    abilities: ['Moc'],
-    transformId: 'bovine_defense_force_1',
-    isHero: false,
-    isToken: false,
-    description: 'Muu.'
-},
-{
-    id: 'bovine_defense_force_1',
-    name: 'Bovine Defense Force',
-    type: 'Unit',
-    power: 8,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: false,
-    isToken: true,
-    description: 'Chrońcie krowy!'
-},
-{
-    id: 'dandelion',
-    name: 'Dandelion',
-    type: 'Unit',
-    power: 2,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: ['horn'],
-    isHero: false,
-    isToken: false,
-    description: 'Jaskier, ty to wiesz, jak człowiekowi humor poprawić.'
-},
-{
-    id: 'emiel_regis',
-    name: 'Emiel Regis Rohellec Terzieff',
-    type: 'Unit',
-    power: 5,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: false,
-    isToken: false,
-    description: 'Wampiry wyższe mają niezwykłe zdolności regeneracyjne.'
-},
-{
-    id: 'gaunter_odimm',
-    name: "Gaunter O'Dimm",
-    type: 'Unit',
-    power: 2,
-    faction: 'Neutral',
-    row: 'siege',
-    abilities: ['muster'],
-    baseId: 'gaunter_odimm',
-    isHero: false,
-    isToken: false,
-    description: 'Pan Lusterko.'
-},
-{
-    id: 'gaunter_odimm_darkness_1',
-    name: "Gaunter O'Dimm: Darkness",
-    type: 'Unit',
-    power: 4,
-    faction: 'Neutral',
-    row: 'ranged',
-    abilities: ['muster'],
-    baseId: 'gaunter_odimm',
-    isHero: false,
-    isToken: false,
-    description: ''
-},
-{
-    id: 'gaunter_odimm_darkness_2',
-    name: "Gaunter O'Dimm: Darkness",
-    type: 'Unit',
-    power: 4,
-    faction: 'Neutral',
-    row: 'ranged',
-    abilities: ['muster'],
-    baseId: 'gaunter_odimm',
-    isHero: false,
-    isToken: false,
-    description: ''
-},
-{
-    id: 'gaunter_odimm_darkness_3',
-    name: "Gaunter O'Dimm: Darkness",
-    type: 'Unit',
-    power: 4,
-    faction: 'Neutral',
-    row: 'ranged',
-    abilities: ['muster'],
-    baseId: 'gaunter_odimm',
-    isHero: false,
-    isToken: false,
-    description: ''
-},
-{
-    id: 'geralt_of_rivia',
-    name: 'Geralt of Rivia',
-    type: 'Unit',
-    power: 15,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: true,
-    isToken: false,
-    description: 'Jeśli mam wybierać między jednym złem a drugim, wolę nie wybierać wcale.'
-},
-{
-    id: 'mysterious_elf',
-    name: "Mysterious Elf",
-    type: 'Unit',
-    power: 0,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: ['spy'],
-    isHero: true,
-    isToken: false,
-    description: '(a.k.a Avallac\'h)'
-},
-{
-    id: 'olgierd_von_everec',
-    name: 'Olgierd von Everec',
-    type: 'Unit',
-    power: 6,
-    faction: 'Neutral',
-    row: ['melee', 'ranged'],
-    abilities: ['agile', 'morale_boost'],
-    isHero: false,
-    isToken: false,
-    description: ''
-},
-{
-    id: 'triss_merigold',
-    name: 'Triss Merigold',
-    type: 'Unit',
-    power: 7,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: true,
-    isToken: false,
-    description: 'Nie potrafię być dla ciebie tylko przyjaciółką, Geralt.'
-},
-{
-    id: 'vesemir',
-    name: 'Vesemir',
-    type: 'Unit',
-    power: 6,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: false,
-    isToken: false,
-    description: 'Najstarszy i najbardziej doświadczony wiedźmin z Kaer Morhen.'
-},
-{
-    id: 'villentretenmerth',
-    name: 'Villentretenmerth',
-    type: 'Unit',
-    power: 7,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: ['scorch_row'],
-    isHero: false,
-    isToken: false,
-    description: 'Złoty smok, rzadszy niż diament.'
-},
-{
-    id: 'yennefer_of_vengerberg',
-    name: 'Yennefer of Vengerberg',
-    type: 'Unit',
-    power: 7,
-    faction: 'Neutral',
-    row: 'ranged',
-    abilities: ['medic'],
-    isHero: true,
-    isToken: false,
-    description: 'Nigdy nie tęsknię za porankami. Albo budzę się tuż przed południem, albo wcale.'
-},
-{
-    id: 'zoltan_chivay',
-    name: 'Zoltan Chivay',
-    type: 'Unit',
-    power: 5,
-    faction: 'Neutral',
-    row: 'melee',
-    abilities: [],
-    isHero: false,
-    isToken: false,
-    description: 'Co, u licha? Dalej, na pohybel skurwysynom!'
-},
-    
+    // === KARTY NEUTRALNE (ZAKTUALIZOWANE)
+    // ==================================================================
+    { id: 'cirilla_fiona_elen_riannon', name: 'Cirilla Fiona Elen Riannon', type: 'Unit', power: 15, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: '' },
+    { id: 'cow_1', name: 'Cow', type: 'Unit', power: 0, faction: 'Neutral', row: 'ranged', abilities: ['avenger'], summons: 'bovine_defense_force_1', isHero: false, description: 'Muu.' },
+    { id: 'bovine_defense_force_1', name: 'Bovine Defense Force', type: 'Unit', power: 8, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, isToken: true, description: 'Chrońcie krowy!' },
+    { id: 'dandelion', name: 'Dandelion', type: 'Unit', power: 2, faction: 'Neutral', row: 'melee', abilities: ['horn'], isHero: false, description: 'Jaskier, ty to wiesz, jak człowiekowi humor poprawić.' },
+    { id: 'emiel_regis', name: 'Emiel Regis Rohellec Terzieff', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Wampiry wyższe mają niezwykłe zdolności regeneracyjne.' },
+    { id: 'gaunter_odimm', name: "Gaunter O'Dimm", type: 'Unit', power: 2, faction: 'Neutral', row: 'siege', abilities: ['muster'], baseId: 'gaunter_odimm', isHero: false, description: 'Pan Lusterko.' },
+    { id: 'gaunter_odimm_darkness_1', name: "Gaunter O'Dimm: Darkness", type: 'Unit', power: 4, faction: 'Neutral', row: 'ranged', abilities: ['muster'], baseId: 'gaunter_odimm', isHero: false, description: '' },
+    { id: 'gaunter_odimm_darkness_2', name: "Gaunter O'Dimm: Darkness", type: 'Unit', power: 4, faction: 'Neutral', row: 'ranged', abilities: ['muster'], baseId: 'gaunter_odimm', isHero: false, description: '' },
+    { id: 'gaunter_odimm_darkness_3', name: "Gaunter O'Dimm: Darkness", type: 'Unit', power: 4, faction: 'Neutral', row: 'ranged', abilities: ['muster'], baseId: 'gaunter_odimm', isHero: false, description: '' },
+    { id: 'geralt_of_rivia', name: 'Geralt of Rivia', type: 'Unit', power: 15, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Jeśli mam wybierać między jednym złem a drugim, wolę nie wybierać wcale.' },
+    { id: 'mysterious_elf', name: "Mysterious Elf", type: 'Unit', power: 0, faction: 'Neutral', row: 'melee', abilities: ['spy'], isHero: true, description: '(a.k.a Avallac\'h)' },
+    { id: 'olgierd_von_everec', name: 'Olgierd von Everec', type: 'Unit', power: 6, faction: 'Neutral', row: ['melee', 'ranged'], abilities: ['agile', 'morale_boost'], isHero: false, description: '' },
+    { id: 'triss_merigold', name: 'Triss Merigold', type: 'Unit', power: 7, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Nie potrafię być dla ciebie tylko przyjaciółką, Geralt.' },
+    { id: 'vesemir', name: 'Vesemir', type: 'Unit', power: 6, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Najstarszy i najbardziej doświadczony wiedźmin z Kaer Morhen.' },
+    { id: 'villentretenmerth', name: 'Villentretenmerth', type: 'Unit', power: 7, faction: 'Neutral', row: 'melee', abilities: ['scorch_row'], isHero: false, description: 'Złoty smok, rzadszy niż diament.' },
+    { id: 'yennefer_of_vengerberg', name: 'Yennefer of Vengerberg', type: 'Unit', power: 7, faction: 'Neutral', row: 'ranged', abilities: ['medic'], isHero: true, description: 'Nigdy nie tęsknię za porankami. Albo budzę się tuż przed południem, albo wcale.' },
+    { id: 'zoltan_chivay', name: 'Zoltan Chivay', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Co, u licha? Dalej, na pohybel skurwysynom!' },
+
     // ==================================================================
     // === KARTY SPECJALNE
     // ==================================================================
