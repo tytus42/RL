@@ -257,9 +257,6 @@ function renderPlayerBoard(player) {
     });
 }
 
-// ==================================================================
-// === ZMODYFIKOWANA FUNKCJA TWORZĄCA KARTY ===
-// ==================================================================
 function createCardElement(card) {
     const cardDiv = document.createElement('div');
     cardDiv.classList.add('card-on-board');
@@ -268,31 +265,11 @@ function createCardElement(card) {
     if (card.isHero) cardDiv.classList.add('hero-card');
     if (card.faction) cardDiv.classList.add(`faction-${card.faction.toLowerCase().replace(/\s+/g, '-')}`);
     
-    // Obsługa kart Specjalnych i Pogody (prosty wygląd)
-    if (card.type === 'Special' || card.type === 'Weather') {
+    if (card.type !== 'Unit') {
         cardDiv.classList.add(`${card.type.toLowerCase()}-card`);
         cardDiv.innerHTML = `<div class="card-name-simple">${card.name}</div>`;
     } 
-    // Obsługa Rogu Dowódcy (specjalny wygląd karty)
-    else if (card.type === 'Horn') {
-        cardDiv.classList.add('horn-card-styled');
-        cardDiv.innerHTML = `
-            <div class="card-left-column">
-                <div class="card-power-container-empty"></div>
-                <div class="card-row-icon-container">
-                     <div class="ability-icon main-icon">${abilityIconMap['horn'] || '❓'}</div>
-                </div>
-            </div>
-            <div class="card-right-column">
-                <div class="card-info-footer">
-                    <div class="card-description">Podwaja siłę wszystkich jednostek w tym rzędzie.</div>
-                    <div class="card-name">${card.name}</div>
-                </div>
-            </div>
-        `;
-    }
-    // Obsługa wszystkich kart Jednostek
-    else if (card.type === 'Unit') {
+    else {
         const finalPower = card.currentPower ?? card.power;
         let powerClass = '';
         if (finalPower < card.power) powerClass = 'power-nerfed';
@@ -717,15 +694,22 @@ function playCard(player) {
             
             if (hasAbilities) {
                 if (cardInstance.abilities.includes('muster')) {
-                    const cardNameToMuster = cardInstance.name;
-                    const cardsToSummon = player.availableCards.filter(card => card.name === cardNameToMuster);
-                    if (cardsToSummon.length > 0) {
-                        addLogEntry(`Zbiórka! ${player.name} przywołuje ${cardsToSummon.length} dodatkowe karty ${cardNameToMuster}.`);
-                        player.availableCards = player.availableCards.filter(card => card.name !== cardNameToMuster);
-                        cardsToSummon.forEach(summonedCardData => {
-                            const summonedCardInstance = { ...summonedCardData, instanceId: Date.now() + Math.random() };
-                            player.board[targetRow].push(summonedCardInstance);
-                        });
+                    const musterId = cardInstance.baseId;
+                    if (musterId) {
+                        let cardsToSummon = player.availableCards.filter(card => card.baseId === musterId);
+                        if (cardInstance.name === "Gaunter O'Dimm: Darkness") {
+                            cardsToSummon = cardsToSummon.filter(card => card.name !== "Gaunter O'Dimm");
+                        }
+                        if (cardsToSummon.length > 0) {
+                            addLogEntry(`Zbiórka! ${player.name} przywołuje dodatkowe jednostki.`);
+                            const summonedIds = cardsToSummon.map(c => c.id);
+                            player.availableCards = player.availableCards.filter(card => !summonedIds.includes(card.id));
+                            cardsToSummon.forEach(summonedCardData => {
+                                const summonedCardInstance = { ...summonedCardData, instanceId: Date.now() + Math.random() };
+                                player.board[targetRow].push(summonedCardInstance);
+                                addLogEntry(`- Przywołano: ${summonedCardInstance.name}.`);
+                            });
+                        }
                     }
                 }
                 if (cardInstance.abilities.includes('scorch_row')) {
