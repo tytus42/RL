@@ -8,7 +8,7 @@ const allCards = [
         type: 'Leader',
         faction: 'Northern Realms',
         abilities: [],
-        description: 'Zniszcz najsilniejszą/najsilniejsze jednostki oblężnicze wroga, jeśli suma ich siły wynosi 10 lub więcej.'
+        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
     },
     {
         id: 'foltest_silver',
@@ -16,7 +16,7 @@ const allCards = [
         type: 'Leader',
         faction: 'Northern Realms',
         abilities: [],
-        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
+        description: 'Anuluje zdolność dowódcy przeciwnika.'
     },
     {
         id: 'foltest_gold',
@@ -128,7 +128,7 @@ const allCards = [
     { id: 'zoltan_chivay', name: 'Zoltan Chivay', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Co, u licha? Dalej, na pohybel skurwysynom!' },
     { id: 'emiel_regis', name: 'Emiel Regis', type: 'Unit', power: 5, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Wampiry wyższe mają niezwykłe zdolności regeneracyjne.' },
     { id: 'dandelion', name: 'Jaskier', type: 'Unit', power: 2, faction: 'Neutral', row: 'melee', abilities: ['morale_boost'], isHero: false, description: 'Jaskier, ty to wiesz, jak człowiekowi humor poprawić.' },
-
+    
     // ==================================================================
     // === KARTY SPECJALNE
     // ==================================================================
@@ -143,22 +143,43 @@ const allCards = [
     // ==================================================================
     // === KRÓLESTWA PÓŁNOCY (NORTHERN REALMS)
     // ==================================================================
-    { id: 'john_natalis', name: 'Jan Natalis', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true, description: '' },
-    { id: 'vernon_roche', name: 'Vernon Roche', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true, description: '' },
-    { id: 'philippa_eilhart', name: 'Filippa Eilhart', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: true, description: '' },
+    { id: 'ballista_1', name: 'Ballista', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
+    { id: 'blue_stripes_commando_1', name: 'Blue Stripes Commando', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'blue_stripes_commando', description: '' },
+    { id: 'blue_stripes_commando_2', name: 'Blue Stripes Commando', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'blue_stripes_commando', description: '' },
+    { id: 'blue_stripes_commando_3', name: 'Blue Stripes Commando', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'blue_stripes_commando', description: '' },
+    { id: 'catapult_1', name: 'Catapult', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], isHero: false, baseId: 'catapult', description: '' },
+    { id: 'catapult_2', name: 'Catapult', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], isHero: false, baseId: 'catapult', description: '' },
+    { id: 'crinfrid_reavers_dragon_hunter_1', name: 'Crinfrid Reavers Dragon Hunter', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: ['tight_bond'], isHero: false, baseId: 'crinfrid_reavers_dragon_hunter', description: '' },
+    { id: 'crinfrid_reavers_dragon_hunter_2', name: 'Crinfrid Reavers Dragon Hunter', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: ['tight_bond'], isHero: false, baseId: 'crinfrid_reavers_dragon_hunter', description: '' },
+    { id: 'crinfrid_reavers_dragon_hunter_3', name: 'Crinfrid Reavers Dragon Hunter', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: ['tight_bond'], isHero: false, baseId: 'crinfrid_reavers_dragon_hunter', description: '' },
+    { id: 'dethmold', name: 'Dethmold', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false, description: '' },
+    { id: 'dun_banner_medic', name: 'Dun Banner Medic', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'siege', abilities: ['medic'], isHero: false, description: '' },
     { id: 'esterad_thyssen', name: 'Esterad Thyssen', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true, description: '' },
+    { id: 'john_natalis', name: 'John Natalis', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true, description: '' },
+    { id: 'kaedweni_siege_expert_1', name: 'Kaedweni Siege Expert', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['morale_boost'], isHero: false, description: '' },
+    { id: 'kaedweni_siege_expert_2', name: 'Kaedweni Siege Expert', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['morale_boost'], isHero: false, description: '' },
+    { id: 'kaedweni_siege_expert_3', name: 'Kaedweni Siege Expert', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['morale_boost'], isHero: false, description: '' },
     { id: 'keira_metz', name: 'Keira Metz', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false, description: '' },
-    { id: 'siegfried_of_denesle', name: 'Zygfryd z Denesle', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
-    { id: 'yarpen_zigrin', name: 'Yarpen Zigrin', type: 'Unit', power: 2, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
+    { id: 'philippa_eilhart', name: 'Philippa Eilhart', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: true, description: '' },
+    { id: 'poor_fucking_infantry_1', name: 'Poor Fucking Infantry', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'poor_fucking_infantry', description: '' },
+    { id: 'poor_fucking_infantry_2', name: 'Poor Fucking Infantry', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'poor_fucking_infantry', description: '' },
+    { id: 'poor_fucking_infantry_3', name: 'Poor Fucking Infantry', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'poor_fucking_infantry', description: '' },
+    { id: 'poor_fucking_infantry_4', name: 'Poor Fucking Infantry', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], isHero: false, baseId: 'poor_fucking_infantry', description: '' },
+    { id: 'prince_stennis', name: 'Prince Stennis', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: ['spy'], isHero: false, description: '' },
+    { id: 'redanian_foot_soldier_1', name: 'Redanian Foot Soldier', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
+    { id: 'redanian_foot_soldier_2', name: 'Redanian Foot Soldier', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
+    { id: 'sabrina_glevissig', name: 'Sabrina Glevissig', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false, description: '' },
+    { id: 'siegfried_of_denesle', name: 'Siegfried of Denesle', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
     { id: 'sheldon_skaggs', name: 'Sheldon Skaggs', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false, description: '' },
-    { id: 'prince_stennis', name: 'Książę Stennis', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: ['spy'], isHero: false, description: '' },
-    { id: 'thaler', name: 'Talar', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['spy'], isHero: false, description: '' },
-    { id: 'dun_banner_medic', name: 'Medyk Chorągwi Burej', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'siege', abilities: ['medic'], isHero: false, description: '' },
-    { id: 'blue_stripes_commando', name: 'Komandos Niebieskich Pasów', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['tight_bond'], baseId: 'blue_stripes_commando', description: '' },
-    { id: 'catapult', name: 'Katapulta', type: 'Unit', power: 8, faction: 'Northern Realms', row: 'siege', abilities: ['tight_bond'], baseId: 'catapult', description: '' },
-    { id: 'trebuchet', name: 'Trebusz', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
-    { id: 'ballista', name: 'Balista', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
-    { id: 'siege_tower', name: 'Wieża oblężnicza', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
+    { id: 'siege_tower', name: 'Siege Tower', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
+    { id: 'sigismund_dijkstra', name: 'Sigismund Dijkstra', type: 'Unit', power: 4, faction: 'Northern Realms', row: 'melee', abilities: ['spy'], isHero: false, description: '' },
+    { id: 'sile_de_tansarville', name: 'Sile de Tansarville', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'ranged', abilities: [], isHero: false, description: '' },
+    { id: 'thaler', name: 'Thaler', type: 'Unit', power: 1, faction: 'Northern Realms', row: 'siege', abilities: ['spy'], isHero: false, description: '' },
+    { id: 'trebuchet_1', name: 'Trebuchet', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
+    { id: 'trebuchet_2', name: 'Trebuchet', type: 'Unit', power: 6, faction: 'Northern Realms', row: 'siege', abilities: [], isHero: false, description: '' },
+    { id: 'vernon_roche', name: 'Vernon Roche', type: 'Unit', power: 10, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: true, description: '' },
+    { id: 'ves', name: 'Ves', type: 'Unit', power: 5, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
+    { id: 'yarpen_zigrin', name: 'Yarpen Zigrin', type: 'Unit', power: 2, faction: 'Northern Realms', row: 'melee', abilities: [], isHero: false, description: '' },
 
     // ==================================================================
     // === POTWORY (MONSTERS)
@@ -188,7 +209,7 @@ const allCards = [
     { id: 'vampire_ekimmara', name: 'Wampir: Ekimma', type: 'Unit', power: 4, faction: 'Monsters', row: 'melee', abilities: ['muster'], baseId: 'vampire', description: '' },
     { id: 'arachas', name: 'Arachas', type: 'Unit', power: 4, faction: 'Monsters', row: 'ranged', abilities: ['muster'], baseId: 'arachas', description: '' },
     { id: 'arachas_behemoth', name: 'Behemot', type: 'Unit', power: 6, faction: 'Monsters', row: 'siege', abilities: ['muster'], baseId: 'arachas', description: '' },
-
+    
     // ==================================================================
     // === NILFGAARD
     // ==================================================================
@@ -216,7 +237,7 @@ const allCards = [
     { id: 'impera_brigade_guard', name: 'Gwardzista', type: 'Unit', power: 3, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'impera_brigade', description: '' },
     { id: 'nausicaa_cavalry_rider', name: 'Jeździec', type: 'Unit', power: 2, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'nausicaa_cavalry', description: '' },
     { id: 'young_emissary', name: 'Młody Emisariusz', type: 'Unit', power: 5, faction: 'Nilfgaardian Empire', row: 'melee', abilities: ['tight_bond'], baseId: 'young_emissary', description: '' },
-
+    
     // ==================================================================
     // === SCOIA'TAEL
     // ==================================================================
@@ -236,7 +257,7 @@ const allCards = [
     { id: 'elven_skirmisher', name: 'Harocwnik', type: 'Unit', power: 2, faction: 'Scoia\'tael', row: 'ranged', abilities: ['muster'], baseId: 'elven_skirmisher', description: '' },
     { id: 'dwarven_skirmisher', name: 'Zoltan', type: 'Unit', power: 3, faction: 'Scoia\'tael', row: 'melee', abilities: ['muster'], baseId: 'dwarven_skirmisher', description: '' },
     { id: 'havekar_healer', name: 'Medyk', type: 'Unit', power: 0, faction: 'Scoia\'tael', row: 'ranged', abilities: ['medic'], isHero: false, description: '' },
-
+    
     // ==================================================================
     // === SKELLIGE
     // ==================================================================
