@@ -129,7 +129,7 @@ const allCards = [
     { id: 'gaunter_odimm_darkness_3', name: "Gaunter O'Dimm: Darkness", type: 'Unit', power: 4, faction: 'Neutral', row: 'ranged', abilities: ['muster'], baseId: 'gaunter_odimm', isHero: false, description: '' },
     { id: 'geralt_of_rivia', name: 'Geralt of Rivia', type: 'Unit', power: 15, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Jeśli mam wybierać między jednym złem a drugim, wolę nie wybierać wcale.' },
     { id: 'mysterious_elf', name: "Mysterious Elf", type: 'Unit', power: 0, faction: 'Neutral', row: 'melee', abilities: ['spy'], isHero: true, description: '(a.k.a Avallac\'h)' },
-    { id: 'olgierd_von_everec', name: 'Olgierd von Everec', type: 'Unit', power: 6, faction: 'Neutral', row: ['melee', 'ranged'], abilities: ['agile', 'morale_boost'], isHero: false, description: '' },
+    { id: 'olgierd_von_everec', name: 'Olgierd von Everec', type: 'Unit', power: 6, faction: 'Neutral', row: ['melee', 'ranged'], abilities: ['agile', 'morale_boost'], isHero: false, description: 'At least you now know I dont easily lose my head' },
     { id: 'triss_merigold', name: 'Triss Merigold', type: 'Unit', power: 7, faction: 'Neutral', row: 'melee', abilities: [], isHero: true, description: 'Nie potrafię być dla ciebie tylko przyjaciółką, Geralt.' },
     { id: 'vesemir', name: 'Vesemir', type: 'Unit', power: 6, faction: 'Neutral', row: 'melee', abilities: [], isHero: false, description: 'Najstarszy i najbardziej doświadczony wiedźmin z Kaer Morhen.' },
     { id: 'villentretenmerth', name: 'Villentretenmerth', type: 'Unit', power: 7, faction: 'Neutral', row: 'melee', abilities: ['scorch_row'], isHero: false, description: 'Złoty smok, rzadszy niż diament.' },
@@ -139,13 +139,27 @@ const allCards = [
     // ==================================================================
     // === KARTY SPECJALNE
     // ==================================================================
-    { id: 'scorch', name: 'Pożoga', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'], description: 'Zniszcz najsilniejszą/najsilniejsze karty na polu bitwy.' },
-    { id: 'commanders_horn', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'], description: 'Podwaja siłę wszystkich jednostek w rzędzie. Działa jednorazowo.' },
-    { id: 'decoy', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'], description: 'Zamień na jednostkę na polu bitwy, aby wróciła na rękę.' },
-    { id: 'biting_frost', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki w zwarciu na 1.' },
-    { id: 'impenetrable_fog', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki dystansowej na 1.' },
-    { id: 'torrential_rain', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'], effectClass: 'rain-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie oblężniczym na 1.' },
-    { id: 'clear_weather', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null, description: 'Usuwa wszystkie efekty pogodowe.' },
+    { id: 'scorch_1', name: 'Pożoga', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'], description: 'Zniszcz najsilniejszą/najsilniejsze karty na polu bitwy.' },
+    { id: 'scorch_2', name: 'Pożoga', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'], description: 'Zniszcz najsilniejszą/najsilniejsze karty na polu bitwy.' },
+    { id: 'scorch_3', name: 'Pożoga', type: 'Special', faction: 'Neutral', abilities: ['scorch_strongest'], description: 'Zniszcz najsilniejszą/najsilniejsze karty na polu bitwy.' },
+    { id: 'commanders_horn_1', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'], description: 'Podwaja siłę wszystkich jednostek w rzędzie. Działa jednorazowo.' },
+    { id: 'commanders_horn_2', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'], description: 'Podwaja siłę wszystkich jednostek w rzędzie. Działa jednorazowo.' },
+    { id: 'commanders_horn_3', name: 'Róg Dowódcy', type: 'Special', faction: 'Neutral', abilities: ['horn'], description: 'Podwaja siłę wszystkich jednostek w rzędzie. Działa jednorazowo.' },
+    { id: 'decoy_1', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'], description: 'Zamień na jednostkę na polu bitwy, aby wróciła na rękę.' },
+    { id: 'decoy_2', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'], description: 'Zamień na jednostkę na polu bitwy, aby wróciła na rękę.' },
+    { id: 'decoy_3', name: 'Wabik', type: 'Special', faction: 'Neutral', abilities: ['decoy'], description: 'Zamień na jednostkę na polu bitwy, aby wróciła na rękę.' },
+    { id: 'biting_frost_1', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki w zwarciu na 1.' },
+    { id: 'biting_frost_2', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki w zwarciu na 1.' },
+    { id: 'biting_frost_3', name: 'Trzaskający Mróz', type: 'Weather', faction: 'Neutral', rowAffected: ['melee'], effectClass: 'frost-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki w zwarciu na 1.' },
+    { id: 'impenetrable_fog_1', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki dystansowej na 1.' },
+    { id: 'impenetrable_fog_2', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki dystansowej na 1.' },
+    { id: 'impenetrable_fog_3', name: 'Gęsta Mgła', type: 'Weather', faction: 'Neutral', rowAffected: ['ranged'], effectClass: 'fog-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie walki dystansowej na 1.' },
+    { id: 'torrential_rain_1', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'], effectClass: 'rain-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie oblężniczym na 1.' },
+    { id: 'torrential_rain_2', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'], effectClass: 'rain-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie oblężniczym na 1.' },
+    { id: 'torrential_rain_3', name: 'Ulewny Deszcz', type: 'Weather', faction: 'Neutral', rowAffected: ['siege'], effectClass: 'rain-effect', description: 'Ustawia siłę wszystkich jednostek w rzędzie oblężniczym na 1.' },
+    { id: 'clear_weather_1', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null, description: 'Usuwa wszystkie efekty pogodowe.' },
+    { id: 'clear_weather_2', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null, description: 'Usuwa wszystkie efekty pogodowe.' },
+    { id: 'clear_weather_3', name: 'Czyste Niebo', type: 'Weather', faction: 'Neutral', rowAffected: null, description: 'Usuwa wszystkie efekty pogodowe.' },
 
     // ==================================================================
     // === KRÓLESTWA PÓŁNOCY (NORTHERN REALMS)
