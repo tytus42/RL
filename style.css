@@ -1,11 +1,11 @@
 @font-face {
-  font-family: 'GothicFont';
-  src: url('Gothic_II_NK.ttf') format('truetype');
+    font-family: 'GothicFont';
+    src: url('Gothic_II_NK.ttf') format('truetype');
 }
 
 /* --- General Body & Container Styles --- */
 body {
-    font-family: 'GothicFont', serif;
+    font-family: 'GothicFont', serif; /* ZMIANA: Przywrócenie oryginalnej czcionki */
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -45,7 +45,7 @@ h3 { font-size: 1.1em; margin-bottom: 8px; color: #d1c8b7; }
 
 /* --- Buttons & Selects --- */
 button, select {
-    font-family: 'GothicFont', sans-serif;
+    font-family: 'GothicFont', sans-serif; /* ZMIANA: Przywrócenie oryginalnej czcionki */
 }
 button { background-color: #b98e59; color: #fff; border: 1px solid #d4af81; padding: 12px 25px; border-radius: 5px; font-size: 1.1em; cursor: pointer; transition: all 0.3s ease; margin: 5px; text-shadow: 1px 1px 2px #000; }
 button:hover { background-color: #c99e69; border-color: #fff; transform: translateY(-2px); }
@@ -129,19 +129,20 @@ button:disabled { background-color: #555; color: #bbb; cursor: not-allowed; tran
 .card-name { font-size: 0.7em; font-weight: bold; line-height: 1.2; color: #fff; text-shadow: 1px 1px 2px #000; }
 .card-description { font-size: 0.6em; color: #ddd; font-style: italic; margin-bottom: 2px; }
 
-/* === POCZĄTEK POPRAWKI === */
-/* Style frakcji */
+/* === ZMIANA: Zaktualizowane style frakcji === */
 .faction-neutral { background: linear-gradient(145deg, #a47b4a, #5a3a1a); }
-.faction-monsters { background: linear-gradient(145deg, #c0392b, #96281b); }
-.faction-northern-realms { background: linear-gradient(145deg, #3498db, #2980b9); }
-.faction-scoia-tael { background: linear-gradient(145deg, #27ae60, #1e8449); }
-.faction-nilfgaardian-empire { background: linear-gradient(145deg, #2c3e50, #000000); }
-.faction-skellige { background: linear-gradient(145deg, #8e44ad, #5e3370); }
+.faction-khorinis { background: linear-gradient(145deg, #3498db, #2980b9); }
+.faction-potwory { background: linear-gradient(145deg, #c0392b, #96281b); }
+.faction-najemnicy { background: linear-gradient(145deg, #7f8c8d, #34495e); }
+.faction-klasztor { background: linear-gradient(145deg, #f1c40f, #f39c12); }
+.faction-orkowie { background: linear-gradient(145deg, #27ae60, #1e8449); }
+.faction-bandyci { background: linear-gradient(145deg, #e67e22, #d35400); }
+.faction-nieumarli { background: linear-gradient(145deg, #8e44ad, #5e3370); }
 
 .card-left-column { background-color: rgba(0,0,0,0.3); }
 .card-right-column { background-color: rgba(0,0,0,0.1); }
 .card-name { color: #fff; }
-/* === KONIEC POPRAWKI === */
+/* === KONIEC ZMIANY === */
 
 /* Specjalne style dla kart */
 .hero-card { border: 2px solid #ffd700; }
