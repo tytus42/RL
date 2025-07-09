@@ -32,8 +32,11 @@ let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
 let cardToResurrectWithAgile = null;
-let isMonsterAbilityActive = false; // NOWY STAN
-let monsterPlayerToChoose = null; // NOWY STAN
+let isMonsterAbilityActive = false;
+let monsterPlayerToChoose = null;
+let isSkelligeAbilityActive = false; // NOWY STAN
+let skelligePlayerToChoose = null; // NOWY STAN
+let skelligeCardsToKeep = []; // NOWY STAN
 
 // === MAPY IKON ===
 const abilityIconMap = {
@@ -327,7 +330,7 @@ function populateAvailableCardsSelect(player) {
 function populateGraveyardSelect(player) {
     const select = player.domElements.graveyardSelect;
     select.innerHTML = `<option value="">-- Cmentarz --</option>`;
-    if (isMedicModeActive && player === activePlayer) {
+    if ((isMedicModeActive || isSkelligeAbilityActive) && player === activePlayer) {
         select.disabled = false;
         select.innerHTML = '<option value="">-- Wybierz cel --</option>';
         player.graveyard.forEach(card => {
@@ -775,7 +778,7 @@ function activateLeaderAbility(player) {
 }
 
 // ==================================================================
-// === ZMODYFIKOWANE FUNKCJE DLA ZDOLNOŚCI POTWORÓW ===
+// === ZMODYFIKOWANE FUNKCJE DLA ZDOLNOŚCI FRAKCJI ===
 // ==================================================================
 function endRound() {
     addLogEntry("Runda zakończona!");
@@ -816,9 +819,19 @@ function endRound() {
         monsterPlayerToChoose = monsterPlayer;
         addLogEntry(`${monsterPlayer.name}, wybierz kartę, która ma zostać na następną rundę.`);
         activateMonsterAbilitySelection(monsterPlayer);
-    } else {
-        proceedToNextRound();
+        return;
     }
+    
+    const skelligePlayer = [players.player1, players.player2].find(p => p.faction === 'Skellige');
+    if (roundNumber === 2 && skelligePlayer && skelligePlayer.graveyard.some(c => !c.isHero && !c.isToken)) {
+        isSkelligeAbilityActive = true;
+        skelligePlayerToChoose = skelligePlayer;
+        addLogEntry(`${skelligePlayer.name}, wybierz do 2 kart z cmentarza, które wrócą w następnej rundzie.`);
+        activateSkelligeAbilitySelection(skelligePlayer);
+        return;
+    }
+
+    proceedToNextRound();
 }
 
 function activateMonsterAbilitySelection(player) {
@@ -846,6 +859,33 @@ function executeMonsterAbility(player, cardToKeep) {
     proceedToNextRound();
 }
 
+function activateSkelligeAbilitySelection(player) {
+    activePlayer = player; // Ustaw gracza Skellige jako aktywnego na czas wyboru
+    updateAllControls();
+    player.domElements.graveyardSelect.disabled = false;
+    addLogEntry(`Wybrano ${skelligeCardsToKeep.length}/2 kart.`);
+}
+
+function executeSkelligeAbility(player, cardId) {
+    if (skelligeCardsToKeep.length >= 2) return;
+
+    const cardIndex = player.graveyard.findIndex(c => c.id === cardId);
+    if (cardIndex > -1) {
+        const [selectedCard] = player.graveyard.splice(cardIndex, 1);
+        skelligeCardsToKeep.push(selectedCard);
+        addLogEntry(`${player.name} wybrał kartę: ${selectedCard.name}. Wybrano ${skelligeCardsToKeep.length}/2.`);
+        
+        if (skelligeCardsToKeep.length === 2) {
+            isSkelligeAbilityActive = false;
+            skelligePlayerToChoose = null;
+            proceedToNextRound();
+        } else {
+            populateGraveyardSelect(player); // Odśwież listę, aby usunąć wybraną kartę
+        }
+    }
+}
+
+
 function proceedToNextRound() {
     [players.player1, players.player2].forEach(p => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
@@ -872,6 +912,21 @@ function proceedToNextRound() {
         if (p.commander) p.commander.activatedThisRound = false;
     });
     
+    // Przywołaj karty Skellige na początku rundy 3
+    if (roundNumber === 2 && skelligeCardsToKeep.length > 0) {
+        const skelligePlayer = [players.player1, players.player2].find(p => p.faction === 'Skellige');
+        if (skelligePlayer) {
+            addLogEntry(`${skelligePlayer.name} przywołuje wojowników zza grobu!`);
+            skelligeCardsToKeep.forEach(card => {
+                const cardInstance = { ...card, instanceId: Date.now() + Math.random() };
+                const targetRow = Array.isArray(card.row) ? card.row[0] : card.row; // Uproszczone umieszczenie
+                skelligePlayer.board[targetRow].push(cardInstance);
+                addLogEntry(`- ${card.name} powraca na pole bitwy!`);
+            });
+        }
+    }
+    skelligeCardsToKeep = [];
+
     weatherCardsOnBoard = []; 
     passedPlayers = [];
     roundNumber++; 
@@ -952,7 +1007,9 @@ function setupEventListeners() {
         updatePlayerControlsVisibility(players.player1); 
     });
     players.player1.domElements.graveyardSelect.addEventListener('change', (event) => { 
-        if (isMedicModeActive && activePlayer === players.player1) { 
+        if (isSkelligeAbilityActive && skelligePlayerToChoose === players.player1) {
+            executeSkelligeAbility(players.player1, event.target.value);
+        } else if (isMedicModeActive && activePlayer === players.player1) { 
             executeResurrection(players.player1, event.target.value); 
         }
     });
@@ -977,7 +1034,9 @@ function setupEventListeners() {
         updatePlayerControlsVisibility(players.player2); 
     });
     players.player2.domElements.graveyardSelect.addEventListener('change', (event) => { 
-        if (isMedicModeActive && activePlayer === players.player2) { 
+        if (isSkelligeAbilityActive && skelligePlayerToChoose === players.player2) {
+            executeSkelligeAbility(players.player2, event.target.value);
+        } else if (isMedicModeActive && activePlayer === players.player2) { 
             executeResurrection(players.player2, event.target.value); 
         }
     });
