@@ -7,23 +7,23 @@ const allCards = [
         name: 'Foltest',
         type: 'Leader',
         faction: 'Northern Realms',
-        abilities: [],
-        description: 'Zniszcz najsilniejszą/najsilniejsze jednostki oblężnicze wroga, jeśli suma ich siły wynosi 10 lub więcej.'
+        abilities: ['leader_fog'],
+        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
     },
     {
         id: 'foltest_silver',
         name: 'Foltest',
         type: 'Leader',
         faction: 'Northern Realms',
-        abilities: [],
-        description: 'Wybierz kartę mgły z talii i zagraj ją natychmiast.'
+        abilities: ['leader_clear_weather'],
+        description: 'Anuluje wszystkie efekty pogodowe.'
     },
     {
         id: 'foltest_gold',
         name: 'Foltest',
         type: 'Leader',
         faction: 'Northern Realms',
-        abilities: [],
+        abilities: ['leader_siege_master'],
         description: 'Podwaja siłę wszystkich twoich jednostek oblężniczych.'
     },
     {
@@ -31,7 +31,7 @@ const allCards = [
         name: 'Eredin',
         type: 'Leader',
         faction: 'Monsters',
-        abilities: [],
+        abilities: ['leader_weather_choice'],
         description: 'Wybierz dowolną kartę pogody z talii i zagraj ją natychmiast.'
     },
     {
@@ -39,7 +39,7 @@ const allCards = [
         name: 'Eredin',
         type: 'Leader',
         faction: 'Monsters',
-        abilities: [],
+        abilities: ['leader_discard_and_draw'],
         description: 'Odrzuć 2 karty i dobierz 1 nową.'
     },
     {
@@ -47,7 +47,7 @@ const allCards = [
         name: 'Eredin',
         type: 'Leader',
         faction: 'Monsters',
-        abilities: [],
+        abilities: ['leader_melee_boost'],
         description: 'Podwaja siłę wszystkich twoich jednostek walczących w zwarciu.'
     },
     {
@@ -55,7 +55,7 @@ const allCards = [
         name: 'Francesca Findabair',
         type: 'Leader',
         faction: 'Scoia\'tael',
-        abilities: [],
+        abilities: ['leader_move_agile'],
         description: 'Przesuń jednostki z rzędu oblężniczego do rzędu dystansowego.'
     },
     {
@@ -63,7 +63,7 @@ const allCards = [
         name: 'Francesca Findabair',
         type: 'Leader',
         faction: 'Scoia\'tael',
-        abilities: [],
+        abilities: ['leader_scorch_ranged'],
         description: 'Zniszcz najsilniejszą/najsilniejsze jednostki dystansowe wroga, jeśli suma ich siły wynosi 10 lub więcej.'
     },
     {
@@ -71,7 +71,7 @@ const allCards = [
         name: 'Francesca Findabair',
         type: 'Leader',
         faction: 'Scoia\'tael',
-        abilities: [],
+        abilities: ['leader_ranged_boost'],
         description: 'Podwaja siłę wszystkich twoich jednostek dystansowych.'
     },
     {
@@ -79,7 +79,7 @@ const allCards = [
         name: 'Emhyr var Emreis',
         type: 'Leader',
         faction: 'Nilfgaardian Empire',
-        abilities: [],
+        abilities: ['leader_draw_from_opponent_graveyard'],
         description: 'Dobierz kartę z cmentarza przeciwnika.'
     },
     {
@@ -87,7 +87,7 @@ const allCards = [
         name: 'Emhyr var Emreis',
         type: 'Leader',
         faction: 'Nilfgaardian Empire',
-        abilities: [],
+        abilities: ['leader_cancel_opponent_leader'],
         description: 'Anuluj zdolność dowódcy przeciwnika.'
     },
     {
@@ -95,7 +95,7 @@ const allCards = [
         name: 'Emhyr var Emreis',
         type: 'Leader',
         faction: 'Nilfgaardian Empire',
-        abilities: [],
+        abilities: ['leader_view_opponent_hand'],
         description: 'Wybierz losową jednostkę z ręki przeciwnika.'
     },
     {
@@ -103,7 +103,7 @@ const allCards = [
         name: 'Crach an Craite',
         type: 'Leader',
         faction: 'Skellige',
-        abilities: [],
+        abilities: ['leader_shuffle_graveyard'],
         description: 'Przetasuj do 2 kart z cmentarza z powrotem do talii.'
     },
     {
@@ -111,7 +111,7 @@ const allCards = [
         name: 'Crach an Craite',
         type: 'Leader',
         faction: 'Skellige',
-        abilities: [],
+        abilities: ['leader_destroy_weathered'],
         description: 'Niszczy jednostki osłabione przez pogodę.'
     },
 
