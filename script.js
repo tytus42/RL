@@ -7,8 +7,8 @@ const historyLog = document.getElementById('history-log');
 
 // Obiekty graczy
 let players = {
-    player1: { name: 'Gracz 1', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } } },
-    player2: { name: 'Gracz 2', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } } }
+    player1: { name: 'Gracz 1', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false },
+    player2: { name: 'Gracz 2', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false }
 };
 Object.keys(players).forEach(pKey => {
     const pNum = pKey.slice(-1);
@@ -18,6 +18,7 @@ Object.keys(players).forEach(pKey => {
         activateLeaderButton: document.getElementById(`activateLeader${pNum}`), cardSelect: document.getElementById(`player${pNum}-card-select`),
         rowSelect: document.getElementById(`player${pNum}-row-select`), playCardButton: document.getElementById(`playCardButton${pNum}`),
         graveyardSelect: document.getElementById(`player${pNum}-graveyard-select`), passRoundButton: document.getElementById(`passRoundButton${pNum}`),
+        factionAbilityButton: document.getElementById(`factionAbilityButton${pNum}`),
         meleeRow: document.getElementById(`player${pNum}-melee-row`), rangedRow: document.getElementById(`player${pNum}-ranged-row`),
         siegeRow: document.getElementById(`player${pNum}-siege-row`), meleeHorn: document.getElementById(`player${pNum}-melee-horn`),
         rangedHorn: document.getElementById(`player${pNum}-ranged-horn`), siegeHorn: document.getElementById(`player${pNum}-siege-horn`),
@@ -28,15 +29,18 @@ Object.keys(players).forEach(pKey => {
 
 // Zmienne stanu gry
 let activePlayer = null, roundNumber = 1, passedPlayers = [], weatherCardsOnBoard = [], isFirstMoveOfRound = true;
+let lastRoundLoser = null;
 let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
 let cardToResurrectWithAgile = null;
 let isMonsterAbilityActive = false;
 let monsterPlayerToChoose = null;
-let isSkelligeAbilityActive = false;
-let skelligePlayerToChoose = null;
-let skelligeCardsToKeep = [];
+let isOrcsAbilityActive = false;
+let orcsPlayerToChoose = null;
+let orcsCardsToKeep = [];
+let isBanditsAbilityActive = false;
+let banditsPlayerToChoose = null;
 
 // === MAPY IKON ===
 const abilityIconMap = {
@@ -181,7 +185,7 @@ function applyAllEffects() {
             player.domElements[rowType + 'Row'].classList.remove('frost-effect', 'fog-effect', 'rain-effect', 'fear-effect');
             let isHornActive = !!player.board.horns[rowType];
             
-            if (player.commander && player.commander.abilities && player.commander.abilities.includes('leader_siege_master')) {
+            if (player.commander && player.commander.abilities && player.commander.abilities.includes('leader_siege_boost')) {
                 if(rowType === 'siege') isHornActive = true;
             }
             if (player.commander && player.commander.abilities && player.commander.abilities.includes('leader_melee_boost')) {
@@ -341,7 +345,19 @@ function populateAvailableCardsSelect(player) {
 function populateGraveyardSelect(player) {
     const select = player.domElements.graveyardSelect;
     select.innerHTML = `<option value="">-- Cmentarz --</option>`;
-    if ((isMedicModeActive || isSkelligeAbilityActive) && activePlayer === player) {
+    
+    if (isBanditsAbilityActive && player === banditsPlayerToChoose) {
+        const opponent = (player === players.player1) ? players.player2 : players.player1;
+        select.disabled = false;
+        select.innerHTML = '<option value="">-- Wybierz łup --</option>';
+        opponent.graveyard.forEach(card => {
+            const option = new Option(`${card.name} (${card.type}, ${card.power})`, card.id);
+            if (card.isHero) { 
+                option.disabled = true;
+            }
+            select.add(option);
+        });
+    } else if ((isMedicModeActive || isOrcsAbilityActive) && activePlayer === player) {
         select.disabled = false;
         select.innerHTML = '<option value="">-- Wybierz cel --</option>';
         player.graveyard.forEach(card => {
@@ -539,7 +555,12 @@ function startGame() {
 }
 
 function updatePlayerControlsVisibility(player) {
-    const { cardSelect, rowSelect, playCardButton, passRoundButton, activateLeaderButton, graveyardSelect } = player.domElements;
+    const { cardSelect, rowSelect, playCardButton, passRoundButton, activateLeaderButton, graveyardSelect, factionAbilityButton } = player.domElements;
+
+    passRoundButton.textContent = 'Pasuj';
+    factionAbilityButton.style.display = 'none';
+    factionAbilityButton.disabled = true;
+    factionAbilityButton.title = '';
 
     playCardButton.style.display = 'inline-block';
     playCardButton.disabled = true;
@@ -565,13 +586,18 @@ function updatePlayerControlsVisibility(player) {
         return;
     }
 
-    if ((isMedicModeActive || isSkelligeAbilityActive) && player === activePlayer) {
+    if ((isMedicModeActive || isOrcsAbilityActive || isBanditsAbilityActive) && player === activePlayer) {
         cardSelect.disabled = true;
         rowSelect.disabled = true;
         playCardButton.style.display = 'none';
-        passRoundButton.disabled = true;
+        passRoundButton.disabled = true; 
         activateLeaderButton.disabled = true;
         populateGraveyardSelect(player);
+        
+        if (isOrcsAbilityActive && player === orcsPlayerToChoose) {
+            passRoundButton.textContent = 'Zatwierdź wybór';
+            passRoundButton.disabled = false;
+        }
         return;
     }
 
@@ -587,6 +613,39 @@ function updatePlayerControlsVisibility(player) {
     passRoundButton.disabled = !isPlayerTurn;
     activateLeaderButton.disabled = !isPlayerTurn || (player.commander && player.commander.activatedThisRound);
     
+    // ZMIANA: Dodano opisy dla nowych frakcji
+    switch(player.faction) {
+        case 'Klasztor':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.disabled = !isPlayerTurn || player.factionAbilityUsed;
+            factionAbilityButton.title = 'Pomiń turę bez pasowania (raz na grę).';
+            break;
+        case 'Khorinis':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Wygrywasz rundę w przypadku remisu.';
+            break;
+        case 'Potwory':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie, jedna jednostka zostaje na planszy.';
+            break;
+        case 'Orkowie':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Na początku 3 rundy, 3 jednostki wracają z cmentarza.';
+            break;
+        case 'Bandyci':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie dobierz 1 kartę z cmentarza wroga.';
+            break;
+        case 'Najemnicy':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Możliwość wymiany jednej karty więcej na starcie gry.';
+            break;
+        case 'Nieumarli':
+            factionAbilityButton.style.display = 'inline-block';
+            factionAbilityButton.title = 'Zdolność pasywna: Dobór 1 losowej karty z talii po wygranej rundzie.';
+            break;
+    }
+
     const selectedOption = cardSelect.options[cardSelect.selectedIndex];
     if (!selectedOption || !selectedOption.value || !isPlayerTurn) return;
 
@@ -611,7 +670,7 @@ function updatePlayerControlsVisibility(player) {
 
 function handlePlayerAction(player, action, isFollowUpAction = false) {
     if (!isFollowUpAction) {
-        if (isMonsterAbilityActive || isSkelligeAbilityActive) return;
+        if (isMonsterAbilityActive || isOrcsAbilityActive || isBanditsAbilityActive) return;
         if (isMedicModeActive) { action(); return; }
         if (isDecoyModeActive) { action(); return; }
         if (!isFirstMoveOfRound && (player !== activePlayer || passedPlayers.includes(player))) { return; }
@@ -623,7 +682,7 @@ function handlePlayerAction(player, action, isFollowUpAction = false) {
     if (!actionSucceeded) { return updateAllControls(); }
     if (isFirstMoveOfRound) { isFirstMoveOfRound = false; activePlayer = player; }
     
-    if (isMedicModeActive || isDecoyModeActive) { return updateAllControls(); }
+    if (isMedicModeActive || isDecoyModeActive || isOrcsAbilityActive || isBanditsAbilityActive) { return updateAllControls(); }
 
     if (passedPlayers.length === 2) { return; }
     const opponent = (player === players.player1) ? players.player2 : players.player1;
@@ -769,6 +828,11 @@ function playCard(player) {
 }
 
 function passRound(player) {
+    if (isOrcsAbilityActive && player === orcsPlayerToChoose) {
+        finalizeOrcsSelection(player);
+        return;
+    }
+
     handlePlayerAction(player, () => {
         if (passedPlayers.includes(player)) return false;
         passedPlayers.push(player); addLogEntry(`${player.name} spasował.`);
@@ -790,10 +854,9 @@ function activateLeaderAbility(player) {
                 weatherCardsOnBoard = [];
                 addLogEntry('Wszystkie efekty pogodowe zostały usunięte.');
                 break;
-            // Inne aktywne zdolności można dodać tutaj
             default:
                 alert(`Zdolność dowódcy "${ability}" nie została jeszcze zaimplementowana.`);
-                return false; // Zdolność nie została użyta
+                return false;
         }
 
         player.commander.activatedThisRound = true;
@@ -813,20 +876,24 @@ function endRound() {
         const loser = (winner === players.player1) ? players.player2 : players.player1;
         loser.crystalCount--;
         addLogEntry(`${winner.name} wygrywa rundę!`);
+        lastRoundLoser = loser;
     } else {
-        const p1IsNilfgaard = players.player1.faction === 'Nilfgaardian Empire';
-        const p2IsNilfgaard = players.player2.faction === 'Nilfgaardian Empire';
+        const p1IsKhorinis = players.player1.faction === 'Khorinis';
+        const p2IsKhorinis = players.player2.faction === 'Khorinis';
 
-        if (p1IsNilfgaard && !p2IsNilfgaard) {
-            addLogEntry(`Remis! ${players.player1.name} wygrywa dzięki zdolności frakcji Nilfgaard!`);
+        if (p1IsKhorinis && !p2IsKhorinis) {
+            addLogEntry(`Remis! ${players.player1.name} wygrywa dzięki zdolności frakcji Khorinis!`);
             players.player2.crystalCount--;
-        } else if (p2IsNilfgaard && !p1IsNilfgaard) {
-            addLogEntry(`Remis! ${players.player2.name} wygrywa dzięki zdolności frakcji Nilfgaard!`);
+            lastRoundLoser = players.player2;
+        } else if (p2IsKhorinis && !p1IsKhorinis) {
+            addLogEntry(`Remis! ${players.player2.name} wygrywa dzięki zdolności frakcji Khorinis!`);
             players.player1.crystalCount--;
+            lastRoundLoser = players.player1;
         } else {
             addLogEntry(`Remis!`);
             players.player1.crystalCount--;
             players.player2.crystalCount--;
+            lastRoundLoser = null;
         }
     }
     
@@ -899,13 +966,16 @@ function setupEventListeners() {
     players.player1.domElements.playCardButton.addEventListener('click', () => playCard(players.player1));
     players.player1.domElements.passRoundButton.addEventListener('click', () => passRound(players.player1));
     players.player1.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player1));
+    players.player1.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player1));
     players.player1.domElements.cardSelect.addEventListener('change', () => { 
         deactivateDecoyMode(); 
         updatePlayerControlsVisibility(players.player1); 
     });
     players.player1.domElements.graveyardSelect.addEventListener('change', (event) => { 
-        if (isSkelligeAbilityActive && skelligePlayerToChoose === players.player1) {
-            executeSkelligeAbility(players.player1, event.target.value);
+        if (isBanditsAbilityActive && banditsPlayerToChoose === players.player1) {
+            finalizeBanditsSelection(players.player1, event.target.value);
+        } else if (isOrcsAbilityActive && orcsPlayerToChoose === players.player1) {
+            executeOrcsAbility(players.player1, event.target.value);
         } else if (isMedicModeActive && activePlayer === players.player1) { 
             executeResurrection(players.player1, event.target.value); 
         }
@@ -926,13 +996,16 @@ function setupEventListeners() {
     players.player2.domElements.playCardButton.addEventListener('click', () => playCard(players.player2));
     players.player2.domElements.passRoundButton.addEventListener('click', () => passRound(players.player2));
     players.player2.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player2));
+    players.player2.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player2));
     players.player2.domElements.cardSelect.addEventListener('change', () => { 
         deactivateDecoyMode(); 
         updatePlayerControlsVisibility(players.player2); 
     });
     players.player2.domElements.graveyardSelect.addEventListener('change', (event) => { 
-        if (isSkelligeAbilityActive && skelligePlayerToChoose === players.player2) {
-            executeSkelligeAbility(players.player2, event.target.value);
+        if (isBanditsAbilityActive && banditsPlayerToChoose === players.player2) {
+            finalizeBanditsSelection(players.player2, event.target.value);
+        } else if (isOrcsAbilityActive && orcsPlayerToChoose === players.player2) {
+            executeOrcsAbility(players.player2, event.target.value);
         } else if (isMedicModeActive && activePlayer === players.player2) { 
             executeResurrection(players.player2, event.target.value); 
         }
@@ -950,7 +1023,21 @@ function setupEventListeners() {
     });
 }
 
-// === DODANE FUNKCJE DLA ZDOLNOŚCI FRAKCJI ===
+// ==================================================================
+// === ZDOLNOŚCI FRAKCJI
+// ==================================================================
+
+function activateFactionAbility(player) {
+    if (player.faction === 'Klasztor' && !player.factionAbilityUsed) {
+        handlePlayerAction(player, () => {
+            addLogEntry(`${player.name} używa medytacji i przeczekuje turę.`);
+            player.factionAbilityUsed = true;
+            switchActivePlayer();
+            return false;
+        }, true);
+    }
+}
+
 function activateMonsterAbilitySelection(player) {
     updateAllControls();
     ['melee', 'ranged', 'siege'].forEach(rowKey => {
@@ -976,51 +1063,72 @@ function executeMonsterAbility(player, cardToKeep) {
     proceedToNextRound();
 }
 
-function activateSkelligeAbilitySelection(player) {
-    activePlayer = player;
-    updateAllControls();
-    player.domElements.graveyardSelect.disabled = false;
-    addLogEntry(`Wybrano ${skelligeCardsToKeep.length}/2 kart.`);
+function finalizeOrcsSelection(player) {
+    if (!isOrcsAbilityActive || player !== orcsPlayerToChoose) return;
+
+    addLogEntry(`${player.name} zakończył wybór wojowników.`);
+
+    if (orcsCardsToKeep.length > 0) {
+        addLogEntry(`${player.name} wzywa posiłki!`);
+        orcsCardsToKeep.forEach(card => {
+            const cardInstance = { ...card, instanceId: Date.now() + Math.random() };
+            const targetRow = Array.isArray(card.row) ? card.row[0] : card.row;
+            player.board[targetRow].push(cardInstance);
+            addLogEntry(`- ${card.name} dołącza do armii!`);
+        });
+    }
+
+    isOrcsAbilityActive = false;
+    orcsPlayerToChoose = null;
+    orcsCardsToKeep = [];
+    
+    startNewRoundSequence();
 }
 
-function executeSkelligeAbility(player, cardId) {
-    if (skelligeCardsToKeep.length >= 2) return;
+
+function executeOrcsAbility(player, cardId) {
+    if (orcsCardsToKeep.length >= 3) return;
 
     const cardIndex = player.graveyard.findIndex(c => c.id === cardId);
     if (cardIndex > -1) {
         const [selectedCard] = player.graveyard.splice(cardIndex, 1);
-        skelligeCardsToKeep.push(selectedCard);
-        addLogEntry(`${player.name} wybrał kartę: ${selectedCard.name}. Wybrano ${skelligeCardsToKeep.length}/2.`);
+        orcsCardsToKeep.push(selectedCard);
+        addLogEntry(`${player.name} wybrał wojownika: ${selectedCard.name}. Wybrano ${orcsCardsToKeep.length}/3.`);
         
-        if (skelligeCardsToKeep.length === 2) {
-            isSkelligeAbilityActive = false;
-            skelligePlayerToChoose = null;
-            activePlayer = null;
-            triggerEndOfRoundAbilities();
+        if (orcsCardsToKeep.length === 3) {
+            finalizeOrcsSelection(player);
         } else {
-            populateGraveyardSelect(player);
+            updateAllControls();
         }
     }
 }
 
-function triggerEndOfRoundAbilities() {
-    const skelligePlayer = [players.player1, players.player2].find(p => p.faction === 'Skellige');
-    if (roundNumber === 2 && skelligePlayer && skelligePlayer.graveyard.some(c => !c.isHero && !c.isToken) && skelligeCardsToKeep.length < 2) {
-        isSkelligeAbilityActive = true;
-        skelligePlayerToChoose = skelligePlayer;
-        activePlayer = skelligePlayer;
-        addLogEntry(`${skelligePlayer.name}, wybierz do 2 kart z cmentarza, które wrócą w następnej rundzie.`);
-        updateAllControls();
-        return;
+function finalizeBanditsSelection(player, cardId) {
+    if (!isBanditsAbilityActive || player !== banditsPlayerToChoose) return;
+
+    const opponent = (player === players.player1) ? players.player2 : players.player1;
+    const cardIndex = opponent.graveyard.findIndex(c => c.id === cardId);
+    if (cardIndex > -1) {
+        const [stolenCard] = opponent.graveyard.splice(cardIndex, 1);
+        player.availableCards.push(stolenCard);
+        addLogEntry(`${player.name} kradnie kartę ${stolenCard.name} z cmentarza przeciwnika!`);
     }
 
-    const monsterPlayer = [players.player1, players.player2].find(p => p.faction === 'Monsters');
+    isBanditsAbilityActive = false;
+    banditsPlayerToChoose = null;
+    lastRoundLoser = null;
+
+    startNewRoundSequence();
+}
+
+function triggerEndOfRoundAbilities() {
+    const monsterPlayer = [players.player1, players.player2].find(p => p.faction === 'Potwory');
     const hasValidMonsterCards = monsterPlayer && [...monsterPlayer.board.melee, ...monsterPlayer.board.ranged, ...monsterPlayer.board.siege].some(c => !c.isHero && !c.isToken);
 
-    if (hasValidMonsterCards) {
+    if (hasValidMonsterCards && lastRoundLoser === monsterPlayer) {
         isMonsterAbilityActive = true;
         monsterPlayerToChoose = monsterPlayer;
-        addLogEntry(`${monsterPlayer.name}, wybierz kartę, która ma zostać na następną rundę.`);
+        addLogEntry(`${monsterPlayer.name}, twoja zdolność frakcyjna pozwala ci zachować jedną jednostkę. Wybierz którą.`);
         activateMonsterAbilitySelection(monsterPlayer);
         return;
     }
@@ -1030,6 +1138,11 @@ function triggerEndOfRoundAbilities() {
 
 function proceedToNextRound() {
     [players.player1, players.player2].forEach(p => {
+        // ZMIANA: Zdolność Klasztoru jest jednorazowa na grę, więc nie jest resetowana.
+        if (p.faction !== 'Klasztor') {
+             p.factionAbilityUsed = false;
+        }
+
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             const newRow = [];
             const cardsInRow = [...p.board[rowType]];
@@ -1054,27 +1167,41 @@ function proceedToNextRound() {
         if (p.commander) p.commander.activatedThisRound = false;
     });
     
-    if (roundNumber === 2 && skelligeCardsToKeep.length > 0) {
-        const skelligePlayer = [players.player1, players.player2].find(p => p.faction === 'Skellige');
-        if (skelligePlayer) {
-            addLogEntry(`${skelligePlayer.name} przywołuje wojowników zza grobu!`);
-            skelligeCardsToKeep.forEach(card => {
-                const cardInstance = { ...card, instanceId: Date.now() + Math.random() };
-                const targetRow = Array.isArray(card.row) ? card.row[0] : card.row;
-                skelligePlayer.board[targetRow].push(cardInstance);
-                addLogEntry(`- ${card.name} powraca na pole bitwy!`);
-            });
-        }
-    }
-    skelligeCardsToKeep = [];
-
     weatherCardsOnBoard = []; 
     passedPlayers = [];
     roundNumber++; 
     isFirstMoveOfRound = true; 
     activePlayer = null;
-    addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
+    
+    startNewRoundSequence();
+}
 
+function startNewRoundSequence() {
+    const banditPlayer = lastRoundLoser && lastRoundLoser.faction === 'Bandyci' ? lastRoundLoser : null;
+    const opponent = banditPlayer ? (banditPlayer === players.player1 ? players.player2 : players.player1) : null;
+
+    if (banditPlayer && opponent && opponent.graveyard.some(c => !c.isHero)) {
+        isBanditsAbilityActive = true;
+        banditsPlayerToChoose = banditPlayer;
+        activePlayer = banditPlayer;
+        addLogEntry(`${banditPlayer.name}, twoja zdolność pozwala ci dobrać kartę z cmentarza wroga.`);
+        updateAllControls();
+        return;
+    }
+
+    const orcsPlayer = [players.player1, players.player2].find(p => p.faction === 'Orkowie');
+    if (roundNumber === 3 && orcsPlayer && orcsPlayer.graveyard.some(c => c.type === 'Unit' && !c.isHero && !c.isToken)) {
+        isOrcsAbilityActive = true;
+        orcsPlayerToChoose = orcsPlayer;
+        activePlayer = orcsPlayer;
+        addLogEntry(`Rozpoczyna się Runda 3! ${orcsPlayer.name}, twoja zdolność frakcyjna została aktywowana.`);
+        addLogEntry(`Wybierz do 3 wojowników z cmentarza, którzy dołączą do armii, a następnie zatwierdź wybór.`);
+        updateAllControls();
+        return;
+    }
+
+    lastRoundLoser = null;
+    addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
     updateAllControls();
 }
 
