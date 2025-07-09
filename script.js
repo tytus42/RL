@@ -32,6 +32,8 @@ let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
 let cardToResurrectWithAgile = null;
+let isMonsterAbilityActive = false; // NOWY STAN
+let monsterPlayerToChoose = null; // NOWY STAN
 
 // === MAPY IKON ===
 const abilityIconMap = {
@@ -41,9 +43,9 @@ const abilityIconMap = {
 };
 
 const rowIconMap = {
-    melee: `<svg viewBox="0 0 300 300" fill="currentColor"><path d="M258,2l-16,48L97.06,181.76l-7.23-11.14l-11.68-7.58L210,18L258,2z M101.029,238.26l11.314-11.314l-31.176-48.02 l-48.02-31.176l-11.314,11.314l31.386,31.386l-34.26,37.693c-4.464-0.586-9.138,0.82-12.568,4.249 c-5.858,5.858-5.858,15.355,0,21.213c5.858,5.858,15.355,5.858,21.213,0c3.428-3.428,4.834-8.1,4.25-12.562l37.695-34.262 L101.029,238.26z"/></svg>`,
-    ranged: `<svg viewBox="0 0 512 512" fill="currentColor"><path d="M89.594 18.094l-10.75 10.75.03.03 27.532 333.563-83.03 92.938 33.25 33.25 90.155-80.563 336.19 24.907c.06.062.124.124.186.186l.156-.156h.032v-.03l10.562-10.564c-1.676-1.676-3.122-3.437-4.687-5.156-21.332-25.55-25.416-63.24-35.47-109.125-8.323-37.99-21.225-81.042-53.094-125.03l-38.062 50.81c.005.008-.005.026 0 .032 28.988 36.074 46.027 67.766 59.72 96.25 15.017 31.247 26.122 59 44.467 83.688L165.314 391.5 337.53 237.594l64.376-85.97-41.53-41.53-85.907 64.312L122.81 344.094 98.156 45.25c24.68 18.33 52.425 29.426 83.656 44.438 28.49 13.693 60.2 30.72 96.282 59.718l50.812-38.062c-43.99-31.86-87.04-44.736-125.03-53.063C157.987 48.224 120.3 44.113 94.75 22.78c-1.72-1.564-3.48-3.01-5.156-4.686zm317.03.312c-3.385.028-6.862.406-10.28.97-4.558.75-8.992 1.837-12.813 3.093-3.82 1.254-6.776 2.302-9.717 4.624a7.184 7.184 0 0 0-2.72 6.187l5.032 62.345a7.184 7.184 0 0 0 2.063 4.53l33.656 33.626a7.184 7.184 0 0 0 4.5 2.095l62.344 5.03a7.184 7.184 0 0 0 6.218-2.718c2.335-2.944 3.367-5.895 4.625-9.718 1.26-3.824 2.343-8.255 3.095-12.814.752-4.56 1.18-9.198.875-13.625-.305-4.425-1.012-8.99-4.844-12.81L422.78 23.343c-3.822-3.824-8.384-4.54-12.81-4.844-1.108-.076-2.216-.103-3.345-.094zm.126 14.375c.8-.006 1.563.016 2.25.064 2.404.165 3.74.915 3.72.78l65.655 65.657c-.138-.023.616 1.318.78 3.72.19 2.746-.062 6.526-.686 10.313-.626 3.786-1.595 7.62-2.595 10.656-.412 1.25-.524 1.272-.938 2.186l-54.78-4.375-29.938-29.936-4.376-54.813c.913-.41.94-.495 2.187-.905 3.037-.998 6.872-1.97 10.658-2.594 2.84-.466 5.662-.728 8.062-.75zm-47.97 120.44l-18.936 31.593-204.5 204.468-8.844-.655-1.188-14.563 201.875-201.906 31.594-18.937z"/></svg>`,
-    siege: `<svg viewBox="0 0 512 512" fill="currentColor"><g><path d="M197.62,238.574v-45.828c-14.75,5.27-31.722,11.334-49.026,17.522L197.62,238.574z"/><path d="M122.679,275.084c0.007,9.827,1.453,19.409,4.319,28.605l49.549-28.605l-49.549-28.605 C124.132,255.675,122.679,265.264,122.679,275.084z"/><path d="M260.854,275.084l13.474,7.776c1.99-0.713,3.627-1.297,4.856-1.732c5.046-1.807,17.963-7.022,35.192-14.112 c-0.577-7.015-1.902-13.881-3.98-20.536L260.854,275.084z"/><path d="M256.066,186.594c-5.25-2.214-10.703-3.96-16.292-5.203v57.183l49.46-28.551 C279.937,199.918,268.63,191.904,256.066,186.594z"/><path d="M297.275,158.573c-22.404-15.145-49.535-24.014-78.574-24.007c-19.355-0.007-37.881,3.932-54.704,11.049 c-25.236,10.676-46.656,28.469-61.8,50.887c-15.158,22.404-24.021,49.535-24.014,78.581c0,19.348,3.932,37.875,11.056,54.696 c10.676,25.236,28.469,46.656,50.88,61.8c22.411,15.158,49.536,24.02,78.582,24.014c19.348,0,37.875-3.932,54.703-11.049 c25.236-10.683,46.656-28.476,61.8-50.887c15.151-22.412,24.014-49.535,24.007-78.574c0.007-19.355-3.932-37.882-11.05-54.703 C337.486,195.137,319.693,173.718,297.275,158.573z M230.408,170.356c10.302,1.134,20.129,3.728,29.304,7.613 c17.521,7.403,32.611,19.498,43.783,34.636l-67.444,38.941c-1.752-1.29-3.626-2.404-5.644-3.287V170.356z M159.787,187.68 c13.793-9.304,29.826-15.416,47.199-17.338v77.916c-2.01,0.883-3.892,1.997-5.637,3.287l-67.464-38.955 C141.042,202.9,149.79,194.431,159.787,187.68z M113.314,275.084c0-14.601,2.954-28.421,8.279-41.02 c0.17-0.408,0.38-0.801,0.556-1.208l67.464,38.954c-0.115,1.073-0.19,2.16-0.19,3.274c0,1.1,0.074,2.186,0.19,3.259l-67.491,38.982 C116.458,304.408,113.321,290.147,113.314,275.084z M206.986,379.805c-10.296-1.141-20.13-3.735-29.297-7.614 c-17.522-7.409-32.612-19.498-43.79-34.635l67.45-38.934c1.745,1.29,3.626,2.404,5.637,3.28V379.805z M218.7,286.792 c-6.472,0-11.715-5.243-11.715-11.708c0-6.472,5.243-11.715,11.715-11.715c6.465,0,11.708,5.243,11.708,11.715 C230.408,281.549,225.166,286.792,218.7,286.792z M277.608,362.473c-13.793,9.31-29.82,15.429-47.199,17.344v-77.916 c2.017-0.876,3.892-1.99,5.644-3.28l67.457,38.941C296.351,347.261,287.611,355.723,277.608,362.473z M315.808,316.095 c-0.17,0.408-0.38,0.795-0.557,1.202L247.78,278.35c0.116-1.08,0.197-2.166,0.197-3.266c0-1.114-0.081-2.2-0.197-3.274 l67.498-38.968c5.664,12.916,8.802,27.171,8.808,42.241C324.08,289.685,321.132,303.498,315.808,316.095z"/><path d="M61.959,275.084c-0.007-15.416,2.296-30.316,6.458-44.428l-31.321,11.192 c-4.265,1.528-6.492,6.166-5.093,10.431c-19.858,9.874-40.055,37.026-28.741,68.693c11.315,31.654,44.158,39.872,65.767,34.914 c1.63,4.197,6.289,6.357,10.554,4.842l6.438-2.302c-4.462-7.09-8.428-14.526-11.728-22.33 C66.346,317.332,61.959,296.666,61.959,275.084z"/><path d="M477.772,96.406l-14.506,5.182c-10.16,3.634-6.479,9.854-24.394,16.251c-1.827,0.652-5.494,1.834-10.581,3.423 c-2.139-2.825-5.901-4.088-9.412-2.839c-3.26,1.168-5.345,4.164-5.501,7.43c-31.546,9.602-54.351,15.402-95.75,27.742 c19.681,16.041,35.436,36.707,45.481,60.47c3.898,9.216,6.933,18.9,9.018,28.923c35.097-14.954,45.393-22.071,71.396-32.781 c2.187,2.424,5.705,3.429,8.964,2.255c3.511-1.257,5.616-4.625,5.481-8.157c4.937-1.996,8.523-3.409,10.356-4.06 c17.908-6.411,19.008,0.733,29.169-2.894L512,192.169L477.772,96.406z"/></g></svg>`
+    melee: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.414 5.586a2 2 0 0 0-2.828 0L7 14.172V11a1 1 0 0 0-2 0v5a1 1 0 0 0 1 1h5a1 1 0 0 0 0-2H8.828l8.586-8.586a2 2 0 0 0 0-2.828Z"/></svg>`,
+    ranged: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.621 3.172a1 1 0 0 0-1.04-.21l-14 7a1 1 0 0 0 .13 1.885l7.071 2.829 2.829 7.07a1 1 0 0 0 1.885.13l7-14a1 1 0 0 0-.21-1.04Z"/></svg>`,
+    siege: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h20v2H2v-2Zm2-8a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1Zm16 0a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1ZM6.03 4.22a1 1 0 0 0-1.363 1.45l4.243 4.242a1 1 0 0 0 1.414 0l4.243-4.242a1 1 0 1 0-1.414-1.414L12 6.586 7.447 4.177a1 1 0 0 0-1.414.043Z"/></svg>`
 };
 
 // === Funkcje pomocnicze ===
@@ -531,6 +533,13 @@ function updatePlayerControlsVisibility(player) {
     rowSelect.innerHTML = '<option value="">-- Wybierz Rząd --</option>';
     graveyardSelect.disabled = true;
 
+    if (isMonsterAbilityActive && player === monsterPlayerToChoose) {
+        cardSelect.disabled = true;
+        passRoundButton.disabled = true;
+        activateLeaderButton.disabled = true;
+        return;
+    }
+    
     if (isAgileResurrectionModeActive && player === activePlayer) {
         cardSelect.disabled = true;
         passRoundButton.disabled = true;
@@ -588,6 +597,7 @@ function updatePlayerControlsVisibility(player) {
 
 function handlePlayerAction(player, action, isFollowUpAction = false) {
     if (!isFollowUpAction) {
+        if (isMonsterAbilityActive) return;
         if (isMedicModeActive) { action(); return; }
         if (isDecoyModeActive) { action(); return; }
         if (!isFirstMoveOfRound && (player !== activePlayer || passedPlayers.includes(player))) { return; }
@@ -697,7 +707,7 @@ function playCard(player) {
                     const musterId = cardInstance.baseId;
                     if (musterId) {
                         let cardsToSummon = player.availableCards.filter(card => card.baseId === musterId);
-                        if (cardInstance.name === "Gaunter O'Dimm: Darkness") {
+                        if (cardInstance.name.includes("Gaunter O'Dimm: Darkness")) {
                             cardsToSummon = cardsToSummon.filter(card => card.name !== "Gaunter O'Dimm");
                         }
                         if (cardsToSummon.length > 0) {
@@ -764,26 +774,95 @@ function activateLeaderAbility(player) {
     });
 }
 
+// ==================================================================
+// === ZMODYFIKOWANE FUNKCJE DLA ZDOLNOŚCI POTWORÓW ===
+// ==================================================================
 function endRound() {
     addLogEntry("Runda zakończona!");
     const p1Power = calculatePlayerPower(players.player1), p2Power = calculatePlayerPower(players.player2);
-    if (p1Power > p2Power) { players.player2.crystalCount--; addLogEntry(`${players.player1.name} wygrywa rundę!`); }
-    else if (p2Power > p1Power) { players.player1.crystalCount--; addLogEntry(`${players.player2.name} wygrywa rundę!`); }
-    else { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
+    
+    let winner = null;
+    if (p1Power > p2Power) winner = players.player1;
+    else if (p2Power > p1Power) winner = players.player2;
+
+    if (winner) {
+        const loser = (winner === players.player1) ? players.player2 : players.player1;
+        loser.crystalCount--;
+        addLogEntry(`${winner.name} wygrywa rundę!`);
+    } else {
+        const p1IsNilfgaard = players.player1.faction === 'Nilfgaardian Empire';
+        const p2IsNilfgaard = players.player2.faction === 'Nilfgaardian Empire';
+
+        if (p1IsNilfgaard && !p2IsNilfgaard) {
+            addLogEntry(`Remis! ${players.player1.name} wygrywa dzięki zdolności frakcji Nilfgaard!`);
+            players.player2.crystalCount--;
+        } else if (p2IsNilfgaard && !p1IsNilfgaard) {
+            addLogEntry(`Remis! ${players.player2.name} wygrywa dzięki zdolności frakcji Nilfgaard!`);
+            players.player1.crystalCount--;
+        } else {
+            addLogEntry(`Remis!`);
+            players.player1.crystalCount--;
+            players.player2.crystalCount--;
+        }
+    }
     
     if (checkGameOver()) return;
 
+    const monsterPlayer = [players.player1, players.player2].find(p => p.faction === 'Monsters');
+    const hasValidMonsterCards = monsterPlayer && [...monsterPlayer.board.melee, ...monsterPlayer.board.ranged, ...monsterPlayer.board.siege].some(c => !c.isHero && !c.isToken);
+
+    if (hasValidMonsterCards) {
+        isMonsterAbilityActive = true;
+        monsterPlayerToChoose = monsterPlayer;
+        addLogEntry(`${monsterPlayer.name}, wybierz kartę, która ma zostać na następną rundę.`);
+        activateMonsterAbilitySelection(monsterPlayer);
+    } else {
+        proceedToNextRound();
+    }
+}
+
+function activateMonsterAbilitySelection(player) {
+    updateAllControls();
+    ['melee', 'ranged', 'siege'].forEach(rowKey => {
+        player.board[rowKey].forEach(cardOnBoard => {
+            if (!cardOnBoard.isHero && !cardOnBoard.isToken) {
+                const cardElement = player.domElements[rowKey + 'Row'].querySelector(`[data-instance-id="${cardOnBoard.instanceId}"]`);
+                if (cardElement) {
+                    cardElement.classList.add('targetable');
+                }
+            }
+        });
+    });
+}
+
+function executeMonsterAbility(player, cardToKeep) {
+    addLogEntry(`${player.name} wybrał kartę ${cardToKeep.name}, która pozostanie na planszy.`);
+    cardToKeep.isKeptByFaction = true;
+    isMonsterAbilityActive = false;
+    monsterPlayerToChoose = null;
+    
+    document.querySelectorAll('.targetable').forEach(el => el.classList.remove('targetable'));
+
+    proceedToNextRound();
+}
+
+function proceedToNextRound() {
     [players.player1, players.player2].forEach(p => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             const newRow = [];
             const cardsInRow = [...p.board[rowType]];
 
             cardsInRow.forEach(card => {
-                const replacement = handleCardRemoval(card);
-                if (replacement) {
-                    newRow.push(replacement);
+                if (card.isKeptByFaction) {
+                    newRow.push(card);
+                    delete card.isKeptByFaction;
                 } else {
-                    p.graveyard.push(card);
+                    const replacement = handleCardRemoval(card);
+                    if (replacement) {
+                        newRow.push(replacement);
+                    } else {
+                        p.graveyard.push(card);
+                    }
                 }
             });
             p.board[rowType] = newRow;
@@ -818,6 +897,25 @@ function checkGameOver() {
 
 function setupEventListeners() {
     battlefieldScreen.addEventListener('click', (event) => {
+        if (isMonsterAbilityActive) {
+            const targetElement = event.target.closest('.card-on-board.targetable');
+            if (targetElement) {
+                const instanceId = targetElement.dataset.instanceId;
+                let found = null;
+                for (const r of ['melee', 'ranged', 'siege']) {
+                    const card = monsterPlayerToChoose.board[r].find(c => c.instanceId == instanceId);
+                    if (card) {
+                        found = card;
+                        break;
+                    }
+                }
+                if (found) {
+                    executeMonsterAbility(monsterPlayerToChoose, found);
+                }
+            }
+            return;
+        }
+
         if (!isDecoyModeActive || !activePlayer) return;
         const targetElement = event.target.closest('.card-on-board.targetable');
         
@@ -901,58 +999,6 @@ function setupEventListeners() {
 // Np. dodaj te karty, aby przetestować mechaniki
 /*
 const allCards = [
-    // ... inne karty
-    {
-        id: 'golem_1',
-        name: 'Golem',
-        type: 'Unit',
-        power: 3,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: ['avenger'],
-        summons: 'golem_fiend_1',
-        isHero: false
-    },
-    {
-        id: 'golem_fiend_1',
-        name: 'Większy Golem',
-        type: 'Unit',
-        power: 9,
-        faction: 'Neutral',
-        row: 'melee',
-        abilities: [],
-        isHero: false,
-        isToken: true
-    },
-    {
-        id: 'kasacz_1',
-        name: 'Kąsacz',
-        type: 'Unit',
-        power: 4,
-        faction: 'Monsters',
-        row: 'melee',
-        abilities: ['Moc'],
-        transformId: 'wsciekly_kasacz_1',
-        isHero: false
-    },
-    {
-        id: 'wsciekly_kasacz_1',
-        name: 'Wściekły Kąsacz',
-        type: 'Unit',
-        power: 8,
-        faction: 'Monsters',
-        row: 'melee',
-        abilities: [],
-        isHero: false,
-        isToken: true
-    },
-    {
-        id: 'wyzwolenie_sily_1',
-        name: 'Wyzwolenie siły',
-        type: 'Special',
-        faction: 'Neutral',
-        abilities: ['Wyzwolenie siły']
-    },
     // ... inne karty
 ];
 */
