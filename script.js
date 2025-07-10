@@ -79,17 +79,29 @@ function handleCardRemoval(card) {
     return null;
 }
 
-function executePowerRelease(player) {
-    addLogEntry(`${player.name} uwalnia moc swoich jednostek!`);
+// ZMIANA: Funkcja przyjmuje teraz kartę, która ją wywołała
+function executePowerRelease(player, triggeringCard) {
+    const targetId = triggeringCard.transformTargetId;
+    const limit = triggeringCard.transformLimit || Infinity; // Domyślnie bez limitu
+    
+    if (!targetId) {
+        addLogEntry(`Karta ${triggeringCard.name} nie ma określonego celu transformacji.`);
+        return;
+    }
+
+    addLogEntry(`${player.name} uwalnia moc za pomocą ${triggeringCard.name}!`);
+    let transformedCount = 0;
+
     ['melee', 'ranged', 'siege'].forEach(rowType => {
         const newRow = [];
         player.board[rowType].forEach(card => {
-            if (card.abilities && card.abilities.includes('Moc') && card.transformId) {
+            if (transformedCount < limit && card.abilities && card.abilities.includes('Moc') && card.baseId === targetId && card.transformId) {
                 const transformedCardInfo = getCardDetailsById(card.transformId);
                 if (transformedCardInfo) {
                     addLogEntry(`${card.name} transformuje w ${transformedCardInfo.name}!`);
                     const newCard = { ...transformedCardInfo, instanceId: Date.now() + Math.random() };
                     newRow.push(newCard);
+                    transformedCount++;
                 } else {
                     newRow.push(card);
                 }
@@ -99,6 +111,10 @@ function executePowerRelease(player) {
         });
         player.board[rowType] = newRow;
     });
+
+    if (transformedCount === 0) {
+        addLogEntry("...ale nie znaleziono odpowiednich celów do transformacji.");
+    }
 }
 
 
@@ -613,7 +629,6 @@ function updatePlayerControlsVisibility(player) {
     passRoundButton.disabled = !isPlayerTurn;
     activateLeaderButton.disabled = !isPlayerTurn || (player.commander && player.commander.activatedThisRound);
     
-    // ZMIANA: Dodano opisy dla nowych frakcji
     switch(player.faction) {
         case 'Klasztor':
             factionAbilityButton.style.display = 'inline-block';
@@ -814,7 +829,7 @@ function playCard(player) {
             } else if (hasAbilities && cardInstance.abilities.includes('scorch_strongest')) {
                 executeGlobalScorch();
             } else if (hasAbilities && cardInstance.abilities.includes('Wyzwolenie siły')) {
-                executePowerRelease(player);
+                executePowerRelease(player, cardInstance);
             }
             
             if (shouldGoToGraveyard) {
@@ -1138,7 +1153,6 @@ function triggerEndOfRoundAbilities() {
 
 function proceedToNextRound() {
     [players.player1, players.player2].forEach(p => {
-        // ZMIANA: Zdolność Klasztoru jest jednorazowa na grę, więc nie jest resetowana.
         if (p.faction !== 'Klasztor') {
              p.factionAbilityUsed = false;
         }
