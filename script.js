@@ -30,6 +30,7 @@ Object.keys(players).forEach(pKey => {
 // Zmienne stanu gry
 let activePlayer = null, roundNumber = 1, passedPlayers = [], weatherCardsOnBoard = [], isFirstMoveOfRound = true;
 let lastRoundLoser = null;
+let nextRoundSummonsQueue = []; // NOWA ZMIENNA
 let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
@@ -46,7 +47,8 @@ let banditsPlayerToChoose = null;
 const abilityIconMap = {
     medic: '❤️', muster: '🎺', tight_bond: '🔗', morale_boost: '➕',
     scorch_row: '🔥', spy: '👁️', avenger: '💀', Moc: '💪', horn: '📯',
-    decoy: '🎭', 'Wyzwolenie siły': '💥', scorch_strongest: '☄️', agile: '↔️'
+    decoy: '🎭', 'Wyzwolenie siły': '💥', scorch_strongest: '☄️', agile: '↔️',
+    summon_next_round: '⏳'
 };
 
 const rowIconMap = {
@@ -793,8 +795,8 @@ function playCard(player) {
                     const musterId = cardInstance.baseId;
                     if (musterId) {
                         let cardsToSummon = player.availableCards.filter(card => card.baseId === musterId);
-                        if (cardInstance.name.includes("Gaunter O'Dimm: Darkness")) {
-                            cardsToSummon = cardsToSummon.filter(card => card.name !== "Gaunter O'Dimm");
+                        if (cardInstance.musterRole === 'slug') {
+                            cardsToSummon = cardsToSummon.filter(card => card.musterRole !== 'master');
                         }
                         if (cardsToSummon.length > 0) {
                             addLogEntry(`Zbiórka! ${player.name} przywołuje dodatkowe jednostki.`);
@@ -909,6 +911,18 @@ function endRound() {
             lastRoundLoser = null;
         }
     }
+
+    // NOWA LOGIKA: Zapisz karty do przywołania w następnej rundzie
+    nextRoundSummonsQueue = [];
+    [players.player1, players.player2].forEach(p => {
+        ['melee', 'ranged', 'siege'].forEach(rowType => {
+            p.board[rowType].forEach(card => {
+                if (card.abilities && card.abilities.includes('summon_next_round') && card.nextRoundSummonId) {
+                    nextRoundSummonsQueue.push({ owner: p, summonId: card.nextRoundSummonId });
+                }
+            });
+        });
+    });
     
     if (checkGameOver()) return;
 
@@ -1189,6 +1203,20 @@ function proceedToNextRound() {
 }
 
 function startNewRoundSequence() {
+    // NOWA LOGIKA: Przywołanie jednostek z poprzedniej rundy
+    if (nextRoundSummonsQueue.length > 0) {
+        addLogEntry("Na polu bitwy pojawiają się nowe jednostki!");
+        nextRoundSummonsQueue.forEach(summon => {
+            const cardInfo = getCardDetailsById(summon.summonId);
+            if (cardInfo) {
+                const newUnit = { ...cardInfo, instanceId: Date.now() + Math.random() };
+                summon.owner.board[newUnit.row].push(newUnit);
+                addLogEntry(`${summon.owner.name} przywołuje ${newUnit.name}!`);
+            }
+        });
+        nextRoundSummonsQueue = [];
+    }
+
     const banditPlayer = lastRoundLoser && lastRoundLoser.faction === 'Bandyci' ? lastRoundLoser : null;
     const opponent = banditPlayer ? (banditPlayer === players.player1 ? players.player2 : players.player1) : null;
 
