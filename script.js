@@ -30,7 +30,7 @@ Object.keys(players).forEach(pKey => {
 // Zmienne stanu gry
 let activePlayer = null, roundNumber = 1, passedPlayers = [], weatherCardsOnBoard = [], isFirstMoveOfRound = true;
 let lastRoundLoser = null;
-let nextRoundSummonsQueue = []; // NOWA ZMIENNA
+let nextRoundSummonsQueue = [];
 let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
@@ -82,9 +82,9 @@ function handleCardRemoval(card) {
 }
 
 function executePowerRelease(player, triggeringCard) {
-    const targetId = triggeringCard.transformTargetId;
+    const targetIds = Array.isArray(triggeringCard.transformTargetId) ? triggeringCard.transformTargetId : [triggeringCard.transformTargetId];
     
-    if (!targetId) {
+    if (!targetIds || targetIds.length === 0) {
         addLogEntry(`Karta ${triggeringCard.name} nie ma określonego celu transformacji.`);
         return;
     }
@@ -95,7 +95,7 @@ function executePowerRelease(player, triggeringCard) {
     ['melee', 'ranged', 'siege'].forEach(rowType => {
         const newRow = [];
         player.board[rowType].forEach(card => {
-            if (card.abilities && card.abilities.includes('Moc') && card.baseId === targetId && card.transformId) {
+            if (card.abilities && card.abilities.includes('Moc') && targetIds.includes(card.baseId) && card.transformId) {
                 const transformedCardInfo = getCardDetailsById(card.transformId);
                 if (transformedCardInfo) {
                     addLogEntry(`${card.name} transformuje w ${transformedCardInfo.name}!`);
@@ -912,13 +912,12 @@ function endRound() {
         }
     }
 
-    // NOWA LOGIKA: Zapisz karty do przywołania w następnej rundzie
     nextRoundSummonsQueue = [];
     [players.player1, players.player2].forEach(p => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             p.board[rowType].forEach(card => {
                 if (card.abilities && card.abilities.includes('summon_next_round') && card.nextRoundSummonId) {
-                    nextRoundSummonsQueue.push({ owner: p, summonId: card.nextRoundSummonId });
+                    nextRoundSummonsQueue.push({ owner: p, summonId: card.nextRoundSummonId, summonerRow: rowType });
                 }
             });
         });
@@ -1203,14 +1202,14 @@ function proceedToNextRound() {
 }
 
 function startNewRoundSequence() {
-    // NOWA LOGIKA: Przywołanie jednostek z poprzedniej rundy
     if (nextRoundSummonsQueue.length > 0) {
         addLogEntry("Na polu bitwy pojawiają się nowe jednostki!");
         nextRoundSummonsQueue.forEach(summon => {
             const cardInfo = getCardDetailsById(summon.summonId);
             if (cardInfo) {
                 const newUnit = { ...cardInfo, instanceId: Date.now() + Math.random() };
-                summon.owner.board[newUnit.row].push(newUnit);
+                const targetRow = Array.isArray(newUnit.row) ? newUnit.row[0] : newUnit.row;
+                summon.owner.board[targetRow].push(newUnit);
                 addLogEntry(`${summon.owner.name} przywołuje ${newUnit.name}!`);
             }
         });
@@ -1246,12 +1245,5 @@ function startNewRoundSequence() {
 }
 
 // === Inicjalizacja gry ===
-// Pamiętaj, aby zdefiniować swoją tablicę `allCards` przed wywołaniem tych funkcji!
-/*
-const allCards = [
-    // ... inne karty
-];
-*/
-
 setupGame();
 setupEventListeners();
