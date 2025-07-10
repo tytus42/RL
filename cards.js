@@ -93,7 +93,7 @@ const allCards = [
     { id: "Wsciekly_kasacz_1", name: "Wściekły kąsacz", type: "Unit", power: 8, faction: "Orkowie", row: "ranged", abilities: ["tight_bond"], isHero: false, isToken: true, baseId: "wsciekly_kasacz" },
     { id: "Wsciekly_kasacz_2", name: "Wściekły kąsacz", type: "Unit", power: 8, faction: "Orkowie", row: "ranged", abilities: ["tight_bond"], isHero: false, isToken: true, baseId: "wsciekly_kasacz" },
     { id: "Wsciekly_kasacz_3", name: "Wściekły kąsacz", type: "Unit", power: 8, faction: "Orkowie", row: "ranged", abilities: ["tight_bond"], isHero: false, isToken: true, baseId: "wsciekly_kasacz" },
-    { id: "Orkowy_treser", name: "Orkowy treser", type: "Unit", power: 8, faction: "Orkowie", row: "ranged", abilities: ["Wyzwolenie siły"], isHero: true, transformTargetId: ["Kasacz"] },
+    { id: "Orkowy_treser", name: "Orkowy treser", type: "Unit", power: 8, faction: "Orkowie", row: "ranged", abilities: ["Wyzwolenie siły"], isHero: true, transformTargetId: ["kasacz", "wiarus"] },
     { id: "Ur-Shak", name: "Ur-Shak", type: "Unit", power: 10, faction: "Orkowie", row: "ranged", isHero: true },
     { id: "Hosh-Pak", name: "Hosh-Pak", type: "Unit", power: 10, faction: "Orkowie", row: "melee", abilities: ["muster"], isHero: true, baseId: "Ork_wojownik", musterRole: "master" },
     { id: "Herszt_orkow", name: "Herszt orków", type: "Unit", power: 11, faction: "Orkowie", row: "melee", isHero: true, isToken: true },
