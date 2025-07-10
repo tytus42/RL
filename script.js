@@ -79,10 +79,8 @@ function handleCardRemoval(card) {
     return null;
 }
 
-// ZMIANA: Funkcja przyjmuje teraz kartę, która ją wywołała
 function executePowerRelease(player, triggeringCard) {
     const targetId = triggeringCard.transformTargetId;
-    const limit = triggeringCard.transformLimit || Infinity; // Domyślnie bez limitu
     
     if (!targetId) {
         addLogEntry(`Karta ${triggeringCard.name} nie ma określonego celu transformacji.`);
@@ -95,7 +93,7 @@ function executePowerRelease(player, triggeringCard) {
     ['melee', 'ranged', 'siege'].forEach(rowType => {
         const newRow = [];
         player.board[rowType].forEach(card => {
-            if (transformedCount < limit && card.abilities && card.abilities.includes('Moc') && card.baseId === targetId && card.transformId) {
+            if (card.abilities && card.abilities.includes('Moc') && card.baseId === targetId && card.transformId) {
                 const transformedCardInfo = getCardDetailsById(card.transformId);
                 if (transformedCardInfo) {
                     addLogEntry(`${card.name} transformuje w ${transformedCardInfo.name}!`);
