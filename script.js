@@ -199,7 +199,12 @@ function applyAllEffects() {
     [players.player1, players.player2].forEach(player => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             player.domElements[rowType + 'Row'].classList.remove('frost-effect', 'fog-effect', 'rain-effect', 'fear-effect');
+            
+            // ZMIANA: Sprawdzamy, czy karta w slocie rogu nie jest kartą specjalną z transformacją
             let isHornActive = !!player.board.horns[rowType];
+            if (isHornActive && player.board.horns[rowType].abilities && player.board.horns[rowType].abilities.includes('Wyzwolenie siły')) {
+                isHornActive = false; // Nie podwajaj siły, jeśli to Ulu-Mulu
+            }
             
             if (player.commander && player.commander.abilities && player.commander.abilities.includes('leader_siege_boost')) {
                 if(rowType === 'siege') isHornActive = true;
@@ -818,17 +823,31 @@ function playCard(player) {
                     if (hasValidTargets) { isMedicModeActive = true; }
                     else { addLogEntry("Medyk nie znalazł celów na cmentarzu."); }
                 }
+                // ZMIANA: Dodano obsługę Wyzwolenia Siły dla jednostek
+                if (cardInstance.abilities.includes('Wyzwolenie siły')) {
+                    executePowerRelease(player, cardInstance);
+                }
             }
         } else if (cardInstance.type === 'Special') {
             let shouldGoToGraveyard = true;
             addLogEntry(`${player.name} zagrał kartę specjalną: ${cardInstance.name}.`);
 
+            // ZMIANA: Rozdzielenie if-ów, aby obsłużyć karty z wieloma zdolnościami (np. Ulu-Mulu)
             if (hasAbilities && cardInstance.abilities.includes('horn')) {
-                player.board.horns[targetRow] = { ...cardInstance, type: 'Horn', name: 'Róg' };
+                if (player.board.horns[targetRow]) {
+                    addLogEntry(`Róg już jest w tym rzędzie!`);
+                    player.availableCards.push(cardData); // Zwróć kartę do ręki
+                    return false; // Akcja nieudana
+                }
+                player.board.horns[targetRow] = { ...cardInstance };
                 shouldGoToGraveyard = false;
-            } else if (hasAbilities && cardInstance.abilities.includes('scorch_strongest')) {
+            }
+            
+            if (hasAbilities && cardInstance.abilities.includes('scorch_strongest')) {
                 executeGlobalScorch();
-            } else if (hasAbilities && cardInstance.abilities.includes('Wyzwolenie siły')) {
+            }
+            
+            if (hasAbilities && cardInstance.abilities.includes('Wyzwolenie siły')) {
                 executePowerRelease(player, cardInstance);
             }
             
