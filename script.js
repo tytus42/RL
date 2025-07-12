@@ -7,8 +7,8 @@ const historyLog = document.getElementById('history-log');
 
 // Obiekty graczy
 let players = {
-    player1: { name: 'Gracz 1', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false },
-    player2: { name: 'Gracz 2', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false }
+    player1: { name: 'Gracz 1', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false, factionAbilityUsedThisGame: false },
+    player2: { name: 'Gracz 2', faction: null, crystalCount: 2, power: 0, commander: null, graveyard: [], availableCards: [], board: { melee: [], ranged: [], siege: [], horns: { melee: null, ranged: null, siege: null } }, factionAbilityUsed: false, factionAbilityUsedThisGame: false }
 };
 Object.keys(players).forEach(pKey => {
     const pNum = pKey.slice(-1);
@@ -196,14 +196,52 @@ function renderCrystals(player) {
 
 function applyAllEffects() {
     const activeWeatherRows = new Set(weatherCardsOnBoard.map(card => card.rowAffected).flat().filter(row => row));
+    
+    [players.player1, players.player2].forEach(player => {
+        ['melee', 'ranged', 'siege'].forEach(rowType => {
+            player.board[rowType].forEach(card => {
+                delete card.currentPower;
+            });
+        });
+    });
+
+    [players.player1, players.player2].forEach(player => {
+        ['melee', 'ranged', 'siege'].forEach(rowType => {
+            const unleasherInRow = player.board[rowType].find(c => c.abilities && c.abilities.includes('Wyzwolenie siły'));
+            const unleasherInHorn = player.board.horns[rowType];
+            let powerUnleasher = unleasherInRow;
+            
+            if (!powerUnleasher && unleasherInHorn && unleasherInHorn.abilities && unleasherInHorn.abilities.includes('Wyzwolenie siły')) {
+                powerUnleasher = unleasherInHorn;
+            }
+
+            if (powerUnleasher) {
+                const targetIds = Array.isArray(powerUnleasher.transformTargetId) ? powerUnleasher.transformTargetId : [powerUnleasher.transformTargetId];
+                
+                player.board[rowType].forEach((card, index) => {
+                    if (!card.isTransformed && card.abilities && card.abilities.includes('Moc') && targetIds.includes(card.baseId) && card.transformId) {
+                        const transformedCardInfo = getCardDetailsById(card.transformId);
+                        if (transformedCardInfo) {
+                            addLogEntry(`${card.name} transformuje w ${transformedCardInfo.name} pod wpływem ${powerUnleasher.name}!`);
+                            player.board[rowType][index] = { 
+                                ...transformedCardInfo, 
+                                instanceId: card.instanceId,
+                                isTransformed: true 
+                            };
+                        }
+                    }
+                });
+            }
+        });
+    });
+
     [players.player1, players.player2].forEach(player => {
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             player.domElements[rowType + 'Row'].classList.remove('frost-effect', 'fog-effect', 'rain-effect', 'fear-effect');
             
-            // ZMIANA: Sprawdzamy, czy karta w slocie rogu nie jest kartą specjalną z transformacją
             let isHornActive = !!player.board.horns[rowType];
             if (isHornActive && player.board.horns[rowType].abilities && player.board.horns[rowType].abilities.includes('Wyzwolenie siły')) {
-                isHornActive = false; // Nie podwajaj siły, jeśli to Ulu-Mulu
+                isHornActive = false;
             }
             
             if (player.commander && player.commander.abilities && player.commander.abilities.includes('leader_siege_boost')) {
@@ -233,14 +271,13 @@ function applyAllEffects() {
             const moraleBoostValue = moraleGiversInRow.length;
 
             cardsInRow.forEach(card => {
-                delete card.currentPower;
                 if (card.type === 'Unit' && !card.isHero && card.name !== 'Wabik') {
                     let power = card.power;
                     if (activeWeatherRows.has(rowType)) { power = 1; }
                     
-                    const baseId = card.baseId || card.id.split('_')[0];
-                    if (card.abilities && card.abilities.includes('tight_bond') && bondGroups[baseId] && bondGroups[baseId].length > 1) {
-                        power *= bondGroups[baseId].length;
+                    const baseIdForBond = card.baseId || card.id.split('_')[0];
+                    if (card.abilities && card.abilities.includes('tight_bond') && bondGroups[baseIdForBond] && bondGroups[baseIdForBond].length > 1) {
+                        power *= bondGroups[baseIdForBond].length;
                     }
                     
                     if (moraleBoostValue > 0) {
@@ -251,7 +288,10 @@ function applyAllEffects() {
                     }
                     
                     if (isHornActive) { power *= 2; }
-                    if (power !== card.power) { card.currentPower = power; }
+                    
+                    if (power !== card.power) {
+                        card.currentPower = power;
+                    }
                 }
             });
 
@@ -455,7 +495,11 @@ function executeResurrection(player, resurrectedCardId) {
     isMedicModeActive = false;
     if (!resurrectedCardId) {
         addLogEntry(`${player.name} anulował wskrzeszenie.`);
-        if (!isFirstMoveOfRound) switchActivePlayer();
+        if (isFactionAbilitySetupInProgress) {
+            processFactionAbilityQueue();
+        } else if (!isFirstMoveOfRound) {
+            switchActivePlayer();
+        }
         return;
     }
 
@@ -476,7 +520,9 @@ function executeResurrection(player, resurrectedCardId) {
         const wasMedicChain = placeResurrectedCard(player, cardInstance, targetRow);
         
         if (!wasMedicChain) {
-            if (!isFirstMoveOfRound) {
+            if (isFactionAbilitySetupInProgress) {
+                processFactionAbilityQueue();
+            } else if (!isFirstMoveOfRound) {
                 switchActivePlayer();
             } else {
                 isFirstMoveOfRound = false;
@@ -525,7 +571,9 @@ function completeAgileResurrection(player, chosenRow) {
     cardToResurrectWithAgile = null;
     
     if (!wasMedicChain) {
-        if (!isFirstMoveOfRound) {
+        if (isFactionAbilitySetupInProgress) {
+            processFactionAbilityQueue();
+        } else if (!isFirstMoveOfRound) {
             switchActivePlayer();
         } else {
             isFirstMoveOfRound = false;
@@ -579,9 +627,11 @@ function updatePlayerControlsVisibility(player) {
     const { cardSelect, rowSelect, playCardButton, passRoundButton, activateLeaderButton, graveyardSelect, factionAbilityButton } = player.domElements;
 
     passRoundButton.textContent = 'Pasuj';
-    factionAbilityButton.style.display = 'none';
-    factionAbilityButton.disabled = true;
-    factionAbilityButton.title = '';
+    if (factionAbilityButton) {
+        factionAbilityButton.style.display = 'none';
+        factionAbilityButton.disabled = true;
+        factionAbilityButton.title = '';
+    }
 
     playCardButton.style.display = 'inline-block';
     playCardButton.disabled = true;
@@ -634,36 +684,38 @@ function updatePlayerControlsVisibility(player) {
     passRoundButton.disabled = !isPlayerTurn;
     activateLeaderButton.disabled = !isPlayerTurn || (player.commander && player.commander.activatedThisRound);
     
-    switch(player.faction) {
-        case 'Klasztor':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.disabled = !isPlayerTurn || player.factionAbilityUsed;
-            factionAbilityButton.title = 'Pomiń turę bez pasowania (raz na grę).';
-            break;
-        case 'Khorinis':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Wygrywasz rundę w przypadku remisu.';
-            break;
-        case 'Potwory':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie, jedna jednostka zostaje na planszy.';
-            break;
-        case 'Orkowie':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Na początku 3 rundy, 3 jednostki wracają z cmentarza.';
-            break;
-        case 'Bandyci':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie dobierz 1 kartę z cmentarza wroga.';
-            break;
-        case 'Najemnicy':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Możliwość wymiany jednej karty więcej na starcie gry.';
-            break;
-        case 'Nieumarli':
-            factionAbilityButton.style.display = 'inline-block';
-            factionAbilityButton.title = 'Zdolność pasywna: Dobór 1 losowej karty z talii po wygranej rundzie.';
-            break;
+    if (factionAbilityButton) {
+        switch(player.faction) {
+            case 'Klasztor':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.disabled = !isPlayerTurn || player.factionAbilityUsed;
+                factionAbilityButton.title = 'Pomiń turę bez pasowania (raz na grę).';
+                break;
+            case 'Khorinis':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Wygrywasz rundę w przypadku remisu.';
+                break;
+            case 'Potwory':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie, jedna jednostka zostaje na planszy.';
+                break;
+            case 'Orkowie':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Na początku 3 rundy, 3 jednostki wracają z cmentarza.';
+                break;
+            case 'Bandyci':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Po przegranej rundzie dobierz 1 kartę z cmentarza wroga.';
+                break;
+            case 'Najemnicy':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Możliwość wymiany jednej karty więcej na starcie gry.';
+                break;
+            case 'Nieumarli':
+                factionAbilityButton.style.display = 'inline-block';
+                factionAbilityButton.title = 'Zdolność pasywna: Dobór 1 losowej karty z talii po wygranej rundzie.';
+                break;
+        }
     }
 
     const selectedOption = cardSelect.options[cardSelect.selectedIndex];
@@ -787,10 +839,15 @@ function playCard(player) {
             opponent.board[targetRow].push(cardInstance);
             addLogEntry(`${player.name} zagrał Szpiega: ${cardInstance.name} na stronę przeciwnika.`);
         } else if (cardInstance.type === 'Weather') {
-            if (cardInstance.name === 'Czyste Niebo') { weatherCardsOnBoard = []; }
-            else { if (!weatherCardsOnBoard.find(c => c.id === cardInstance.id)) { weatherCardsOnBoard.push(cardInstance); } }
             addLogEntry(`${player.name} zagrał ${cardInstance.name}.`);
-            player.graveyard.push(cardInstance);
+            if (cardInstance.name === 'Światło') {
+                weatherCardsOnBoard = [];
+                player.graveyard.push(cardInstance);
+            } else {
+                if (!weatherCardsOnBoard.find(c => c.id === cardInstance.id)) {
+                    weatherCardsOnBoard.push(cardInstance);
+                }
+            }
         } else if (cardInstance.type === 'Unit') {
             player.board[targetRow].push(cardInstance);
             addLogEntry(`${player.name} zagrał ${cardInstance.name} do rzędu ${translateRowName(targetRow)}.`);
@@ -823,21 +880,16 @@ function playCard(player) {
                     if (hasValidTargets) { isMedicModeActive = true; }
                     else { addLogEntry("Medyk nie znalazł celów na cmentarzu."); }
                 }
-                // ZMIANA: Dodano obsługę Wyzwolenia Siły dla jednostek
-                if (cardInstance.abilities.includes('Wyzwolenie siły')) {
-                    executePowerRelease(player, cardInstance);
-                }
             }
         } else if (cardInstance.type === 'Special') {
             let shouldGoToGraveyard = true;
             addLogEntry(`${player.name} zagrał kartę specjalną: ${cardInstance.name}.`);
 
-            // ZMIANA: Rozdzielenie if-ów, aby obsłużyć karty z wieloma zdolnościami (np. Ulu-Mulu)
             if (hasAbilities && cardInstance.abilities.includes('horn')) {
                 if (player.board.horns[targetRow]) {
                     addLogEntry(`Róg już jest w tym rzędzie!`);
-                    player.availableCards.push(cardData); // Zwróć kartę do ręki
-                    return false; // Akcja nieudana
+                    player.availableCards.push(cardData);
+                    return false;
                 }
                 player.board.horns[targetRow] = { ...cardInstance };
                 shouldGoToGraveyard = false;
@@ -1011,7 +1063,9 @@ function setupEventListeners() {
     players.player1.domElements.playCardButton.addEventListener('click', () => playCard(players.player1));
     players.player1.domElements.passRoundButton.addEventListener('click', () => passRound(players.player1));
     players.player1.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player1));
-    players.player1.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player1));
+    if (players.player1.domElements.factionAbilityButton) {
+        players.player1.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player1));
+    }
     players.player1.domElements.cardSelect.addEventListener('change', () => { 
         deactivateDecoyMode(); 
         updatePlayerControlsVisibility(players.player1); 
@@ -1041,7 +1095,9 @@ function setupEventListeners() {
     players.player2.domElements.playCardButton.addEventListener('click', () => playCard(players.player2));
     players.player2.domElements.passRoundButton.addEventListener('click', () => passRound(players.player2));
     players.player2.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player2));
-    players.player2.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player2));
+    if (players.player2.domElements.factionAbilityButton) {
+        players.player2.domElements.factionAbilityButton.addEventListener('click', () => activateFactionAbility(players.player2));
+    }
     players.player2.domElements.cardSelect.addEventListener('change', () => { 
         deactivateDecoyMode(); 
         updatePlayerControlsVisibility(players.player2); 
@@ -1073,10 +1129,10 @@ function setupEventListeners() {
 // ==================================================================
 
 function activateFactionAbility(player) {
-    if (player.faction === 'Klasztor' && !player.factionAbilityUsed) {
+    if (player.faction === 'Klasztor' && !player.factionAbilityUsedThisGame) {
         handlePlayerAction(player, () => {
             addLogEntry(`${player.name} używa medytacji i przeczekuje turę.`);
-            player.factionAbilityUsed = true;
+            player.factionAbilityUsedThisGame = true;
             switchActivePlayer();
             return false;
         }, true);
@@ -1112,14 +1168,25 @@ function finalizeOrcsSelection(player) {
     if (!isOrcsAbilityActive || player !== orcsPlayerToChoose) return;
 
     addLogEntry(`${player.name} zakończył wybór wojowników.`);
+    let medicChainTriggered = false;
 
     if (orcsCardsToKeep.length > 0) {
         addLogEntry(`${player.name} wzywa posiłki!`);
         orcsCardsToKeep.forEach(card => {
             const cardInstance = { ...card, instanceId: Date.now() + Math.random() };
             const targetRow = Array.isArray(card.row) ? card.row[0] : card.row;
+            
             player.board[targetRow].push(cardInstance);
             addLogEntry(`- ${card.name} dołącza do armii!`);
+
+            if (!medicChainTriggered && cardInstance.abilities && cardInstance.abilities.includes('medic')) {
+                const hasValidTargets = player.graveyard.some(c => c.type === 'Unit' && !c.isHero && c.name !== 'Wabik');
+                if (hasValidTargets) {
+                    isMedicModeActive = true;
+                    medicChainTriggered = true;
+                    addLogEntry(`${cardInstance.name} aktywuje swoją zdolność medyka!`);
+                }
+            }
         });
     }
 
@@ -1127,7 +1194,11 @@ function finalizeOrcsSelection(player) {
     orcsPlayerToChoose = null;
     orcsCardsToKeep = [];
     
-    startNewRoundSequence();
+    if (!medicChainTriggered) {
+        processFactionAbilityQueue();
+    } else {
+        updateAllControls();
+    }
 }
 
 
@@ -1235,33 +1306,56 @@ function startNewRoundSequence() {
         nextRoundSummonsQueue = [];
     }
 
+    factionAbilityQueue = [];
+    isFactionAbilitySetupInProgress = true;
+
     const banditPlayer = lastRoundLoser && lastRoundLoser.faction === 'Bandyci' ? lastRoundLoser : null;
     const opponent = banditPlayer ? (banditPlayer === players.player1 ? players.player2 : players.player1) : null;
 
     if (banditPlayer && opponent && opponent.graveyard.some(c => !c.isHero)) {
-        isBanditsAbilityActive = true;
-        banditsPlayerToChoose = banditPlayer;
-        activePlayer = banditPlayer;
-        addLogEntry(`${banditPlayer.name}, twoja zdolność pozwala ci dobrać kartę z cmentarza wroga.`);
-        updateAllControls();
-        return;
+        factionAbilityQueue.push({player: banditPlayer, type: 'bandits'});
     }
 
-    const orcsPlayer = [players.player1, players.player2].find(p => p.faction === 'Orkowie');
-    if (roundNumber === 3 && orcsPlayer && orcsPlayer.graveyard.some(c => c.type === 'Unit' && !c.isHero && !c.isToken)) {
-        isOrcsAbilityActive = true;
-        orcsPlayerToChoose = orcsPlayer;
-        activePlayer = orcsPlayer;
-        addLogEntry(`Rozpoczyna się Runda 3! ${orcsPlayer.name}, twoja zdolność frakcyjna została aktywowana.`);
-        addLogEntry(`Wybierz do 3 wojowników z cmentarza, którzy dołączą do armii, a następnie zatwierdź wybór.`);
-        updateAllControls();
-        return;
+    if (roundNumber === 3) {
+        const orcsPlayers = [players.player1, players.player2].filter(p => 
+            p.faction === 'Orkowie' && 
+            !p.factionAbilityUsedThisGame &&
+            p.graveyard.some(c => c.type === 'Unit' && !c.isHero && !c.isToken)
+        );
+        orcsPlayers.forEach(p => factionAbilityQueue.push({player: p, type: 'orcs'}));
     }
-
-    lastRoundLoser = null;
-    addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
-    updateAllControls();
+    
+    processFactionAbilityQueue();
 }
+
+function processFactionAbilityQueue() {
+    if (factionAbilityQueue.length > 0) {
+        const abilityToProcess = factionAbilityQueue.shift();
+        const player = abilityToProcess.player;
+
+        if (abilityToProcess.type === 'bandits') {
+            isBanditsAbilityActive = true;
+            banditsPlayerToChoose = player;
+            activePlayer = player;
+            addLogEntry(`${player.name}, twoja zdolność pozwala ci dobrać kartę z cmentarza wroga.`);
+            updateAllControls();
+        } else if (abilityToProcess.type === 'orcs') {
+            isOrcsAbilityActive = true;
+            orcsPlayerToChoose = player;
+            activePlayer = player;
+            player.factionAbilityUsedThisGame = true;
+            addLogEntry(`Rozpoczyna się Runda 3! ${player.name}, twoja zdolność frakcyjna została aktywowana.`);
+            addLogEntry(`Wybierz do 3 wojowników z cmentarza, którzy dołączą do armii, a następnie zatwierdź wybór.`);
+            updateAllControls();
+        }
+    } else {
+        isFactionAbilitySetupInProgress = false;
+        lastRoundLoser = null;
+        addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
+        updateAllControls();
+    }
+}
+
 
 // === Inicjalizacja gry ===
 setupGame();
