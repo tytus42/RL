@@ -1,6 +1,6 @@
 const allCards = [
     // ==================================================================
-    // === KARTY NEUTRALNE
+    // === KARTY NEUTRALNE (ZAKTUALIZOWANE)
     // ==================================================================
     { id: "decoy_1", name: "Chrząszcz", type: "Special", faction: "Neutral", abilities: ["decoy"] },
     { id: "decoy_2", name: "Chrząszcz", type: "Special", faction: "Neutral", abilities: ["decoy"] },
@@ -53,7 +53,7 @@ const allCards = [
     { id: "Lodowy_golem", name: "Lodowy golem", type: "Unit", power: 0, faction: "Neutral", row: "melee", isHero: false, isToken: true },
 
     // ==================================================================
-    // === ORKOWIE (ZAKTUALIZOWANE)
+    // === ORKOWIE
     // ==================================================================
     { id: "Zew_hordy", name: "Zew hordy", type: "Leader", faction: "Orkowie" },
     { id: "Wojna_totalna", name: "Wojna totalna", type: "Leader", faction: "Orkowie" },
@@ -61,9 +61,9 @@ const allCards = [
     { id: "Orkowa_mapa_wojenna", name: "Orkowa mapa wojenna", type: "Unit", power: 0, faction: "Orkowie", row: "melee", abilities: ["summon_next_round"], isHero: false, isToken: false, nextRoundSummonId: "Herszt_orkow" },
     { id: "Orkowy_bebniarz", name: "Orkowy bębniarz", type: "Unit", power: 2, faction: "Orkowie", row: "siege", abilities: ["morale_boost"], isHero: false },
     { id: "Tarrok", name: "Tarrok", type: "Unit", power: 2, faction: "Orkowie", row: "melee", abilities: ["medic"], isHero: false },
-    { id: "Kasacz_1", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "orkowy_treser", transformId: "wsciekly_kasacz_token" },
-    { id: "Kasacz_2", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "orkowy_treser", transformId: "wsciekly_kasacz_token" },
-    { id: "Kasacz_3", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "orkowy_treser", transformId: "wsciekly_kasacz_token" },
+    { id: "Kasacz_1", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "kasacz", transformId: "wsciekly_kasacz_token" },
+    { id: "Kasacz_2", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "kasacz", transformId: "wsciekly_kasacz_token" },
+    { id: "Kasacz_3", name: "Kąsacz", type: "Unit", power: 2, faction: "Orkowie", row: "ranged", abilities: ["Moc"], isHero: false, baseId: "kasacz", transformId: "wsciekly_kasacz_token" },
     { id: "Ork_wiarus_1", name: "Ork wiarus", type: "Unit", power: 4, faction: "Orkowie", row: "melee", abilities: ["Moc"], isHero: false, baseId: "wiarus", transformId: "fanatyczny_wiarus_token" },
     { id: "Ork_wiarus_2", name: "Ork wiarus", type: "Unit", power: 4, faction: "Orkowie", row: "melee", abilities: ["Moc"], isHero: false, baseId: "wiarus", transformId: "fanatyczny_wiarus_token" },
     { id: "Orkowy_kusznik_1", name: "Orkowy kusznik", type: "Unit", power: 4, faction: "Orkowie", row: "ranged", abilities: ["muster"], isHero: false, baseId: "orkowy_kusznik" },
@@ -98,13 +98,13 @@ const allCards = [
     { id: "Ork_pulkownik", name: "Ork pułkownik", type: "Unit", power: 12, faction: "Orkowie", row: ["melee", "ranged"], abilities: ["agile", "morale_boost"], isHero: false },
     { id: "fanatyczny_wiarus_token", name: "Fanatyczny wiarus", type: "Unit", power: 14, faction: "Orkowie", row: "melee", abilities: ["morale_boost"], isHero: false, isToken: true },
     { id: "Magia_Braci", name: "Magia Braci", type: "Weather", faction: "Orkowie", rowAffected: ["ranged", "siege"], effectClass: "fear-effect" },
-    { id: "Ulu-Mulu", name: "Ulu-Mulu", type: "Special", faction: "Orkowie", abilities: ["Wyzwolenie siły"], transformTargetId: ["kasacz", "wiarus"] },
+    { id: "Ulu-Mulu", name: "Ulu-Mulu", type: "Special", faction: "Orkowie", abilities: ["horn", "Wyzwolenie siły"], transformTargetId: ["kasacz", "wiarus"] },
     { id: "Ork_niewolnik", name: "Ork niewolnik", type: "Unit", power: 0, faction: "Orkowie", row: "siege", isHero: false, isToken: true },
     { id: "Ogar", name: "Ogar", type: "Unit", power: 0, faction: "Orkowie", row: "siege", isHero: false, isToken: true },
     { id: "Wodz_hordy", name: "Wódz hordy", type: "Unit", power: 0, faction: "Orkowie", row: "siege", isHero: false, isToken: true },
 
     // ==================================================================
-    // === BANDYCI (ZAKTUALIZOWANE)
+    // === BANDYCI
     // ==================================================================
     { id: "Uklady", name: "Układy", type: "Leader", faction: "Bandyci" },
     { id: "Ukryci_wsrod_drzew", name: "Ukryci wśród drzew", type: "Leader", faction: "Bandyci" },
@@ -149,11 +149,4 @@ const allCards = [
     { id: "Quentin", name: "Quentin", type: "Unit", power: 0, faction: "Bandyci", row: "melee", isHero: false, isToken: true },
     { id: "Wloczega", name: "Włóczęga", type: "Unit", power: 4, faction: "Bandyci", row: "melee", isHero: false },
     { id: "Straznik_niewolnikow", name: "Strażnik niewolników", type: "Unit", power: 4, faction: "Bandyci", row: "melee", isHero: false },
-
-    // ==================================================================
-    // === POZOSTAŁE FRAKCJE
-    // ==================================================================
-    { id: "mercs_leader_lee_other", name: "Lee", type: "Leader", faction: "Najemnicy", abilities: ['hero_scorch_row_power_15'], description: 'Niszczy wszystkie jednostki w rzędzie o łącznej sile 15 lub więcej.' },
-    { id: "firemage_leader_corristo_other", name: "Corristo", type: "Leader", faction: "Klasztor", abilities: ['hero_double_weather_damage'], description: 'Wszystkie efekty pogodowe na planszy zadają podwójne obrażenia.' },
-    { id: "undead_leader_seeker_other", name: "Poszukiwacz", type: "Leader", faction: "Nieumarli", abilities: ['hero_resurrect_from_opponent_graveyard'], description: 'Wskrześ 2 jednostki z cmentarza przeciwnika po swojej stronie z siłą 1.' },
 ];
