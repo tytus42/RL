@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gwint Kalkulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-setup-screen" class="game-screen">
+        <h1>Konfiguracja Gry w Gwinta</h1>
+        <div class="player-setup">
+            <h2>Gracz 1</h2>
+            <label for="player1-faction-select">Wybierz Frakcję:</label>
+            <select id="player1-faction-select"></select>
+            <label for="player1-leader-select">Wybierz Dowódcę:</label>
+            <select id="player1-leader-select" disabled></select>
+        </div>
+        <div class="player-setup">
+            <h2>Gracz 2</h2>
+            <label for="player2-faction-select">Wybierz Frakcję:</label>
+            <select id="player2-faction-select"></select>
+            <label for="player2-leader-select">Wybierz Dowódcę:</label>
+            <select id="player2-leader-select" disabled></select>
+        </div>
+        <button id="startGameButton">Rozpocznij Grę</button>
+    </div>
+
+    <div id="battlefield-screen" class="game-screen" style="display: none;">
+        <div class="side-column">
+             <div class="player-sidebar player1-sidebar">
+                <div class="player-info">
+                    <div class="player-header">
+                        <h2 id="player1-name-display">Gracz 1</h2>
+                        <div class="crystals-display" id="player1-crystal-count"></div>
+                    </div>
+                    <div class="ability-buttons">
+                        <button id="factionAbilityButton1">
+                            <span class="ability-label">Talia</span>
+                            <span id="player1-faction-display">[Wybierz]</span>
+                        </button>
+                        <button id="activateLeader1">
+                            <span id="player1-commander-name">[Wybierz]</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="player-controls">
+                    <div class="card-play-section">
+                        <label>Zagraj kartę:</label>
+                        <select id="player1-card-select"></select>
+                        <select id="player1-row-select"></select>
+                        <button id="playCardButton1">Zagraj</button>
+                    </div>
+                    <div class="graveyard-section">
+                        <label>Cmentarz:</label>
+                        <select id="player1-graveyard-select" class="graveyard-select" disabled>
+                            <option value="">-- Pusty --</option>
+                        </select>
+                    </div>
+                    <button id="passRoundButton1" class="pass-button">Pasuj</button>
+                </div>
+             </div>
+            
+             <div class="global-weather-row" id="global-weather-row">
+                <h3>Pogoda</h3>
+             </div>
+
+             <div class="player-sidebar player2-sidebar">
+                <div class="player-info">
+                     <div class="player-header">
+                        <h2 id="player2-name-display">Gracz 2</h2>
+                        <div class="crystals-display" id="player2-crystal-count"></div>
+                    </div>
+                     <div class="ability-buttons">
+                        <button id="factionAbilityButton2">
+                            <span class="ability-label">Talia</span>
+                            <span id="player2-faction-display">[Wybierz]</span>
+                        </button>
+                        <button id="activateLeader2">
+                            <span id="player2-commander-name">[Wybierz]</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="player-controls">
+                    <div class="card-play-section">
+                        <label>Zagraj kartę:</label>
+                        <select id="player2-card-select"></select>
+                        <select id="player2-row-select"></select>
+                        <button id="playCardButton2">Zagraj</button>
+                    </div>
+                    <div class="graveyard-section">
+                        <label>Cmentarz:</label>
+                        <select id="player2-graveyard-select" class="graveyard-select" disabled>
+                            <option value="">-- Pusty --</option>
+                        </select>
+                    </div>
+                    <button id="passRoundButton2" class="pass-button">Pasuj</button>
+                </div>
+             </div>
+        </div>
+
+        <div class="main-board-column">
+            <div class="player-board-area">
+                <div class="total-power-display">
+                    <!-- ZMIANA: Usunięto tekst "Siła Całkowita" -->
+                    <span id="player1-power">0</span>
+                </div>
+                <div class="battlefield-rows player1-board">
+                    <div class="row-container">
+                        <div class="row-score" id="player1-siege-score">0</div>
+                        <div class="horn-slot" id="player1-siege-horn"></div>
+                        <div class="row siege-row" id="player1-siege-row"><h3>Oblężnicze</h3></div>
+                    </div>
+                    <div class="row-container">
+                        <div class="row-score" id="player1-ranged-score">0</div>
+                        <div class="horn-slot" id="player1-ranged-horn"></div>
+                        <div class="row ranged-row" id="player1-ranged-row"><h3>Dystans</h3></div>
+                    </div>
+                    <div class="row-container">
+                        <div class="row-score" id="player1-melee-score">0</div>
+                        <div class="horn-slot" id="player1-melee-horn"></div>
+                        <div class="row melee-row" id="player1-melee-row"><h3>Wręcz</h3></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="player-board-area">
+                <div class="total-power-display">
+                    <!-- ZMIANA: Usunięto tekst "Siła Całkowita" -->
+                    <span id="player2-power">0</span>
+                </div>
+                <div class="battlefield-rows player2-board">
+                     <div class="row-container">
+                        <div class="row-score" id="player2-melee-score">0</div>
+                        <div class="horn-slot" id="player2-melee-horn"></div>
+                        <div class="row melee-row" id="player2-melee-row"><h3>Wręcz</h3></div>
+                    </div>
+                    <div class="row-container">
+                        <div class="row-score" id="player2-ranged-score">0</div>
+                        <div class="horn-slot" id="player2-ranged-horn"></div>
+                        <div class="row ranged-row" id="player2-ranged-row"><h3>Dystans</h3></div>
+                    </div>
+                    <div class="row-container">
+                        <div class="row-score" id="player2-siege-score">0</div>
+                        <div class="horn-slot" id="player2-siege-horn"></div>
+                        <div class="row siege-row" id="player2-siege-row"><h3>Oblężnicze</h3></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="history-log-container">
+            <h2>Historia Gry</h2>
+            <div id="history-log"></div>
+        </div>
+    </div>
+
+    <script src="cards.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
