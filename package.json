@@ -1,0 +1,16 @@
+{
+  "name": "ryzowy-ksiaze",
+  "version": "1.0.0",
+  "description": "Gra karciana Ryżowy Książę",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 3000",
+    "dev": "npx http-server . -p 3000"
+  },
+  "keywords": ["game", "cards", "javascript"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
