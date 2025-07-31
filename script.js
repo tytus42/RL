@@ -615,8 +615,15 @@ function executeResurrection(player, resurrectedCardId) {
         if (!wasMedicChain) {
             if (isFactionAbilitySetupInProgress) {
                 processFactionAbilityQueue();
-            } else if (!isFirstMoveOfRound) {
-                switchActivePlayer();
+            } else if (!isFirstMoveOfRound && passedPlayers.length < 2) {
+                // Sprawdź czy przeciwnik już spasował
+                const opponent = (player === players.player1) ? players.player2 : players.player1;
+                if (!passedPlayers.includes(opponent)) {
+                    switchActivePlayer();
+                } else {
+                    // Przeciwnik spasował, aktywny gracz pozostaje ten sam
+                    updateAllControls();
+                }
             } else {
                 isFirstMoveOfRound = false;
                 activePlayer = player;
@@ -666,8 +673,15 @@ function completeAgileResurrection(player, chosenRow) {
     if (!wasMedicChain) {
         if (isFactionAbilitySetupInProgress) {
             processFactionAbilityQueue();
-        } else if (!isFirstMoveOfRound) {
-            switchActivePlayer();
+        } else if (!isFirstMoveOfRound && passedPlayers.length < 2) {
+            // Sprawdź czy przeciwnik już spasował
+            const opponent = (player === players.player1) ? players.player2 : players.player1;
+            if (!passedPlayers.includes(opponent)) {
+                switchActivePlayer();
+            } else {
+                // Przeciwnik spasował, aktywny gracz pozostaje ten sam
+                updateAllControls();
+            }
         } else {
             isFirstMoveOfRound = false;
             activePlayer = player;
