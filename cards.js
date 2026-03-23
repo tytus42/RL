@@ -25,7 +25,7 @@ const allCards = [
     { id: "Pablo", name: "Pablo", type: "Unit", power: 5, faction: "Khorinis", row: "melee", isHero: false },
     { id: "Constantino", name: "Constantino", type: "Unit", power: 5, faction: "Khorinis", row: "siege", abilities: ["medic"], isHero: false },
     { id: "Martin", name: "Martin", type: "Unit", power: 5, faction: "Khorinis", row: "melee", abilities: ["spy"], isHero: false },
-    { id: "Ruga", name: "Ruga", type: "Unit", power: 5, faction: "Khorinis", row: "renged", isHero: false },
+    { id: "Ruga", name: "Ruga", type: "Unit", power: 5, faction: "Khorinis", row: "ranged", isHero: false },
     { id: "Wulfgar", name: "Wulfgar", type: "Unit", power: 5, faction: "Khorinis", row: "melee", isHero: false },
     { id: "Orik", name: "Orik", type: "Unit", power: 6, faction: "Khorinis", row: "siege", isHero: false },
     { id: "Esmeralda", name: "Esmeralda", type: "Unit", power: 6, faction: "Khorinis", row: "siege", isHero: false },
