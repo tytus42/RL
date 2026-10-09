@@ -1,14 +1,14 @@
-# Ryżowy Książę – kalkulator gry (stan na 2026-10-09)
+# Ryżowy Książę – kalkulator gry (stan na 2026-10-10)
 
-Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z listy rozwijanej (brak talii i ręki).
-Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `index.html`, `style.css`.
+Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z arkusza wyboru (brak talii i ręki).
+Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `ui.js` (warstwa interfejsu pod telefon), `index.html`, `style.css`.
 Źródło zasad: Instrukcja_RK_2.2.pdf (zasady z instrukcji mają pierwszeństwo przed zasadami na kartach).
 
 ## Cel projektu (ważne)
 To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznymi kartami. Ma ułatwiać liczenie punktów.
 - Program nie losuje, nie tasuje i nie wymienia kart – to dzieje się fizycznie przy stole.
 - Ruchy w programie odwzorowują ruchy fizyczne graczy, z zachowaniem zasad (kolejność tur, pasowanie, zdolności, koniec rundy).
-- Brak talii, ręki, mulligana i limitów budowy talii jest więc celowy, a nie brakiem do uzupełnienia.
+- Brak talii, ręki, mulligana i limitów budowy talii (22 jednostki, max 10 kart efektów) jest więc celowy, a nie brakiem do uzupełnienia.
 - Główne urządzenie: telefon lub tablet leżący na stole.
 
 ## Co działa (przetestowane: 44 scenariusze + ok. 400 losowych partii)
@@ -21,11 +21,37 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
 
+## Interfejs pod telefon (2026-10-10)
+Nowy `ui.js` (ładowany po `script.js`) + przebudowane `index.html` i `style.css`. Logika gry w `script.js` bez zmian – `ui.js` czyta stan i steruje ukrytymi listami `<select>` tymi samymi zdarzeniami co wcześniej.
+- Układ telefonu: jedna kolumna w kolejności jak przy stole (panel gracza 1, plansza 1, pogoda, plansza 2, panel gracza 2). Od 900 px układ szeroki.
+- Przyklejony pasek wyniku: imiona, kryształy, sumy, numer rundy, czyja tura, komunikat trybu (Chrząszcz / medyk / wybór rzędu) i ostatnia akcja.
+- Wybór karty w arkuszu od dołu: wyszukiwarka, filtry (rząd, bohaterowie, specjalne, pogoda), te same karty zgrupowane z licznikiem (np. Zombie ×5).
+- Rząd wybiera się dużymi przyciskami; przycisk „Zagraj: <karta>”.
+- Medyk: cmentarz otwiera się sam, z opcją „Pomiń wskrzeszenie”. Cmentarz można też przeglądać przyciskiem „Cmentarz (n)”.
+- Pasowanie wymaga drugiego dotknięcia (ochrona przed przypadkowym pasem).
+- Sterowanie gracza, który czeka, jest zwinięte na telefonie.
+- Imiona graczy na ekranie konfiguracji (pamiętane w localStorage).
+- Blokada wygaszania ekranu (Wake Lock) w trakcie gry; ostrzeżenie przed zamknięciem karty w środku partii.
+- Czcionka nagłówków: `Gothic_II_NK.ttf` z repo (gdy brak pliku – szeryfowa zastępcza).
+
+### Poprawione błędy wyglądu i UX
+- Strona wychodziła poza ekran w poziomie (468 px przy 390 px).
+- Na karty zostawało ok. 25% szerokości rzędu (siła całkowita + wynik + puste pole rogu po 50–90 px).
+- Napisy rzędów na środku nachodziły na karty i były ucinane („Oblężnicze”).
+- Sterowanie było ok. 1000 px nad planszą; nie było widać, czyja jest tura.
+- Listy rozwijane z czcionką < 16 px powodowały automatyczne powiększanie na iPhonie.
+- Historia nie miała `grid-area` i rosła bez ograniczenia; teraz zwijana, z limitem wysokości.
+- Efekty `:hover` „przyklejały się” na ekranach dotykowych.
+- Start gry bez wybranej frakcji/dowódcy był możliwy (`return alert` w `forEach` nie przerywał startu) – teraz przycisk jest nieaktywny do pełnej konfiguracji.
+- Grom miał efekt mrozu zamiast deszczu – `ui.js` podmienia `effectClass` na `rain-effect` (docelowo poprawić w `cards.js`/Excelu).
+- Historia pokazywała angielskie nazwy rzędów („do rzędu siege”) – `ui.js` tłumaczy je w nowych wpisach.
+
 ## Zostawione na później
 - Zdolności wszystkich dowódców (m.in. Zastępy Innosa, Oko Innosa, Zew hordy, Beliar z nami) – obecnie alert „Implementacja w toku".
 - Zdolności 7 talii (str. 19 instrukcji): remis dla Khorinis, zostająca karta Potworów, dodatkowa wymiana Najemników, pominięcie tury Klasztoru, powrót 2 kart u Orków, dobór po przegranej Bandytów, dobór po wygranej Nieumarłych. (W kalkulatorze część z nich może sprowadzać się do przypomnienia dla graczy, bo karty dobierają fizycznie.)
 - Zwycięzca rundy zaczyna następną (obecnie może zacząć każdy).
 - Remis w rundzie: celowo bez zmian (obaj gracze tracą kryształ).
+- Komunikaty `alert()` (koniec gry, „Wybierz rząd”, dowódca) – do zamiany na okienka w stylu aplikacji.
 
 ## Decyzje (potwierdzone 2026-10-09)
 - Mobilność (agile): rząd wybiera się przy zagrywaniu karty i przy jej wskrzeszeniu – tak działa kod.
@@ -34,21 +60,19 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 
 ## Uwagi do danych
 - W `cards.js` zmieniono względem Excela: Najemnik x4 ma tight_bond, Ork wojownik x3 nie jest tokenem, dodano dowódcę Zastępy Innosa, usunięto Cavalorn_token, Goblin wojownik bez musterRole, Strach jako Weather, ID Barania_kielbasa_1..3. Warto zsynchronizować Excel.
+- Grom: `effectClass` powinno być `rain-effect` (obecnie poprawiane w `ui.js`).
 
 ## Hosting (publikacja online)
 Projekt to czysty HTML/CSS/JS bez backendu, więc wystarczy darmowy hosting statyczny.
-- **Repozytorium: github.com/tytus42/RL**, strona: **tytus42.github.io/RL/** (GitHub Pages włączone). W repo jest też czcionka `Gothic_II_NK.ttf` – przyda się przy designie.
-- **GitHub Pages** (rekomendowane na stałe): repozytorium, Settings -> Pages -> gałąź `main`. Adres `login.github.io/nazwa-repo`, aktualizacja po każdym pushu, historia zmian w gicie.
-- **Netlify Drop** (najszybsze na próbę): app.netlify.com/drop, przeciągnąć folder `gwint`. Bez konta link jest tymczasowy.
-- Cloudflare Pages / Vercel: też działają, ale dla tego projektu nic nie wnoszą ponad powyższe.
-- Przed publikacją: plik startowy musi się nazywać `index.html` (jest), a wielkość liter w nazwach plików ma znaczenie na serwerze (`cards.js` != `Cards.js`).
+- **Istniejące repozytorium: github.com/tytus42/RL** (publiczne, GitHub Pages włączone, adres **tytus42.github.io/RL/**). Trzeba podmienić `index.html`, `cards.js`, `script.js`, `style.css` oraz dodać `ui.js` i `NOTATKA.md`. W repo jest `Gothic_II_NK.ttf` – `style.css` z niej korzysta.
+- Podmiana z telefonu: github.com w widoku na komputer -> Add file -> Upload files (pliki o tej samej nazwie są nadpisywane) -> Commit changes. Stare wersje zostają w historii commitów.
+- Netlify Drop (app.netlify.com/drop) – szybka alternatywa na próbę.
+- Wielkość liter w nazwach plików ma znaczenie na serwerze (`cards.js` != `Cards.js`).
 - Serwer (WebSocket) potrzebny byłby dopiero przy grze przez sieć na osobnych urządzeniach – nie jest to cel projektu.
 
 ## Pomysły pod użycie przy stole (do zrobienia)
-1. **Układ pod telefon/tablet**: obecnie jedna kolumna dopiero poniżej 900 px, listy rozwijane i małe karty na planszy są niewygodne na telefonie.
+1. ~~Układ pod telefon/tablet~~ – zrobione 2026-10-10.
 2. **Praca offline (PWA)**: `manifest.json` + prosty service worker, instalacja na ekranie głównym, działanie bez zasięgu.
-3. **Zapis stanu w `localStorage`**: odświeżenie strony kasuje dziś całą partię, zapis ochroni przed przypadkowym zamknięciem karty w środku rundy.
+3. **Zapis stanu w `localStorage`**: odświeżenie strony kasuje dziś całą partię (jest już ostrzeżenie przed zamknięciem, ale nie zapis).
 4. **Cofnięcie ostatniego ruchu (undo)**: pomyłki w klikaniu przy odwzorowywaniu fizycznych ruchów będą się zdarzać.
-
-## Następny temat: grafika i design (index.html + style.css)
-Obecny wygląd jest tekstowy: karty to proste prostokąty z nazwą i siłą, bez grafik kart. Projektować z myślą o telefonie leżącym na stole (duże elementy dotykowe, szybki wybór karty zamiast długich list rozwijanych).
+5. Grafiki kart w arkuszu wyboru i na planszy (obecnie siła + nazwa).
