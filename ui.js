@@ -4,6 +4,22 @@
 (function () {
     'use strict';
 
+    // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
+    // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
+    const UI_VERSION = '2026-10-11c';
+    if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
+        const box = document.createElement('div');
+        box.className = 'version-error';
+        box.innerHTML = '<p><strong>Wczytały się pliki z różnych wersji.</strong><br>Odśwież stronę. Jeśli to nie pomoże, wyczyść pamięć podręczną przeglądarki dla tej strony.</p>';
+        const btn = document.createElement('button');
+        btn.className = 'btn-primary';
+        btn.textContent = 'Odśwież';
+        btn.addEventListener('click', () => location.reload());
+        box.appendChild(btn);
+        document.body.prepend(box);
+        return;
+    }
+
     const ROWS = ['melee', 'ranged', 'siege'];
     const ROW_LABEL = { melee: 'Wręcz', ranged: 'Dystans', siege: 'Oblężnicze' };
     const ROW_ICON = { melee: '⚔', ranged: '➶', siege: '⛫' };
@@ -114,6 +130,7 @@
         });
         $('#sb-round').textContent = `Tura ${roundNumber}`;
         $('#undo-btn').disabled = !canUndo();
+        $('#redo-btn').disabled = !canRedo();
 
         const st = statusText();
         const banner = $('#status-banner');
@@ -515,17 +532,34 @@
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
     }
-    function doUndo() {
-        if (!canUndo()) return;
+    const lastLogText = () => {
         const last = historyLog.firstElementChild;
-        const what = last ? last.textContent.replace(/^\[(Runda|Tura) \d+\]\s*/, '') : '';
-        if (sheetState) closeSheet();
-        undoLastMove();
+        return last ? last.textContent.replace(/^\[(Runda|Tura) \d+\]\s*/, '') : '';
+    };
+    function afterRestore() {
         if (!isGameOver) { gameRunning = true; $('#summary').hidden = true; document.body.classList.remove('sheet-open'); }
-        toast(what ? `Cofnięto: ${what}` : 'Cofnięto ostatni ruch');
         scheduleRefresh();
     }
+    function doUndo(e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); } // przyciski siedzą w nagłówku <details>
+        if (!canUndo()) return;
+        const what = lastLogText();
+        if (sheetState) closeSheet();
+        undoLastMove();
+        afterRestore();
+        toast(what ? `Cofnięto: ${what}` : 'Cofnięto ostatni ruch');
+    }
+    function doRedo(e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        if (!canRedo()) return;
+        if (sheetState) closeSheet();
+        redoLastMove();
+        afterRestore();
+        const what = lastLogText();
+        toast(what ? `Powtórzono: ${what}` : 'Powtórzono ruch');
+    }
     $('#undo-btn').addEventListener('click', doUndo);
+    $('#redo-btn').addEventListener('click', doRedo);
 
     // ---------- Podsumowanie gry ----------
     const pad = n => String(n).padStart(2, '0');
@@ -590,7 +624,7 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
-    $('#summary-undo').addEventListener('click', doUndo);
+    $('#summary-undo').addEventListener('click', () => doUndo());
     $('#summary-new').addEventListener('click', () => { gameRunning = false; location.reload(); });
 
     // ---------- Ekran konfiguracji ----------

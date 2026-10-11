@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ryżowy Książę – kalkulator</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2026-10-11c">
 </head>
 <body>
     <!-- ============ KONFIGURACJA ============ -->
@@ -49,10 +49,7 @@
                 <span class="sb-gems" id="sb-gems-1"></span>
                 <span class="sb-total" id="sb-total-1">0</span>
             </div>
-            <div class="sb-center">
-                <div class="sb-round" id="sb-round">Tura 1</div>
-                <button id="undo-btn" class="btn-undo" type="button" disabled title="Cofnij ostatni ruch">↶ Cofnij</button>
-            </div>
+            <div class="sb-round" id="sb-round">Tura 1</div>
             <div class="sb-player sb-p2" data-player="2">
                 <span class="sb-total" id="sb-total-2">0</span>
                 <span class="sb-gems" id="sb-gems-2"></span>
@@ -176,7 +173,13 @@
         </div>
 
         <details class="history-log-container" id="history-container">
-            <summary><h2>Historia gry</h2></summary>
+            <summary>
+                <h2>Historia gry</h2>
+                <span class="history-actions">
+                    <button id="undo-btn" class="btn-undo" type="button" disabled title="Cofnij ostatni ruch">↶ Cofnij</button>
+                    <button id="redo-btn" class="btn-undo" type="button" disabled title="Powtórz cofnięty ruch">Powtórz ↷</button>
+                </span>
+            </summary>
             <div id="history-log"></div>
         </details>
     </div>
@@ -218,8 +221,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="cards.js"></script>
-    <script src="script.js"></script>
-    <script src="ui.js"></script>
+    <script src="cards.js?v=2026-10-11c"></script>
+    <script src="script.js?v=2026-10-11c"></script>
+    <script src="ui.js?v=2026-10-11c"></script>
 </body>
 </html>

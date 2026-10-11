@@ -1,3 +1,6 @@
+// Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
+const APP_VERSION = '2026-10-11c';
+
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
 const battlefieldScreen = document.getElementById('battlefield-screen');
@@ -43,6 +46,7 @@ let endRoundTimer = null;
 
 // ===== Cofanie ruchu: migawki stanu przed każdą akcją gracza =====
 const undoStack = [];
+const redoStack = [];
 const UNDO_LIMIT = 300;
 function playerKeyOf(p) { return p === players.player1 ? 'player1' : p === players.player2 ? 'player2' : null; }
 const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
@@ -58,11 +62,14 @@ function takeSnapshot() {
         iid: __iid, roundResults: clone(roundResults), isGameOver, log: historyLog.innerHTML
     };
 }
-function pushUndo(snap) { undoStack.push(snap); if (undoStack.length > UNDO_LIMIT) undoStack.shift(); }
+function pushUndo(snap) {
+    undoStack.push(snap);
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack.length = 0; // nowy ruch kasuje możliwość „Powtórz”
+}
 function canUndo() { return undoStack.length > 0; }
-function undoLastMove() {
-    if (!undoStack.length) return false;
-    const s = undoStack.pop();
+function canRedo() { return redoStack.length > 0; }
+function restoreSnapshot(s) {
     clearTimeout(endRoundTimer); endRoundTimer = null;
     deactivateDecoyMode();
     Object.assign(players.player1, s.p1);
@@ -82,7 +89,26 @@ function undoLastMove() {
     isGameOver = s.isGameOver;
     historyLog.innerHTML = s.log;
     updateAllControls();
+    // Stan „obaj spasowali, tura jeszcze nieprzeliczona” – dokończ turę.
+    if (passedPlayers.length === 2 && !isGameOver) endRoundTimer = setTimeout(endRound, 500);
     if (isMusterModeActive && typeof window.openMusterPicker === 'function') window.openMusterPicker(pendingMuster);
+    if (isGameOver && typeof window.showGameSummary === 'function') {
+        const c1 = players.player1.crystalCount, c2 = players.player2.crystalCount;
+        window.showGameSummary(c1 <= 0 && c2 <= 0 ? null : (c1 <= 0 ? players.player2 : players.player1));
+    }
+}
+function undoLastMove() {
+    if (!undoStack.length) return false;
+    const s = undoStack.pop();
+    redoStack.push(takeSnapshot());
+    restoreSnapshot(s);
+    return true;
+}
+function redoLastMove() {
+    if (!redoStack.length) return false;
+    const s = redoStack.pop();
+    undoStack.push(takeSnapshot());
+    restoreSnapshot(s);
     return true;
 }
 // Wykonuje akcję; jeśli się udała, zapamiętuje stan sprzed niej.
@@ -465,6 +491,8 @@ function executeDecoySwap(player, targetCardInstance) {
 
 function activateDecoyMode(player) {
     if (isDecoyModeActive) deactivateDecoyMode();
+    // Chrząszcz jako pierwszy ruch tury: wskaż gracza, żeby dało się wybrać cel.
+    if (isFirstMoveOfRound) activePlayer = player;
     isDecoyModeActive = true;
     addLogEntry(`${player.name} przygotowuje Chrząszcza... Kliknij cel na swojej planszy.`);
     updatePlayerControlsVisibility(player);
