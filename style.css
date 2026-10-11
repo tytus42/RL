@@ -19,8 +19,10 @@
     --muted: #a89a80;
     --gold: #d9a441;
     --gold-hi: #f3c867;
-    --p1: #e0a83c;
-    --p2: #6fa8dc;
+    /* Kolory graczy – ui.js ustawia je wg koloru frakcji (Excel: Karty_RL.xlsx).
+       --pN: akcent (ramki, paski), --pN-text: wersja czytelna na ciemnym tle, --pN-on: tekst na tle akcentu. */
+    --p1: #e0a83c; --p1-text: #e0a83c; --p1-on: #1d160c;
+    --p2: #6fa8dc; --p2-text: #6fa8dc; --p2-on: #1d160c;
     --melee: #c2493b;
     --ranged: #4a87c4;
     --siege: #c9952e;
@@ -113,8 +115,10 @@ select:disabled { opacity: .5; }
 .player-setup.p1 { border-top: 4px solid var(--p1); }
 .player-setup.p2 { border-top: 4px solid var(--p2); }
 .player-setup h2 { font-size: 1.5em; margin-bottom: 4px; }
-.player-setup.p1 h2 { color: var(--p1); }
-.player-setup.p2 h2 { color: var(--p2); }
+.player-setup.p1 h2 { color: var(--p1-text); }
+.player-setup.p2 h2 { color: var(--p2-text); }
+.player-setup.p1 { background: linear-gradient(color-mix(in srgb, var(--p1) 10%, var(--panel)), var(--panel) 60%); }
+.player-setup.p2 { background: linear-gradient(color-mix(in srgb, var(--p2) 10%, var(--panel)), var(--panel) 60%); }
 .player-setup label { color: var(--muted); font-size: .85em; margin-top: 6px; }
 .setup-hint { color: var(--muted); font-size: .9em; margin: 0 0 10px; }
 #startGameButton { width: 100%; max-width: 420px; }
@@ -158,12 +162,12 @@ select:disabled { opacity: .5; }
 .sb-p1 { justify-content: flex-start; }
 .sb-p2 { justify-content: flex-end; }
 .sb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.sb-p1 .sb-name { color: var(--p1); }
-.sb-p2 .sb-name { color: var(--p2); }
+.sb-p1 .sb-name { color: var(--p1-text); }
+.sb-p2 .sb-name { color: var(--p2-text); }
 .sb-total { font: 700 1.6em/1 var(--head-font); min-width: 1.6em; text-align: center; font-variant-numeric: tabular-nums; }
 .sb-player.is-leading .sb-total { color: var(--gold-hi); }
-.sb-p1.is-active { border-color: var(--p1); background: rgba(224, 168, 60, .12); }
-.sb-p2.is-active { border-color: var(--p2); background: rgba(111, 168, 220, .12); }
+.sb-p1.is-active { border-color: var(--p1); background: color-mix(in srgb, var(--p1) 16%, transparent); }
+.sb-p2.is-active { border-color: var(--p2); background: color-mix(in srgb, var(--p2) 16%, transparent); }
 .sb-player.is-passed { opacity: .55; }
 .sb-player.is-passed .sb-name::after { content: ' · pas'; font-weight: 400; color: var(--muted); }
 .sb-round {
@@ -217,8 +221,12 @@ select:disabled { opacity: .5; }
     gap: 2px 8px;
 }
 .player-info h2 { font-size: 1.25em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player1-sidebar h2 { color: var(--p1); }
-.player2-sidebar h2 { color: var(--p2); }
+.player1-sidebar h2 { color: var(--p1-text); }
+.player2-sidebar h2 { color: var(--p2-text); }
+.player1-sidebar { background: linear-gradient(90deg, color-mix(in srgb, var(--p1) 12%, var(--panel)), var(--panel) 70%); }
+.player2-sidebar { background: linear-gradient(90deg, color-mix(in srgb, var(--p2) 12%, var(--panel)), var(--panel) 70%); }
+.player1-sidebar.is-active .turn-badge { background: var(--p1); border-color: var(--p1); color: var(--p1-on); }
+.player2-sidebar.is-active .turn-badge { background: var(--p2); border-color: var(--p2); color: var(--p2-on); }
 .turn-badge {
     font-size: .75em; text-transform: uppercase; letter-spacing: .06em;
     padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
@@ -255,6 +263,8 @@ select:disabled { opacity: .5; }
     background: var(--panel-2); border: 1px dashed var(--gold);
 }
 .card-pick-btn.has-card { border-style: solid; background: var(--panel-3); }
+.player1-sidebar .card-pick-btn { border-color: var(--p1); }
+.player2-sidebar .card-pick-btn { border-color: var(--p2); }
 .card-pick-btn .pick-name { flex: 1; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-pick-btn .muted { color: var(--muted); font-weight: 400; }
 .card-pick-btn .pick-change { font-size: .8em; color: var(--gold-hi); }
@@ -293,8 +303,8 @@ select:disabled { opacity: .5; }
     padding: 6px;
     display: flex; gap: 6px;
 }
-.player1-area { border-top: 3px solid var(--p1); }
-.player2-area { border-bottom: 3px solid var(--p2); }
+.player1-area { border-top: 3px solid var(--p1); background: linear-gradient(color-mix(in srgb, var(--p1) 9%, var(--panel)), var(--panel) 45%); }
+.player2-area { border-bottom: 3px solid var(--p2); background: linear-gradient(0deg, color-mix(in srgb, var(--p2) 9%, var(--panel)), var(--panel) 45%); }
 .total-power-display { display: none; } /* suma jest w pasku wyniku */
 
 .battlefield-rows { flex: 1; display: flex; gap: 5px; min-width: 0; }
@@ -513,8 +523,8 @@ select:disabled { opacity: .5; }
 .summary-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .summary-table th, .summary-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: center; }
 .summary-table thead th { color: var(--muted); font-weight: 600; font-size: .9em; }
-.summary-table thead th.p1 { color: var(--p1); }
-.summary-table thead th.p2 { color: var(--p2); }
+.summary-table thead th.p1 { color: var(--p1-text); }
+.summary-table thead th.p2 { color: var(--p2-text); }
 .summary-table tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
 .summary-table td.won { color: var(--gold-hi); font-weight: 700; }
 .summary-sub { font-size: 1em; color: var(--muted); margin-top: 4px; }

@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-11c';
+    const UI_VERSION = '2026-10-11d';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -39,6 +39,42 @@
         get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
         set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* brak dostępu */ } }
     };
+
+    // ---------- Kolory frakcji (z Karty_RL.xlsx – kolor wiersza z nazwą talii) ----------
+    const FACTION_COLORS = {
+        Khorinis: '#E69138', Potwory: '#6AA84F', Najemnicy: '#4285F4', Klasztor: '#EA4335',
+        Orkowie: '#FFFF00', Bandyci: '#999999', Nieumarli: '#9900FF', Neutral: '#A61C00'
+    };
+    const DEFAULT_COLORS = ['#e0a83c', '#6fa8dc'];
+    const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const rgbToHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+    const mixWhite = (h, t) => rgbToHex(hexToRgb(h).map(v => v + (255 - v) * t));
+    const luminance = h => {
+        const [r, g, b] = hexToRgb(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    // Wersja do tekstu na ciemnym tle: rozjaśniamy ciemne kolory (np. fiolet Nieumarłych), aż będą czytelne.
+    function readable(h) {
+        let t = 0, out = h;
+        while (luminance(out) < 0.2 && t < 0.8) { t += 0.05; out = mixWhite(h, t); }
+        return out;
+    }
+    function applyFactionColors() {
+        const f = [1, 2].map(n => {
+            const pl = players[`player${n}`];
+            return (pl && pl.faction) || ($(`#player${n}-faction-select`) || {}).value || '';
+        });
+        const base = f.map((fac, i) => FACTION_COLORS[fac] || DEFAULT_COLORS[i]);
+        // Ta sama frakcja u obu graczy – gracz 2 dostaje jaśniejszy odcień, żeby się odróżniał.
+        if (f[0] && f[0] === f[1]) base[1] = luminance(base[1]) > 0.5 ? rgbToHex(hexToRgb(base[1]).map(v => v * 0.6)) : mixWhite(base[1], 0.45);
+        const root = document.documentElement.style;
+        base.forEach((col, i) => {
+            const n = i + 1;
+            root.setProperty(`--p${n}`, col);
+            root.setProperty(`--p${n}-text`, readable(col));
+            root.setProperty(`--p${n}-on`, luminance(col) > 0.35 ? '#1d160c' : '#ffffff');
+        });
+    }
 
     // ---------- Wygląd karty na planszy (nadpisuje createCardElement) ----------
     window.createCardElement = function (card) {
@@ -639,7 +675,7 @@
         startGameButton.disabled = !ok;
         $('#setup-hint').hidden = ok;
     }
-    gameSetupScreen.addEventListener('change', () => setTimeout(refreshSetup, 0));
+    gameSetupScreen.addEventListener('change', () => setTimeout(() => { refreshSetup(); applyFactionColors(); }, 0));
     refreshSetup();
 
     // Przechwycenie przed startGame(): imiona + blokada niepełnej konfiguracji
@@ -654,7 +690,7 @@
         });
         gameRunning = true;
         requestWakeLock();
-        setTimeout(() => { battlefieldScreen.style.display = ''; scheduleRefresh(); }, 0);
+        setTimeout(() => { battlefieldScreen.style.display = ''; applyFactionColors(); scheduleRefresh(); }, 0);
     }, true);
 
     // ---------- Wygoda przy stole ----------

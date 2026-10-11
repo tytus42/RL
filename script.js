@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-11c';
+const APP_VERSION = '2026-10-11d';
 
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
