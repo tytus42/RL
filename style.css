@@ -46,7 +46,7 @@ body {
     min-height: 100dvh;
     background: radial-gradient(ellipse at top, #241d14 0%, var(--bg) 60%) fixed;
     color: var(--text);
-    font: 16px/1.35 var(--head-font); /* czcionka Gothic II z repozytorium – w całej aplikacji */
+    font: 14.5px/1.35 var(--head-font); /* czcionka Gothic II z repozytorium – w całej aplikacji */
     -webkit-tap-highlight-color: transparent;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
@@ -254,15 +254,29 @@ select:disabled { opacity: .5; }
     display: flex; align-items: center; gap: 6px; min-width: 0; font-size: .88em;
 }
 .leader-label { color: var(--muted); }
+.ability-btn {
+    flex: 1 1 0; min-width: 0; min-height: 38px; padding: 4px 10px;
+    display: flex; align-items: center; gap: 6px; text-align: left; font-size: .95em;
+}
+.ability-btn .ab-icon { flex-shrink: 0; color: var(--muted); }
+.ability-btn .ab-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player1-sidebar .ability-btn.can-use { border-color: var(--p1); }
+.player2-sidebar .ability-btn.can-use { border-color: var(--p2); }
+.ability-btn.can-use .ab-icon { color: var(--gold-hi); }
+.ability-btn.used { opacity: .5; }
+.ability-btn.used .ab-name { text-decoration: line-through; }
+.ability-panel { max-width: 440px; text-align: center; gap: 8px; }
+.ability-kind { margin: 0; color: var(--muted); font-size: .85em; }
+.ability-desc { margin: 4px 0; font-size: 1.05em; line-height: 1.45; }
+.ability-note { margin: 0; color: var(--muted); font-size: .88em; font-style: italic; }
+.ability-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 6px; }
 .leader-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .leader-line button.used { opacity: .35; }
 
 .player-controls { display: grid; gap: 8px; }
 .card-play-section { display: grid; gap: 8px; }
 .secondary-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
-.btn-skip { border-color: var(--p1); }
-.player2-sidebar .btn-skip { border-color: var(--p2); }
-.faction-ability { grid-column: 1 / -1; margin: 0; font-size: .8em; color: var(--muted); font-style: italic; }
+
 .secondary-actions button { min-height: 40px; font-size: .92em; }
 
 /* Gracz czekający: zwinięte sterowanie, żeby nie zabierało ekranu */
@@ -271,8 +285,6 @@ select:disabled { opacity: .5; }
 .player-sidebar.is-waiting, .player-sidebar.is-passed { padding-block: 6px; }
 .player-sidebar.is-waiting .info-faction,
 .player-sidebar.is-passed .info-faction { display: none; }
-.player-sidebar.is-waiting .faction-ability,
-.player-sidebar.is-passed .faction-ability { display: none; }
 
 .card-pick-btn {
     display: flex; align-items: center; gap: 10px;
@@ -517,6 +529,7 @@ select:disabled { opacity: .5; }
 .tile.is-check:not(.is-selected) { opacity: .6; }
 
 /* ---------- Komunikat (toast) ---------- */
+.toast.warn { border-color: var(--bad); background: #3a1d17; }
 .toast {
     position: fixed; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 84px); transform: translateX(-50%);
     pointer-events: none; /* nie zasłania przycisków Cofnij/Powtórz */
@@ -553,40 +566,125 @@ select:disabled { opacity: .5; }
 .summary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 /* =========================================================
-   Szeroki ekran (tablet poziomo, komputer)
+   Ekran poziomy (komputer, tablet i telefon obrócony)
+   Jak w Gwincie: po lewej panel (gracz 1, wynik, pogoda, gracz 2),
+   po prawej pole bitwy (plansza gracza 1 nad planszą gracza 2).
+   Obie części mieszczą się na ekranie bez przewijania; historia jest pod spodem.
    ========================================================= */
-@media (min-width: 900px) {
-    body { font-size: 16px; }
+@media (orientation: landscape) and (min-width: 600px) {
+    body { font-size: 14px; }
+    .game-screen#battlefield-screen { max-width: none; }
     #battlefield-screen {
         display: grid;
-        grid-template-columns: minmax(300px, 360px) 1fr;
-        grid-template-areas:
-            "score score"
-            "side  main"
-            "hist  hist";
-        gap: 12px;
-        padding: 0 16px 20px;
+        grid-template-columns: clamp(230px, 30vw, 390px) minmax(0, 1fr);
+        grid-template-rows: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px) auto;
+        grid-template-areas: "side main" "hist hist";
+        gap: 8px;
+        padding: 6px 8px 12px;
     }
-    .scorebar { grid-area: score; margin: 0 -16px; padding-inline: 16px; }
-    .side-column { grid-area: side; display: flex; flex-direction: column; gap: 10px; }
-    .main-board-column { grid-area: main; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .side-column {
+        grid-area: side; display: flex; flex-direction: column; gap: 6px;
+        min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    }
+    .main-board-column { grid-area: main; display: flex; flex-direction: column; gap: 6px; min-height: 0; min-width: 0; }
     .history-log-container { grid-area: hist; }
-    .player-sidebar { flex: 0 0 auto; }
-    .player-sidebar.is-waiting .player-controls, .player-sidebar.is-passed .player-controls { display: grid; opacity: .45; pointer-events: none; }
-    .player-sidebar.is-waiting .info-faction, .player-sidebar.is-passed .info-faction { display: block; }
-    .player-sidebar.is-waiting .faction-ability, .player-sidebar.is-passed .faction-ability { display: block; }
-    .global-weather-row { flex: 1; border-radius: 14px; min-height: 60px; }
 
-    .player-board-area { flex: 1; padding: 8px; }
+    /* kolejność w lewej kolumnie: wynik – gracz 1 – pogoda – gracz 2 */
+    .scorebar { order: 1; }
+    .player1-sidebar { order: 2; }
+    .global-weather-row { order: 3; }
+    .player2-sidebar { order: 4; }
+
+    .scorebar { grid-template-columns: 1fr auto 1fr; }
+    /* Panel wyniku: każdy gracz w osobnym wierszu (imię … kryształy, suma), tura z prawej */
+    .scorebar {
+        grid-template-columns: 1fr auto;
+        grid-template-areas: "p1 round" "p2 round" "status status";
+        gap: 4px 8px;
+    }
+    .sb-p1 { grid-area: p1; }
+    .sb-p2 { grid-area: p2; flex-direction: row-reverse; justify-content: flex-end; }
+    .sb-round { grid-area: round; align-self: center; }
+    .status-banner { grid-area: status; }
+    .sb-player .sb-name { flex: 1; }
+    .scorebar {
+        position: static; margin: 0; padding: 6px 8px;
+        border: 1px solid var(--line); border-radius: 14px;
+        background: var(--panel);
+    }
+    .global-weather-row { border-radius: 14px; min-height: 34px; flex-shrink: 0; }
+    .player-sidebar { flex-shrink: 0; }
+
+    /* pole bitwy: dwie równe połowy, każdy rząd tej samej wysokości */
+    .player-board-area { flex: 1 1 0; min-height: 0; padding: 5px; }
+    .battlefield-rows { min-height: 0; }
+    .row-container { flex: 1 1 0; min-height: 0; grid-template-columns: 50px 1fr; }
+    .row {
+        min-height: 0; height: 100%;
+        align-content: center; overflow-y: auto; scrollbar-width: thin;
+        padding: 16px 6px 4px;
+    }
     .total-power-display {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        width: 64px; flex-shrink: 0; border-radius: 10px; background: rgba(0, 0, 0, .3);
+        width: 58px; flex-shrink: 0; border-radius: 10px; background: rgba(0, 0, 0, .3);
     }
-    .total-power-display span { font: 700 2.1em/1 var(--head-font); color: var(--gold-hi); }
-    .row-container { grid-template-columns: 52px 1fr; flex: 1; }
-    .row { min-height: 72px; padding: 20px 8px 8px; gap: 6px; }
-    .card-on-board { font-size: .9em; min-height: 34px; }
-    .card-power { min-width: 28px; height: 28px; }
-    .card-name { max-width: 12em; }
-    #history-log { max-height: 220px; }
+    .total-power-display span { font: 2em/1 var(--head-font); color: var(--gold-hi); }
+    #history-log { max-height: 260px; }
 }
+/* Niski ekran poziomy (telefon obrócony): wszystko ciaśniej */
+@media (orientation: landscape) and (min-width: 600px) and (max-height: 560px) {
+    body { font-size: 13px; }
+    .side-column, .main-board-column { gap: 4px; }
+    .sb-name { display: none; } /* ciasno – imiona są w panelach graczy */
+    .scorebar { grid-template-columns: 1fr auto 1fr; grid-template-areas: "p1 round p2" "status status status"; }
+    .sb-p2 { flex-direction: row; justify-content: flex-end; }
+    .total-power-display { display: none; }
+    .row-container { grid-template-columns: 38px 1fr; gap: 2px 4px; }
+    .row-score { font-size: 1.15em; }
+    .row { padding: 13px 4px 2px; gap: 3px; }
+    .row h3 { top: 2px; font-size: .62em; }
+    .card-on-board { min-height: 24px; font-size: .8em; padding: 1px 6px 1px 1px; }
+    .card-power { min-width: 20px; height: 20px; font-size: .9em; }
+    .scorebar { padding: 4px 6px; }
+    .status-banner { font-size: .85em; }
+    .status-banner.mode { padding: 3px 8px; }
+    .player-sidebar { padding: 6px 8px; gap: 5px; }
+    .player-info h2 { font-size: 1.05em; }
+    .ability-btn { min-height: 30px; padding: 2px 8px; }
+    .card-pick-btn { min-height: 38px; }
+    #playCardButton1, #playCardButton2 { min-height: 38px; }
+    .row-btn { min-height: 36px; }
+    .secondary-actions button { min-height: 32px; }
+    .global-weather-row { min-height: 26px; padding: 2px 6px; }
+    .player-board-area { padding: 3px; }
+    /* gracz czekający: tylko imię i znacznik; zwykły komunikat tury chowamy (jest znacznik „twój ruch”) */
+    .player-sidebar.is-waiting .leader-line, .player-sidebar.is-passed .leader-line { display: none; }
+    .status-banner:not(.mode) { display: none; }
+}
+
+/* ---------- Talia i wznowienie na ekranie konfiguracji ---------- */
+.deck-btn { margin-top: 8px; width: 100%; min-height: 40px; font-size: .9em; text-align: left; border-style: dashed; }
+.player-setup.p1 .deck-btn:not(:disabled) { border-color: var(--p1); }
+.player-setup.p2 .deck-btn:not(:disabled) { border-color: var(--p2); }
+.resume-box {
+    max-width: 820px; margin: 0 auto 16px; padding: 12px 14px;
+    border: 1px solid var(--gold); border-radius: 14px; background: var(--panel);
+    display: grid; gap: 10px; text-align: center;
+}
+.resume-box p { margin: 0; }
+.resume-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+
+/* ---------- Podgląd siły karty ---------- */
+.card-on-board { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.power-steps { list-style: none; margin: 6px 0 0; padding: 0; text-align: left; display: grid; gap: 4px; }
+.power-steps li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 8px; border-radius: 8px; background: var(--panel-2); }
+.power-steps b { color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.power-final { margin: 8px 0 0; font-size: 1.1em; }
+.power-final b { color: var(--gold-hi); font-size: 1.3em; }
+
+/* ---------- Podświetlenie zmiany wyniku ---------- */
+@keyframes flash-up { 0% { color: var(--good); text-shadow: 0 0 10px var(--good); transform: scale(1.18); } 100% { transform: none; } }
+@keyframes flash-down { 0% { color: var(--bad); text-shadow: 0 0 10px var(--bad); transform: scale(1.18); } 100% { transform: none; } }
+.flash-up { animation: flash-up .7s ease-out; }
+.flash-down { animation: flash-down .7s ease-out; }
+@media (prefers-reduced-motion: reduce) { .flash-up, .flash-down { animation: none; } }

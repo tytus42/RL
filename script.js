@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-11f';
+const APP_VERSION = '2026-10-11i';
 
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
@@ -119,6 +119,49 @@ function redoLastMove() {
     restoreSnapshot(s);
     return true;
 }
+// ===== Zapis partii (ui.js trzyma go w localStorage) =====
+function exportGameState(maxUndo = 25) {
+    return { version: APP_VERSION, snap: takeSnapshot(), undo: undoStack.slice(-maxUndo), started: true };
+}
+function importGameState(o) {
+    if (!o || !o.snap) return false;
+    gameSetupScreen.style.display = 'none';
+    battlefieldScreen.style.display = 'grid';
+    undoStack.length = 0; redoStack.length = 0;
+    (o.undo || []).forEach(u => undoStack.push(u));
+    restoreSnapshot(o.snap);
+    return true;
+}
+
+// ===== Rozbicie siły karty na planszy (dla podglądu w ui.js) =====
+function explainCardPower(instanceId) {
+    let owner = null, rowType = null, card = null;
+    [players.player1, players.player2].forEach(p => ['melee', 'ranged', 'siege'].forEach(r => {
+        const c = p.board[r].find(x => x.instanceId == instanceId);
+        if (c) { owner = p; rowType = r; card = c; }
+    }));
+    if (!card) return null;
+    const steps = [];
+    const final = card.currentPower ?? card.power;
+    if (card.type !== 'Unit' || card.isDecoy) return { card, owner, rowType, steps: [{ label: 'Siła', value: final }], final };
+    steps.push({ label: 'Siła bazowa', value: card.power });
+    if (card.isHero) { steps.push({ label: 'Bohater – odporny na wszystkie efekty', value: card.power }); return { card, owner, rowType, steps, final }; }
+    const row = owner.board[rowType];
+    let p = card.power;
+    const weather = weatherCardsOnBoard.find(w => w.rowAffected && w.rowAffected.includes(rowType));
+    if (weather) { p = 1; steps.push({ label: `Pogoda: ${weather.name} → 1`, value: p }); }
+    if (card.abilities && card.abilities.includes('tight_bond')) {
+        const n = row.filter(c => c.abilities && c.abilities.includes('tight_bond') && c.baseId === card.baseId).length;
+        if (n > 1) { p *= n; steps.push({ label: `Jedność ×${n}`, value: p }); }
+    }
+    const morale = row.filter(c => c.abilities && c.abilities.includes('morale_boost') && c.instanceId !== card.instanceId).length;
+    if (morale) { p += morale; steps.push({ label: `Wzmocnienie +${morale}`, value: p }); }
+    const hornCard = owner.board.horns[rowType];
+    const hornUnit = row.find(c => c.type === 'Unit' && c.abilities && c.abilities.includes('horn') && c.instanceId !== card.instanceId);
+    if (hornCard || hornUnit) { p *= 2; steps.push({ label: `Róg ×2 (${hornCard ? 'Róg wojenny' : hornUnit.name})`, value: p }); }
+    return { card, owner, rowType, steps, final };
+}
+
 // Wykonuje akcję; jeśli się udała, zapamiętuje stan sprzed niej.
 function runAction(action) {
     const snap = takeSnapshot();
@@ -137,6 +180,8 @@ let __iid = 0;
 function nextInstanceId() { return ++__iid; }
 // === Funkcje pomocnicze ===
 function translateRowName(rowKey) { const names = { melee: 'Wręcz', ranged: 'Dystans', siege: 'Oblężnicze' }; return names[rowKey] || rowKey; }
+// Komunikat dla gracza: ui.js podmienia window.notify na okienko w stylu aplikacji.
+function notify(msg) { if (typeof window.notifyUser === 'function') window.notifyUser(msg); else alert(msg); }
 function getCardDetailsById(cardId) { return allCards.find(card => card.id === cardId); }
 
 function addLogEntry(message) {
@@ -626,6 +671,9 @@ function startGame() {
             !card.isToken &&
             (card.faction === p.faction || card.faction === 'Neutral')
         ).map(c => ({ ...c }));
+        // Opcjonalna talia (ui.js): pula ograniczona do kart wybranych przez gracza.
+        const deck = typeof window.getDeckSelection === 'function' ? window.getDeckSelection(playerKeyOf(p), p.faction) : null;
+        if (deck && deck.length) p.availableCards = p.availableCards.filter(c => deck.includes(c.id));
     });
     gameSetupScreen.style.display = 'none'; battlefieldScreen.style.display = 'grid';
     isFirstMoveOfRound = true; activePlayer = null;
@@ -798,11 +846,11 @@ function playCard(player) {
         }
 
         if ((cardToPlayInfo.type === 'Unit' || needsRowChoice(cardToPlayInfo)) && !targetRow) {
-            alert("Wybierz rząd!"); 
+            notify("Wybierz rząd!");
             return false; 
         }
         if (isHornSpecial(cardToPlayInfo) && rowHasHorn(player, targetRow)) {
-            alert("W tym rzędzie działa już róg!");
+            notify("W tym rzędzie działa już róg!");
             return false;
         }
         
@@ -888,8 +936,8 @@ function activateLeaderAbility(player) {
     deactivateDecoyMode();
     handlePlayerAction(player, () => {
         if (!player.commander || player.commander.isUsed) return false;
-        addLogEntry(`Zdolność dowódcy ${player.commander.name} aktywowana!`);
-        alert(`Zdolność dowódcy ${player.commander.name} aktywowana! (Implementacja w toku)`);
+        addLogEntry(`${player.name} używa karty przewodniej: ${player.commander.name}.`);
+        // Efekt karty przewodniej gracze wykonują przy stole – kalkulator zaznacza tylko użycie.
         player.commander.isUsed = true; // raz na całą grę
         return true;
     });

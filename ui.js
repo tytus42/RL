@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-11f';
+    const UI_VERSION = '2026-10-11i';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -46,16 +46,48 @@
         Orkowie: '#FFFF00', Bandyci: '#999999', Nieumarli: '#9900FF', Neutral: '#A61C00'
     };
     const DEFAULT_COLORS = ['#e0a83c', '#6fa8dc'];
-    // Zdolności talii (instrukcja, str. 19) – krótki opis w panelu gracza.
+    // Zdolności talii (instrukcja, str. 19). use: true – gracz uruchamia ją przyciskiem „Użyj”.
     const FACTION_ABILITY = {
-        Khorinis: 'Wygrywa turę w przypadku remisu.',
-        Potwory: 'Po każdej turze 1 karta Potworów zostaje na planszy.',
-        Najemnicy: 'Na starcie wymiana 1 karty więcej.',
-        Klasztor: 'Raz na grę może przeczekać ruch bez pasowania.',
-        Orkowie: 'W 3. turze 2 karty Orków wracają z cmentarza.',
-        Bandyci: 'Po przegranej turze bierze 1 kartę z cmentarza przeciwnika.',
-        Nieumarli: 'Po wygranej turze dobiera 1 kartę z talii.'
+        Khorinis: { text: 'Zwycięstwo tury w przypadku remisu.', how: 'Działa automatycznie przy liczeniu tury.' },
+        Potwory: { text: 'Po końcu każdej tury losowa karta Potworów (nie bohater, nie neutralna) zostaje na planszy.', how: 'Po każdej turze pojawi się okno wyboru karty (z przyciskiem „Losuj”).' },
+        Najemnicy: { text: 'Możliwość wymiany jednej karty więcej na starcie gry.', how: 'Dzieje się przy stole – kalkulator tylko przypomina.' },
+        Klasztor: { text: 'Możliwość przeczekania jednej tury bez konsekwencji.', how: 'Raz na grę: oddajesz ruch przeciwnikowi bez pasowania.', use: true },
+        Orkowie: { text: 'W trzeciej turze 2 losowe karty poległe Orków (nie bohaterowie) wracają na planszę.', how: 'Na starcie 3. tury pojawi się okno wyboru (z przyciskiem „Losuj”).' },
+        Bandyci: { text: 'Po przegranej turze dobór 1 losowej karty poległej przeciwnika (nie bohatera).', how: 'Po przegranej turze pojawi się okno wyboru z cmentarza przeciwnika.' },
+        Nieumarli: { text: 'Po wygranej turze dobór 1 losowej karty z talii (nie bohatera).', how: 'Dzieje się przy stole – kalkulator przypomina w historii.' }
     };
+    // Karty przewodnie (instrukcja, str. 11–13). passive: działa cały czas, bez aktywacji.
+    const LEADER_ABILITY = {
+        Oko_Innosa: 'Dwukrotnie zwiększa siłę twoich jednostek oblężniczych.',
+        Zastepy_Innosa: 'Wywołuje Szeregowy deszcz ognia na rząd jednostek oblężniczych przeciwnika.',
+        Swiety_plomien: 'Wywołuje efekt runy Światło (nie można jej użyć „na przeczekanie”, gdy na planszy nie ma run). Nie musisz mieć Światła w talii; działa też na Strach.',
+        'Nie_boje_sie,_gdy_ciemno_jest': 'Aktywuje runę Roju owadów z talii.',
+        Innos_Pan_Ognia: 'Wywołuje Szeregowy deszcz ognia na rząd jednostek dystansowych przeciwnika.',
+        Drzewa_maja_uszy: { text: 'Dwukrotnie zwiększa siłę wszystkich szpiegów na planszy – twoich i przeciwnika.', passive: true },
+        Selekcja_naturalna: 'Wymiana dwóch wybranych kart na jedną dowolną z całej talii (jednostka/bohater/efekt). Na początku gry albo w trakcie.',
+        Instynkt_stadny: 'Pobierz dowolną kartę ze swojego stosu kart poległych i wprowadź ją ponownie do gry (nie bohatera/efektu).',
+        Zew_puszczy: 'Aktywuj dowolną runę pogody (Światło, Lodowa fala, Grom, Rój owadów) z twojej talii – nie musi być w ręce.',
+        Zadza_krwi: 'Dwukrotnie zwiększa siłę twoich jednostek walczących w zwarciu (nie działa na rząd z Rogiem wojennym).',
+        Kuchnia_polowa: 'Na planszę wraca po jednej losowej jednostce ze stosu kart poległych obu graczy (nie bohaterowie/efekty).',
+        Wlasciciel_Ziemski: 'Pobierz dowolną kartę ze stosu kart poległych przeciwnika (nie bohatera/efektu).',
+        Szybki_zwiad: 'Przeciwnik musi pokazać ci 3 losowe karty ze swojej talii.',
+        Chlopcy_z_Kolonii: { text: 'Przeciwnik nie może użyć karty przewodniej przez całą rozgrywkę.', passive: true },
+        'Wiesz_jak_czestu_pada_tu_deszcz?': 'Aktywuje runę Gromu z talii.',
+        Swieta_Aura_Innosa: 'Dwukrotnie zwiększa siłę twoich jednostek dystansowych (nie działa na rząd z Rogiem wojennym).',
+        Swiety_Mlot_Innosa: 'Wywołuje Szeregowy deszcz ognia na rząd jednostek przeciwnika walczących w zwarciu.',
+        Klasztorny_rygor: 'Jednostki z umiejętnością Mobilność mogą zostać przeniesione do innego, wskazanego szeregu.',
+        Tarcza_Dominique: 'Aktywuje runę Lodowej fali z talii.',
+        Nabor_nowicjuszy: { text: 'Na początku rozgrywki dobierasz jedną kartę więcej niż standardowe 10.', passive: true },
+        Beliar_z_nami: { text: 'Negatywne runy dzielą siłę twoich jednostek przez 2 (zaokrąglenie w dół) zamiast obniżać ją do 1.', passive: true },
+        Zew_hordy: 'Przemienia kąsaczy we wściekłe kąsacze, a wiarusów w fanatycznych wiarusów.',
+        Wojna_totalna: 'Wszystkie karty ze stosu kart poległych przeciwnika zostają zniszczone i nie mogą wrócić na planszę.',
+        Uklady: { text: 'Przeciwnik nie może użyć karty przewodniej przez całą rozgrywkę.', passive: true },
+        Ukryci_wsrod_drzew: 'Wywołuje Szeregowy deszcz ognia na rząd jednostek przeciwnika walczących w zwarciu.',
+        Moc_Dworu_Irdorath: 'Wywołuje Szeregowy deszcz ognia na rząd jednostek przeciwnika walczących w zwarciu.',
+        Mroczny_rytual: 'Dwukrotnie zwiększa siłę twoich jednostek walczących w zwarciu (nie działa na rząd z Rogiem wojennym).',
+        Wrota_piekiel: { text: 'Na początku rozgrywki dobierasz jedną kartę więcej niż standardowe 10.', passive: true }
+    };
+    const leaderInfo = c => { const v = c && LEADER_ABILITY[c.id]; return !v ? { text: 'Brak opisu.' } : typeof v === 'string' ? { text: v } : v; };
     const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const rgbToHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
     const mixWhite = (h, t) => rgbToHex(hexToRgb(h).map(v => v + (255 - v) * t));
@@ -216,7 +248,47 @@
         medicWasActive = isMedicModeActive;
         if (!isMusterModeActive && sheetState && sheetState.kind === 'muster') closeSheet();
         if (!isFactionChoiceActive() && sheetState && sheetState.kind === 'faction') closeSheet();
+
+        flashScores();
+        scheduleSave();
     }
+
+    // ---------- Podświetlenie zmian wyniku ----------
+    const lastScores = new Map();
+    function flashScores() {
+        const els = [...document.querySelectorAll('.row-score, .sb-total, .total-power-display span')];
+        els.forEach(el => {
+            const v = Number(el.textContent);
+            const prev = lastScores.get(el);
+            lastScores.set(el, v);
+            if (prev === undefined || prev === v || suppressFx) return;
+            el.classList.remove('flash-up', 'flash-down');
+            void el.offsetWidth; // restart animacji
+            el.classList.add(v > prev ? 'flash-up' : 'flash-down');
+        });
+    }
+
+    // ---------- Zapis partii w przeglądarce ----------
+    const SAVE_KEY = 'rk-save';
+    let saveTimer = null;
+    function scheduleSave() {
+        if (!gameRunning && !isGameOver) return;
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveNow, 250);
+    }
+    function saveNow() {
+        for (const n of [15, 5, 0]) {
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(exportGameState(n))); return; }
+            catch (e) { /* za mało miejsca – spróbuj z krótszą historią cofania */ }
+        }
+    }
+    function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* brak dostępu */ } }
+    function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return null; } }
+
+    // ---------- Wibracje (telefony z Androidem; iPhone ich nie obsługuje) ----------
+    let suppressFx = false;
+    function buzz(pattern) { try { if (!suppressFx && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* brak */ } }
+
 
     // ---------- Sterowanie gracza: przycisk karty, przyciski rzędu, cmentarz ----------
     function ensureControls(pl) {
@@ -245,19 +317,8 @@
         const sec = $(`.player${n}-sidebar .secondary-actions`);
         sec.insertBefore(grave, sec.firstChild);
 
-        const skip = document.createElement('button');
-        skip.type = 'button';
-        skip.className = 'btn-skip';
-        skip.id = `skip-btn-${n}`;
-        skip.title = 'Zdolność Klasztoru: raz na grę przeczekaj ruch bez pasowania';
-        skip.addEventListener('click', () => { skipTurn(pl); scheduleRefresh(); });
-        sec.insertBefore(skip, pl.domElements.passRoundButton);
-
-        const abil = document.createElement('p');
-        abil.className = 'faction-ability';
-        abil.id = `faction-ability-${n}`;
-        const info = $(`.player${n}-sidebar .info-faction`);
-        info.parentNode.insertBefore(abil, info.nextSibling);
+        $(`#faction-btn-${n}`).addEventListener('click', () => openAbility(pl, 'faction'));
+        $(`#leader-btn-${n}`).addEventListener('click', () => openAbility(pl, 'leader'));
     }
 
     function refreshControls(pl) {
@@ -302,17 +363,17 @@
         grave.disabled = pl.graveyard.length === 0;
         grave.classList.toggle('pulse', isMedicModeActive && activePlayer === pl);
 
-        // Zdolność talii
-        $(`#faction-ability-${n}`).textContent = FACTION_ABILITY[pl.faction] ? `Zdolność talii: ${FACTION_ABILITY[pl.faction]}` : '';
-        const skip = $(`#skip-btn-${n}`);
-        skip.hidden = pl.faction !== 'Klasztor';
-        skip.disabled = !canSkipTurn(pl);
-        skip.textContent = pl.skipUsed ? 'Przeczekano' : 'Przeczekaj';
-
-        // Dowódca
-        const lb = d.activateLeaderButton;
-        if (pl.commander && pl.commander.isUsed) { lb.textContent = 'Użyty'; lb.classList.add('used'); }
-        else { lb.textContent = 'Użyj'; lb.classList.remove('used'); }
+        // Przyciski zdolności talii i dowódcy
+        const fb = $(`#faction-btn-${n}`), lbtn = $(`#leader-btn-${n}`);
+        const fInfo = FACTION_ABILITY[pl.faction];
+        fb.innerHTML = `<span class="ab-icon">⚑</span><span class="ab-name">${esc(pl.faction || '')}</span>`;
+        fb.classList.toggle('can-use', !!(fInfo && fInfo.use && canSkipTurn(pl)));
+        fb.classList.toggle('used', !!(fInfo && fInfo.use && pl.skipUsed));
+        const lInfo = leaderInfo(pl.commander);
+        lbtn.innerHTML = `<span class="ab-icon">♛</span><span class="ab-name">${esc(pl.commander ? pl.commander.name : '')}</span>`;
+        lbtn.classList.toggle('used', !!(pl.commander && pl.commander.isUsed));
+        lbtn.classList.toggle('can-use', !lInfo.passive && !d.activateLeaderButton.disabled);
+        if (abilityState && abilityState.player === pl) renderAbility();
 
         // Pasowanie – reset uzbrojenia, gdy przycisk się zablokował
         if (d.passRoundButton.disabled) disarmPass(d.passRoundButton);
@@ -418,6 +479,7 @@
             if (st && st.onClose) st.onClose();
         }
     });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !abilityDlg.hidden) closeAbility(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetState) { const st = sheetState; closeSheet(); if (st.onClose) st.onClose(); } });
     $('#sheet-search').addEventListener('input', () => renderSheetList());
 
@@ -599,6 +661,55 @@
     }
     window.openMusterPicker = openMusterPicker;
 
+    // ---------- Okno zdolności talii / dowódcy ----------
+    let abilityState = null; // { player, kind: 'faction' | 'leader' }
+    const abilityDlg = $('#ability-dialog');
+    function openAbility(pl, kind) {
+        abilityState = { player: pl, kind };
+        renderAbility();
+        abilityDlg.hidden = false;
+    }
+    function closeAbility() { abilityDlg.hidden = true; abilityState = null; }
+    function renderAbility() {
+        const { player: pl, kind } = abilityState;
+        const use = $('#ability-use');
+        let canUse = false, showUse = true, note = '';
+        if (kind === 'faction') {
+            const info = FACTION_ABILITY[pl.faction] || { text: '' };
+            $('#ability-kind').textContent = `${pl.name} · zdolność talii`;
+            $('#ability-title').textContent = pl.faction;
+            $('#ability-desc').textContent = info.text;
+            showUse = !!info.use;
+            if (info.use) {
+                canUse = canSkipTurn(pl);
+                note = pl.skipUsed ? 'Zdolność została już użyta w tej grze.' : canUse ? info.how
+                    : 'Teraz nie można jej użyć (nie twój ruch, przeciwnik spasował albo trwa inna akcja).';
+            } else note = info.how || '';
+        } else {
+            const c = pl.commander, info = leaderInfo(c);
+            $('#ability-kind').textContent = `${pl.name} · karta przewodnia${info.passive ? ' (pasywna)' : ' (aktywowana, raz na grę)'}`;
+            $('#ability-title').textContent = c ? c.name : '';
+            $('#ability-desc').textContent = info.text;
+            showUse = !info.passive;
+            canUse = showUse && !pl.domElements.activateLeaderButton.disabled;
+            note = info.passive ? 'Działa przez całą rozgrywkę – nie wymaga aktywacji.'
+                : c && c.isUsed ? 'Karta przewodnia została już użyta.'
+                : canUse ? 'Efekt wykonaj przy stole – kalkulator zaznaczy użycie.' : 'Teraz nie można jej użyć (nie twój ruch albo trwa inna akcja).';
+        }
+        $('#ability-note').textContent = note;
+        use.hidden = !showUse;
+        use.disabled = !canUse;
+    }
+    abilityDlg.addEventListener('click', e => { if (e.target.closest('[data-close-ability]')) closeAbility(); });
+    $('#ability-use').addEventListener('click', () => {
+        if (!abilityState) return;
+        const { player: pl, kind } = abilityState;
+        closeAbility();
+        if (kind === 'faction') skipTurn(pl);
+        else pl.domElements.activateLeaderButton.click();
+        scheduleRefresh();
+    });
+
     // ---------- Zdolności talii: wybór kart (Potwory / Orkowie / Bandyci) ----------
     // Przy stole kartę losuje sędzia – tu można ją wskazać albo wylosować przyciskiem „Losuj”.
     function openFactionChoice(ch) {
@@ -640,13 +751,16 @@
 
     // ---------- Cofanie ruchu ----------
     let toastTimer = null;
-    function toast(text) {
+    function toast(text, warn = false) {
         const t = $('#toast');
         t.textContent = text;
+        t.classList.toggle('warn', warn);
         t.hidden = false;
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+        toastTimer = setTimeout(() => { t.hidden = true; }, warn ? 3200 : 2600);
     }
+    // Zamiast systemowego alert() ze script.js
+    window.notifyUser = msg => { toast(msg, true); buzz([30, 40, 30]); };
     const lastLogText = () => {
         const last = historyLog.firstElementChild;
         return last ? last.textContent.replace(/^\[(Runda|Tura) \d+\]\s*/, '') : '';
@@ -660,16 +774,20 @@
         if (!canUndo()) return;
         const what = lastLogText();
         if (sheetState) closeSheet();
+        suppressFx = true;
         undoLastMove();
         afterRestore();
+        queueMicrotask(() => queueMicrotask(() => { suppressFx = false; }));
         toast(what ? `Cofnięto: ${what}` : 'Cofnięto ostatni ruch');
     }
     function doRedo(e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (!canRedo()) return;
         if (sheetState) closeSheet();
+        suppressFx = true;
         redoLastMove();
         afterRestore();
+        queueMicrotask(() => queueMicrotask(() => { suppressFx = false; }));
         const what = lastLogText();
         toast(what ? `Powtórzono: ${what}` : 'Powtórzono ruch');
     }
@@ -704,6 +822,7 @@
 
     function showGameSummary(winner) {
         gameRunning = false;
+        scheduleSaveFinal();
         if (sheetState) closeSheet();
         const [a, b] = P();
         $('#summary-winner').textContent = winner ? `Wygrywa: ${winner.name}` : 'Remis – obaj gracze stracili wszystkie kryształy';
@@ -720,6 +839,7 @@
         scheduleRefresh();
     }
     window.showGameSummary = showGameSummary;
+    function scheduleSaveFinal() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
 
     $('#summary-copy').addEventListener('click', async () => {
         const ta = $('#summary-text');
@@ -740,7 +860,153 @@
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
     $('#summary-undo').addEventListener('click', () => doUndo());
-    $('#summary-new').addEventListener('click', () => { gameRunning = false; location.reload(); });
+    $('#summary-new').addEventListener('click', () => { gameRunning = false; clearSave(); location.reload(); });
+
+    // ---------- Podgląd siły karty: przytrzymanie palca albo prawy przycisk myszy ----------
+    function showPowerInfo(instanceId) {
+        const info = explainCardPower(instanceId);
+        if (!info) return;
+        const c = info.card;
+        abilityState = null;
+        $('#ability-kind').textContent = `${info.owner.name} · ${ROW_LABEL[info.rowType] || ''}${c.isHero ? ' · bohater' : ''}`;
+        $('#ability-title').textContent = c.isDecoy ? 'Chrząszcz' : c.name;
+        $('#ability-desc').innerHTML = '<ol class="power-steps">' + info.steps.map(s =>
+            `<li><span>${esc(s.label)}</span><b>${s.value}</b></li>`).join('') + `</ol><p class="power-final">Siła na planszy: <b>${info.final}</b></p>`;
+        const ab = (c.abilities || []).map(a => ABILITY_LABEL[a] || a).join(', ');
+        $('#ability-note').textContent = [ab && `Umiejętności: ${ab}`, c.description && `„${c.description}”`].filter(Boolean).join(' · ');
+        $('#ability-use').hidden = true;
+        abilityDlg.hidden = false;
+    }
+    let pressTimer = null, pressStart = null, suppressClick = false;
+    battlefieldScreen.addEventListener('pointerdown', e => {
+        const el = e.target.closest('.row .card-on-board');
+        if (!el) return;
+        pressStart = { x: e.clientX, y: e.clientY };
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => { suppressClick = true; showPowerInfo(el.dataset.instanceId); buzz(10); }, 450);
+    });
+    const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+    battlefieldScreen.addEventListener('pointerup', cancelPress);
+    battlefieldScreen.addEventListener('pointercancel', cancelPress);
+    battlefieldScreen.addEventListener('pointermove', e => {
+        if (pressTimer && pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > 10) cancelPress();
+    });
+    battlefieldScreen.addEventListener('contextmenu', e => {
+        const el = e.target.closest('.row .card-on-board');
+        if (!el) return;
+        e.preventDefault();
+        cancelPress();
+        showPowerInfo(el.dataset.instanceId);
+    });
+    // Po przytrzymaniu nie traktuj puszczenia palca jak kliknięcia (np. wyboru celu Chrząszcza).
+    document.addEventListener('click', e => {
+        if (!suppressClick) return;
+        suppressClick = false;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }, true);
+
+    // ---------- Talia (opcjonalnie): wybór kart, które gracz ma fizycznie ----------
+    const deckKey = (n, faction) => `rk-deck-${n}-${faction}`;
+    const deckPool = faction => allCards.filter(c => c.type !== 'Leader' && !c.isToken && (c.faction === faction || c.faction === 'Neutral'));
+    function readDeck(n, faction) {
+        try { const v = JSON.parse(localStorage.getItem(deckKey(n, faction)) || 'null'); return Array.isArray(v) && v.length ? v : null; }
+        catch (e) { return null; }
+    }
+    // script.js pyta o talię przy starcie gry (null = wszystkie karty).
+    window.getDeckSelection = (playerKey, faction) => readDeck(playerKey === 'player1' ? 1 : 2, faction);
+    function refreshDeckButtons() {
+        [1, 2].forEach(n => {
+            const btn = $(`#deck-btn-${n}`);
+            const faction = $(`#player${n}-faction-select`).value;
+            btn.disabled = !faction;
+            if (!faction) { btn.textContent = 'Talia: wybierz najpierw frakcję'; return; }
+            const pool = deckPool(faction), deck = readDeck(n, faction);
+            const cnt = deck ? pool.filter(c => deck.includes(c.id)).length : pool.length;
+            btn.textContent = deck ? `Talia: ${cnt} z ${pool.length} kart (zmień)` : `Talia: wszystkie karty (${pool.length}) – ustaw`;
+        });
+    }
+    function openDeckEditor(n) {
+        const faction = $(`#player${n}-faction-select`).value;
+        if (!faction) return;
+        const pool = deckPool(faction);
+        const saved = readDeck(n, faction);
+        const sameName = {}, seen = {};
+        pool.forEach(c => { sameName[c.name] = (sameName[c.name] || 0) + 1; });
+        const items = pool.map(c => {
+            seen[c.name] = (seen[c.name] || 0) + 1;
+            const label = sameName[c.name] > 1 ? `${c.name} (${seen[c.name]}/${sameName[c.name]})` : c.name;
+            return cardItem(c, { key: c.id, name: label });
+        }).sort((a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.name.localeCompare(b.name, 'pl'));
+        const cfg = {
+            kind: 'deck',
+            title: `Talia gracza ${n} – ${faction}`,
+            searchable: true,
+            multi: true,
+            groupLabels: GROUP_LABELS,
+            filters: [
+                { key: 'all', label: 'Wszystkie' }, { key: 'melee', label: ROW_ICON.melee + ' Wręcz' },
+                { key: 'ranged', label: ROW_ICON.ranged + ' Dystans' }, { key: 'siege', label: ROW_ICON.siege + ' Obl.' },
+                { key: 'hero', label: 'Bohaterowie' }, { key: 'special', label: 'Specjalne' }, { key: 'weather', label: 'Pogoda' }
+            ],
+            selected: new Set(saved ? saved.filter(id => pool.some(c => c.id === id)) : pool.map(c => c.id)),
+            items,
+            footer: () => {
+                const all = cfg.selected.size === items.length;
+                return [
+                    {
+                        label: all ? 'Odznacz wszystkie' : 'Zaznacz wszystkie', cls: 'btn-small', onClick: () => {
+                            if (cfg.selected.size === items.length) cfg.selected.clear(); else items.forEach(it => cfg.selected.add(it.key));
+                            renderSheetList(); renderSheetFoot();
+                        }
+                    },
+                    {
+                        label: `Gotowe (${cfg.selected.size})`, cls: 'btn-primary', disabled: cfg.selected.size === 0, onClick: () => {
+                            try {
+                                if (cfg.selected.size === items.length) localStorage.removeItem(deckKey(n, faction));
+                                else localStorage.setItem(deckKey(n, faction), JSON.stringify([...cfg.selected]));
+                            } catch (e) { /* brak miejsca / dostępu */ }
+                            closeSheet();
+                            refreshDeckButtons();
+                        }
+                    }
+                ];
+            }
+        };
+        openSheet(cfg);
+    }
+    [1, 2].forEach(n => $(`#deck-btn-${n}`).addEventListener('click', () => openDeckEditor(n)));
+
+    // ---------- Wznowienie zapisanej partii ----------
+    function showResumeBox() {
+        const box = $('#resume-box');
+        const saved = loadSave();
+        if (!saved || !saved.snap) { box.hidden = true; return; }
+        const a = saved.snap.p1, b = saved.snap.p2;
+        $('#resume-text').textContent = saved.snap.isGameOver
+            ? `Zakończona gra: ${a.name} (${a.faction}) vs ${b.name} (${b.faction}).`
+            : `Niedokończona gra: ${a.name} (${a.faction}) vs ${b.name} (${b.faction}), tura ${saved.snap.roundNumber}.`;
+        $('#resume-btn').textContent = saved.snap.isGameOver ? 'Pokaż podsumowanie' : 'Wznów grę';
+        box.hidden = false;
+    }
+    $('#resume-btn').addEventListener('click', () => {
+        const saved = loadSave();
+        try {
+            suppressFx = true;
+            if (!importGameState(saved)) throw new Error('brak zapisu');
+            gameRunning = !isGameOver;
+            battlefieldScreen.style.display = '';
+            applyFactionColors();
+            requestWakeLock();
+            scheduleRefresh();
+            toast('Wznowiono zapisaną grę');
+        } catch (e) {
+            clearSave();
+            toast('Nie udało się wczytać zapisu – zacznij nową grę.', true);
+            location.reload();
+        } finally { setTimeout(() => { suppressFx = false; }, 0); }
+    });
+    $('#resume-discard').addEventListener('click', () => { clearSave(); $('#resume-box').hidden = true; });
 
     // ---------- Ekran konfiguracji ----------
     const nameInputs = [$('#player1-name-input'), $('#player2-name-input')];
@@ -754,8 +1020,10 @@
         startGameButton.disabled = !ok;
         $('#setup-hint').hidden = ok;
     }
-    gameSetupScreen.addEventListener('change', () => setTimeout(() => { refreshSetup(); applyFactionColors(); }, 0));
+    gameSetupScreen.addEventListener('change', () => setTimeout(() => { refreshSetup(); applyFactionColors(); refreshDeckButtons(); }, 0));
     refreshSetup();
+    refreshDeckButtons();
+    showResumeBox();
 
     // Przechwycenie przed startGame(): imiona + blokada niepełnej konfiguracji
     // (oryginalny return w forEach nie zatrzymywał startu gry).
@@ -768,6 +1036,7 @@
             store.set(`rk-name-${i + 1}`, v);
         });
         gameRunning = true;
+        clearSave();
         requestWakeLock();
         setTimeout(() => { battlefieldScreen.style.display = ''; applyFactionColors(); scheduleRefresh(); }, 0);
     }, true);
@@ -780,14 +1049,10 @@
     }
     document.addEventListener('visibilitychange', () => { if (gameRunning && document.visibilityState === 'visible') requestWakeLock(); });
 
-    window.addEventListener('beforeunload', e => {
-        if (!gameRunning) return;
-        e.preventDefault();
-        e.returnValue = '';
-    });
+    // Ostrzeżenie przed zamknięciem strony nie jest już potrzebne – partia zapisuje się sama.
 
     // Historia otwarta na dużym ekranie, zwinięta na telefonie
-    const wide = window.matchMedia('(min-width: 900px)');
+    const wide = window.matchMedia('(orientation: landscape) and (min-width: 600px)');
     const hist = $('#history-container');
     const syncHist = () => { hist.open = wide.matches; };
     syncHist();
@@ -796,9 +1061,15 @@
     // Nowe wpisy historii: polskie nazwy rzędów (script.js wpisuje melee/ranged/siege)
     // i odświeżenie paska „ostatnia akcja”.
     new MutationObserver(muts => {
+        let level = 0;
         muts.forEach(m => m.addedNodes.forEach(n => {
-            if (n.nodeType === 1) n.textContent = n.textContent.replace(/do rzędu (melee|ranged|siege)\b/g, (_, r) => `do rzędu ${ROW_LABEL[r]}`);
+            if (n.nodeType !== 1) return;
+            n.textContent = n.textContent.replace(/do rzędu (melee|ranged|siege)\b/g, (_, r) => `do rzędu ${ROW_LABEL[r]}`);
+            if (/Tura zakończona/.test(n.textContent)) level = 2;
+            else if (/zagrał|wskrzesił|przywołuje|Wezwanie|użył|spasował|przeczekuje|używa/.test(n.textContent)) level = Math.max(level, 1);
         }));
+        const restored = muts.some(m => m.addedNodes.length > 3); // przywrócenie historii (cofnij/wznów)
+        if (!restored) { if (level === 2) buzz([40, 70, 40]); else if (level === 1) buzz(15); }
         scheduleRefresh();
     }).observe(historyLog, { childList: true });
 })();
