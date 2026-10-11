@@ -24,9 +24,6 @@
         set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* brak dostępu */ } }
     };
 
-    // ---------- Poprawka danych: Grom (deszcz) miał efekt mrozu ----------
-    allCards.forEach(c => { if (c.name === 'Grom' && c.effectClass === 'frost-effect') c.effectClass = 'rain-effect'; });
-
     // ---------- Wygląd karty na planszy (nadpisuje createCardElement) ----------
     window.createCardElement = function (card) {
         const el = document.createElement('div');
@@ -87,11 +84,12 @@
 
     function statusText() {
         const act = activePlayer;
+        if (isMusterModeActive && pendingMuster) return { cls: 'mode', text: `📯 ${pendingMuster.player.name}: Wezwanie – wybierz karty, które kładziesz.`, action: 'muster' };
         if (isDecoyModeActive && act) return { cls: 'mode', text: `🪲 ${act.name}: dotknij jednostkę na swoim polu. Dotknięcie gdzie indziej anuluje.` };
         if (isAgileResurrectionModeActive && act) return { cls: 'mode', text: `${act.name}: wybierz rząd dla „${cardToResurrectWithAgile ? cardToResurrectWithAgile.name : ''}”.` };
         if (isMedicModeActive && act) return { cls: 'mode', text: `✚ ${act.name}: medyk – wybierz kartę z cmentarza.`, action: 'medic' };
-        if (passedPlayers.length === 2) return { cls: '', text: 'Obaj spasowali – liczenie rundy…' };
-        if (isFirstMoveOfRound) return { cls: '', text: `Runda ${roundNumber} – zaczyna dowolny gracz.` };
+        if (passedPlayers.length === 2) return { cls: '', text: 'Obaj spasowali – liczenie tury…' };
+        if (isFirstMoveOfRound) return { cls: '', text: `Tura ${roundNumber} – zaczyna dowolny gracz.` };
         if (act) {
             const opp = act === players.player1 ? players.player2 : players.player1;
             const extra = passedPlayers.includes(opp) ? ` (${opp.name} spasował)` : '';
@@ -114,21 +112,20 @@
             sb.classList.toggle('is-passed', passedPlayers.includes(pl));
             sb.classList.toggle('is-leading', pl.power > (pl === players.player1 ? players.player2 : players.player1).power);
         });
-        $('#sb-round').textContent = `R${roundNumber}`;
+        $('#sb-round').textContent = `Tura ${roundNumber}`;
+        $('#undo-btn').disabled = !canUndo();
 
         const st = statusText();
         const banner = $('#status-banner');
         banner.className = 'status-banner ' + st.cls;
         banner.textContent = st.text;
-        if (st.action === 'medic') {
+        if (st.action === 'medic' || st.action === 'muster') {
             const b = document.createElement('button');
             b.className = 'btn-small banner-btn';
-            b.textContent = 'Cmentarz';
-            b.addEventListener('click', () => openGraveyard(activePlayer, true));
+            b.textContent = st.action === 'medic' ? 'Cmentarz' : 'Wybierz karty';
+            b.addEventListener('click', () => (st.action === 'medic' ? openGraveyard(activePlayer, true) : openMusterPicker(pendingMuster)));
             banner.appendChild(b);
         }
-        const last = historyLog.firstElementChild;
-        $('#last-action').textContent = last ? last.textContent.replace(/^\[Runda \d+\]\s*/, '') : '';
 
         // Panele graczy
         P().forEach(pl => {
@@ -149,6 +146,7 @@
         if (isMedicModeActive && activePlayer && !medicWasActive) openGraveyard(activePlayer, true);
         if (!isMedicModeActive && medicWasActive && sheetState && sheetState.kind === 'medic') closeSheet();
         medicWasActive = isMedicModeActive;
+        if (!isMusterModeActive && sheetState && sheetState.kind === 'muster') closeSheet();
     }
 
     // ---------- Sterowanie gracza: przycisk karty, przyciski rzędu, cmentarz ----------
@@ -239,10 +237,12 @@
             label = needsRow && !d.rowSelect.value ? 'Wybierz rząd' : `Zagraj: ${selected.name}`;
             if (selected.abilities && selected.abilities.includes('decoy') && d.playCardButton.disabled) label = 'Brak celu dla Chrząszcza';
         }
+        if (selected && selected.type === 'Special' && selected.abilities && selected.abilities.includes('horn') && !needsRow) label = 'Każdy rząd ma już róg';
         d.playCardButton.textContent = label;
         d.playCardButton.hidden = !selected && !isAgileResurrectionModeActive;
         if (isMedicModeActive && activePlayer === pl) d.playCardButton.hidden = true;
         if (isAgileResurrectionModeActive && activePlayer === pl) d.playCardButton.hidden = true;
+        if (isMusterModeActive) d.playCardButton.hidden = true;
     }
 
     // ---------- Potwierdzenie pasowania (dwa dotknięcia) ----------
@@ -269,6 +269,23 @@
     let sheetState = null;
     const sheet = $('#sheet');
 
+    function renderSheetFoot() {
+        const cfg = sheetState;
+        const foot = $('#sheet-foot');
+        foot.innerHTML = '';
+        const footer = typeof cfg.footer === 'function' ? cfg.footer() : cfg.footer;
+        (footer || []).forEach(f => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = f.cls || 'btn-small';
+            b.textContent = f.label;
+            if (f.disabled) b.disabled = true;
+            b.addEventListener('click', f.onClick);
+            foot.appendChild(b);
+        });
+        foot.hidden = !(footer && footer.length);
+    }
+
     function openSheet(cfg) {
         sheetState = cfg;
         $('#sheet-title').textContent = cfg.title;
@@ -292,17 +309,7 @@
             filters.appendChild(b);
         });
         filters.hidden = !(cfg.filters && cfg.filters.length);
-        const foot = $('#sheet-foot');
-        foot.innerHTML = '';
-        (cfg.footer || []).forEach(f => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = f.cls || 'btn-small';
-            b.textContent = f.label;
-            b.addEventListener('click', f.onClick);
-            foot.appendChild(b);
-        });
-        foot.hidden = !(cfg.footer && cfg.footer.length);
+        renderSheetFoot();
         renderSheetList();
         sheet.hidden = false;
         document.body.classList.add('sheet-open');
@@ -348,13 +355,22 @@
             }
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'tile' + (it.hero ? ' hero' : '') + (it.disabled ? ' is-disabled' : '');
-            b.disabled = !!it.disabled || !cfg.onPick;
+            const isSel = cfg.multi && cfg.selected.has(it.key);
+            b.className = 'tile' + (it.hero ? ' hero' : '') + (it.disabled ? ' is-disabled' : '') + (cfg.multi ? ' is-check' : '') + (isSel ? ' is-selected' : '');
+            b.disabled = !!it.disabled || (!cfg.onPick && !cfg.multi);
+            if (cfg.multi) b.setAttribute('aria-pressed', String(isSel));
             b.innerHTML =
                 `<span class="tile-power ${it.powerCls || ''}">${it.badge}</span>` +
                 `<span class="tile-main"><span class="tile-name">${esc(it.name)}${it.count > 1 ? ` <em>×${it.count}</em>` : ''}</span>` +
-                `<span class="tile-meta">${esc(it.meta)}</span></span>`;
-            if (cfg.onPick && !it.disabled) b.addEventListener('click', () => cfg.onPick(it));
+                `<span class="tile-meta">${esc(it.meta)}</span></span>` +
+                (cfg.multi ? '<span class="tile-check" aria-hidden="true"></span>' : '');
+            if (cfg.multi && !it.disabled) {
+                b.addEventListener('click', () => {
+                    if (cfg.selected.has(it.key)) cfg.selected.delete(it.key); else cfg.selected.add(it.key);
+                    renderSheetList();
+                    renderSheetFoot();
+                });
+            } else if (cfg.onPick && !it.disabled) b.addEventListener('click', () => cfg.onPick(it));
             list.appendChild(b);
         });
     }
@@ -443,6 +459,139 @@
             }, { label: 'Zamknij', cls: 'btn-small', onClick: closeSheet }] : null
         });
     }
+
+    // ---------- Wezwanie: wybór kart, które gracz fizycznie kładzie ----------
+    // script.js wywołuje window.openMusterPicker(pendingMuster) i czeka na confirmMuster(ids).
+    function openMusterPicker(pm) {
+        if (!pm || !isMusterModeActive) return;
+        // Każda karta osobno (np. trzy Wilki to trzy pozycje) – gracz może mieć tylko część z nich.
+        const sameName = {};
+        pm.candidates.forEach(c => { sameName[c.name] = (sameName[c.name] || 0) + 1; });
+        const seen = {};
+        const items = pm.candidates.map(c => {
+            seen[c.name] = (seen[c.name] || 0) + 1;
+            const label = sameName[c.name] > 1 ? `${c.name} (${seen[c.name]}/${sameName[c.name]})` : c.name;
+            return cardItem(c, { key: c.id, name: label, hero: !!c.isHero });
+        });
+        const cfg = {
+            kind: 'muster',
+            title: `Wezwanie: ${pm.card.name} – które karty kładziesz?`,
+            searchable: false,
+            multi: true,
+            selected: new Set(pm.candidates.map(c => c.id)), // domyślnie wszystkie
+            items,
+            onClose: () => scheduleRefresh(),
+            footer: () => {
+                const all = cfg.selected.size === items.length;
+                return [
+                    {
+                        label: all ? 'Odznacz wszystkie' : 'Zaznacz wszystkie', cls: 'btn-small', onClick: () => {
+                            if (cfg.selected.size === items.length) cfg.selected.clear();
+                            else items.forEach(it => cfg.selected.add(it.key));
+                            renderSheetList();
+                            renderSheetFoot();
+                        }
+                    },
+                    {
+                        label: cfg.selected.size ? `Połóż wybrane (${cfg.selected.size})` : 'Nie kładę żadnej', cls: 'btn-primary', onClick: () => {
+                            const ids = [...cfg.selected];
+                            closeSheet();
+                            confirmMuster(ids);
+                        }
+                    }
+                ];
+            }
+        };
+        openSheet(cfg);
+    }
+    window.openMusterPicker = openMusterPicker;
+
+    // ---------- Cofanie ruchu ----------
+    let toastTimer = null;
+    function toast(text) {
+        const t = $('#toast');
+        t.textContent = text;
+        t.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+    }
+    function doUndo() {
+        if (!canUndo()) return;
+        const last = historyLog.firstElementChild;
+        const what = last ? last.textContent.replace(/^\[(Runda|Tura) \d+\]\s*/, '') : '';
+        if (sheetState) closeSheet();
+        undoLastMove();
+        if (!isGameOver) { gameRunning = true; $('#summary').hidden = true; document.body.classList.remove('sheet-open'); }
+        toast(what ? `Cofnięto: ${what}` : 'Cofnięto ostatni ruch');
+        scheduleRefresh();
+    }
+    $('#undo-btn').addEventListener('click', doUndo);
+
+    // ---------- Podsumowanie gry ----------
+    const pad = n => String(n).padStart(2, '0');
+    function stamp(d, sep = ' ') { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}${sep}${pad(d.getHours())}${sep === ' ' ? ':' : ''}${pad(d.getMinutes())}`; }
+
+    function summaryText(winner) {
+        const [a, b] = P();
+        const line = pl => `${pl.name} – ${pl.faction}, dowódca: ${pl.commander ? pl.commander.name : '-'}`;
+        const out = [];
+        out.push('Ryżowy Książę – podsumowanie gry');
+        out.push(`Data: ${stamp(new Date())}`);
+        out.push('');
+        out.push(`Gracz 1: ${line(a)}`);
+        out.push(`Gracz 2: ${line(b)}`);
+        out.push(`Zwycięzca: ${winner ? winner.name : 'remis'}`);
+        out.push('');
+        out.push('Wyniki tur:');
+        roundResults.forEach(r => {
+            const w = r.winner === 'draw' ? 'remis' : `wygrywa ${players[r.winner].name}`;
+            out.push(`Tura ${r.round}: ${a.name} ${r.p1} : ${r.p2} ${b.name} – ${w}`);
+        });
+        out.push('');
+        out.push('Historia gry:');
+        [...historyLog.children].reverse().forEach(p => out.push(p.textContent));
+        return out.join('\n');
+    }
+
+    function showGameSummary(winner) {
+        gameRunning = false;
+        if (sheetState) closeSheet();
+        const [a, b] = P();
+        $('#summary-winner').textContent = winner ? `Wygrywa: ${winner.name}` : 'Remis – obaj gracze stracili wszystkie kryształy';
+        const rows = roundResults.map(r => `<tr>
+            <th scope="row">Tura ${r.round}</th>
+            <td class="${r.winner === 'player1' ? 'won' : ''}">${r.p1}</td>
+            <td class="${r.winner === 'player2' ? 'won' : ''}">${r.p2}</td>
+            <td>${r.winner === 'draw' ? 'remis' : esc(players[r.winner].name)}</td></tr>`).join('');
+        $('#summary-table').innerHTML = `<thead><tr><th></th><th class="p1">${esc(a.name)}</th><th class="p2">${esc(b.name)}</th><th>Wygrał</th></tr></thead><tbody>${rows}</tbody>`;
+        $('#summary-text').value = summaryText(winner);
+        $('#summary-undo').disabled = !canUndo();
+        $('#summary').hidden = false;
+        document.body.classList.add('sheet-open');
+        scheduleRefresh();
+    }
+    window.showGameSummary = showGameSummary;
+
+    $('#summary-copy').addEventListener('click', async () => {
+        const ta = $('#summary-text');
+        try { await navigator.clipboard.writeText(ta.value); toast('Skopiowano podsumowanie'); }
+        catch (e) {
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); toast('Skopiowano podsumowanie'); } catch (e2) { toast('Zaznacz tekst i skopiuj ręcznie'); }
+        }
+    });
+    $('#summary-download').addEventListener('click', () => {
+        const blob = new Blob([$('#summary-text').value], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `ryzowy-ksiaze-${stamp(new Date(), '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+    $('#summary-undo').addEventListener('click', doUndo);
+    $('#summary-new').addEventListener('click', () => { gameRunning = false; location.reload(); });
 
     // ---------- Ekran konfiguracji ----------
     const nameInputs = [$('#player1-name-input'), $('#player2-name-input')];

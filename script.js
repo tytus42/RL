@@ -32,6 +32,72 @@ let isDecoyModeActive = false;
 let isMedicModeActive = false;
 let isAgileResurrectionModeActive = false;
 let cardToResurrectWithAgile = null;
+// Wezwanie: gracz wybiera, które karty z grupy faktycznie kładzie na stół.
+let isMusterModeActive = false;
+let pendingMuster = null; // { player, card, targetRow, candidates }
+
+// Wyniki zakończonych tur i stan końca gry (do podsumowania).
+let roundResults = []; // { round, p1, p2, winner: 'player1' | 'player2' | 'draw' }
+let isGameOver = false;
+let endRoundTimer = null;
+
+// ===== Cofanie ruchu: migawki stanu przed każdą akcją gracza =====
+const undoStack = [];
+const UNDO_LIMIT = 300;
+function playerKeyOf(p) { return p === players.player1 ? 'player1' : p === players.player2 ? 'player2' : null; }
+const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+function takeSnapshot() {
+    const strip = p => { const { domElements, ...rest } = p; return clone(rest); };
+    return {
+        p1: strip(players.player1), p2: strip(players.player2),
+        activePlayer: playerKeyOf(activePlayer), roundNumber, passed: passedPlayers.map(playerKeyOf),
+        weather: clone(weatherCardsOnBoard), isFirstMoveOfRound,
+        isMedicModeActive, isAgileResurrectionModeActive, cardToResurrectWithAgile: clone(cardToResurrectWithAgile),
+        isMusterModeActive,
+        pendingMuster: pendingMuster ? { ...clone({ ...pendingMuster, player: null }), player: playerKeyOf(pendingMuster.player) } : null,
+        iid: __iid, roundResults: clone(roundResults), isGameOver, log: historyLog.innerHTML
+    };
+}
+function pushUndo(snap) { undoStack.push(snap); if (undoStack.length > UNDO_LIMIT) undoStack.shift(); }
+function canUndo() { return undoStack.length > 0; }
+function undoLastMove() {
+    if (!undoStack.length) return false;
+    const s = undoStack.pop();
+    clearTimeout(endRoundTimer); endRoundTimer = null;
+    deactivateDecoyMode();
+    Object.assign(players.player1, s.p1);
+    Object.assign(players.player2, s.p2);
+    activePlayer = s.activePlayer ? players[s.activePlayer] : null;
+    roundNumber = s.roundNumber;
+    passedPlayers = s.passed.map(k => players[k]);
+    weatherCardsOnBoard = s.weather;
+    isFirstMoveOfRound = s.isFirstMoveOfRound;
+    isMedicModeActive = s.isMedicModeActive;
+    isAgileResurrectionModeActive = s.isAgileResurrectionModeActive;
+    cardToResurrectWithAgile = s.cardToResurrectWithAgile || null;
+    isMusterModeActive = s.isMusterModeActive;
+    pendingMuster = s.pendingMuster ? { ...s.pendingMuster, player: players[s.pendingMuster.player] } : null;
+    __iid = s.iid;
+    roundResults = s.roundResults;
+    isGameOver = s.isGameOver;
+    historyLog.innerHTML = s.log;
+    updateAllControls();
+    if (isMusterModeActive && typeof window.openMusterPicker === 'function') window.openMusterPicker(pendingMuster);
+    return true;
+}
+// Wykonuje akcję; jeśli się udała, zapamiętuje stan sprzed niej.
+function runAction(action) {
+    const snap = takeSnapshot();
+    const ok = action();
+    if (ok) pushUndo(snap);
+    return ok;
+}
+
+// Róg w rzędzie: karta Rogu wojennego albo jednostka z umiejętnością rogu (np. Lester).
+function rowHasHorn(player, row) {
+    return !!player.board.horns[row] || player.board[row].some(c => c.type === 'Unit' && c.abilities && c.abilities.includes('horn'));
+}
+function isHornSpecial(card) { return card.type === 'Special' && card.abilities && card.abilities.includes('horn'); }
 
 let __iid = 0;
 function nextInstanceId() { return ++__iid; }
@@ -41,7 +107,7 @@ function getCardDetailsById(cardId) { return allCards.find(card => card.id === c
 
 function addLogEntry(message) {
     const p = document.createElement('p');
-    p.textContent = `[Runda ${roundNumber}] ${message}`;
+    p.textContent = `[Tura ${roundNumber}] ${message}`;
     if (historyLog.firstChild) { historyLog.insertBefore(p, historyLog.firstChild); }
     else { historyLog.appendChild(p); }
 }
@@ -199,7 +265,7 @@ function applyAllEffects() {
             player.domElements[rowType + 'Row'].classList.remove('frost-effect', 'fog-effect', 'rain-effect', 'fear-effect');
             const cardsInRow = player.board[rowType];
             const hornUnits = cardsInRow.filter(c => c.type === 'Unit' && c.abilities && c.abilities.includes('horn'));
-
+            
             const bondGroups = {};
             cardsInRow.forEach(card => {
                 if (card.abilities && card.abilities.includes('tight_bond')) {
@@ -210,7 +276,7 @@ function applyAllEffects() {
                     bondGroups[baseId].push(card);
                 }
             });
-
+            
             const moraleGiversInRow = cardsInRow.filter(c => c.abilities && c.abilities.includes('morale_boost'));
             const moraleBoostValue = moraleGiversInRow.length;
 
@@ -219,19 +285,19 @@ function applyAllEffects() {
                 if (card.type === 'Unit' && !card.isHero && !card.isDecoy) {
                     let power = card.power;
                     if (activeWeatherRows.has(rowType)) { power = 1; }
-
+                    
                     const baseId = card.baseId || card.id.split('_')[0];
                     if (card.abilities && card.abilities.includes('tight_bond') && bondGroups[baseId] && bondGroups[baseId].length > 1) {
                         power *= bondGroups[baseId].length;
                     }
-
+                    
                     if (moraleBoostValue > 0) {
                         power += moraleBoostValue;
                         if (card.abilities && card.abilities.includes('morale_boost')) {
                             power -= 1;
                         }
                     }
-
+                    
                     const hornActiveForCard = !!player.board.horns[rowType] || hornUnits.some(h => h.instanceId !== card.instanceId);
                     if (hornActiveForCard) { power *= 2; }
                     if (power !== card.power) { card.currentPower = power; }
@@ -248,7 +314,7 @@ function applyAllEffects() {
             }
         });
     });
-
+    
     globalWeatherRow.innerHTML = '<h3>Pogoda</h3>';
     weatherCardsOnBoard.forEach(card => globalWeatherRow.appendChild(createCardElement(card)));
 }
@@ -336,6 +402,24 @@ function populateGraveyardSelect(player) {
     }
 }
 
+// Kładzie wybrane karty z Wezwania (chosenIds – lista id z pendingMuster.candidates) i kończy ruch.
+function confirmMuster(chosenIds, skipUndo = false) {
+    if (!isMusterModeActive || !pendingMuster) return;
+    if (!skipUndo) pushUndo(takeSnapshot()); // z ui.js: cofnięcie wraca do wyboru kart
+    const { player, card, targetRow, candidates } = pendingMuster;
+    const chosen = candidates.filter(c => chosenIds.includes(c.id));
+    isMusterModeActive = false;
+    pendingMuster = null;
+    chosen.forEach(data => {
+        player.availableCards = player.availableCards.filter(c => c.id !== data.id);
+        const row = Array.isArray(data.row) ? targetRow : data.row;
+        player.board[row].push({ ...data, instanceId: nextInstanceId() });
+    });
+    if (chosen.length > 0) addLogEntry(`Wezwanie! ${card.name} przywołuje: ${chosen.map(c => c.name).join(', ')}.`);
+    else addLogEntry(`Wezwanie: ${player.name} nie położył dodatkowych kart.`);
+    endTurnAfterFollowUp(player);
+}
+
 function endTurnAfterFollowUp(player) {
     const opp = (player === players.player1) ? players.player2 : players.player1;
     if (passedPlayers.includes(opp)) { updateAllControls(); } else { switchActivePlayer(); }
@@ -362,17 +446,17 @@ function executeDecoySwap(player, targetCardInstance) {
             }
         }
         if (targetCardIndex === -1) return false;
-
+        
         const [returnedCard] = boardRow.splice(targetCardIndex, 1);
         player.availableCards.push(returnedCard);
-
+        
         const decoyCardIndex = player.availableCards.findIndex(c => c.abilities && c.abilities.includes('decoy'));
         if (decoyCardIndex > -1) {
             const [decoyCard] = player.availableCards.splice(decoyCardIndex, 1);
             const decoyUnit = { ...decoyCard, instanceId: nextInstanceId(), power: 0, type: 'Unit', isDecoy: true };
             boardRow.push(decoyUnit);
         }
-
+        
         addLogEntry(`${player.name} użył karty Chrząszcz na karcie ${returnedCard.name}.`);
         updateAllControls();
         return true;
@@ -395,6 +479,7 @@ function activateDecoyMode(player) {
 }
 
 function executeResurrection(player, resurrectedCardId) {
+    pushUndo(takeSnapshot());
     isMedicModeActive = false;
     if (!resurrectedCardId) {
         addLogEntry(`${player.name} anulował wskrzeszenie.`);
@@ -407,7 +492,7 @@ function executeResurrection(player, resurrectedCardId) {
 
     const [resurrectedCard] = player.graveyard.splice(cardIndex, 1);
     addLogEntry(`${player.name} przygotowuje do wskrzeszenia: ${resurrectedCard.name}.`);
-
+    
     const cardInstance = { ...resurrectedCard, instanceId: nextInstanceId() };
 
     if (Array.isArray(cardInstance.row) && cardInstance.row.length > 1) {
@@ -417,7 +502,7 @@ function executeResurrection(player, resurrectedCardId) {
     } else {
         const targetRow = Array.isArray(cardInstance.row) ? cardInstance.row[0] : cardInstance.row;
         placeResurrectedCard(player, cardInstance, targetRow);
-
+        
         if (!isFirstMoveOfRound) {
             endTurnAfterFollowUp(player);
         } else {
@@ -438,7 +523,7 @@ function placeResurrectedCard(player, cardInstance, targetRow) {
     } else {
         player.board[targetRow].push(cardInstance);
         addLogEntry(`${player.name} wskrzesił ${cardInstance.name} i położył ją w rzędzie ${translateRowName(targetRow)}.`);
-
+        
         if (hasAbilities) {
             if (cardInstance.abilities.includes('medic')) {
                 const hasValidTargets = player.graveyard.some(c => c.type === 'Unit' && !c.isHero && !c.isDecoy);
@@ -457,12 +542,13 @@ function placeResurrectedCard(player, cardInstance, targetRow) {
 
 function completeAgileResurrection(player, chosenRow) {
     if (!isAgileResurrectionModeActive || !cardToResurrectWithAgile) return;
+    pushUndo(takeSnapshot());
 
     placeResurrectedCard(player, cardToResurrectWithAgile, chosenRow);
 
     isAgileResurrectionModeActive = false;
     cardToResurrectWithAgile = null;
-
+    
     if (!isFirstMoveOfRound) {
         endTurnAfterFollowUp(player);
     } else {
@@ -498,15 +584,15 @@ function startGame() {
         const leaderId = document.getElementById(`${p === players.player1 ? 'player1' : 'player2'}-leader-select`).value;
         if (!p.faction || !leaderId) { return alert("Proszę wybrać frakcję i dowódcę dla obu graczy!"); }
         p.commander = { ...getCardDetailsById(leaderId), isUsed: false }; // własna kopia dla każdego gracza
-        p.availableCards = allCards.filter(card =>
-            card.type !== 'Leader' &&
+        p.availableCards = allCards.filter(card => 
+            card.type !== 'Leader' && 
             !card.isToken &&
             (card.faction === p.faction || card.faction === 'Neutral')
         ).map(c => ({ ...c }));
     });
     gameSetupScreen.style.display = 'none'; battlefieldScreen.style.display = 'grid';
     isFirstMoveOfRound = true; activePlayer = null;
-    addLogEntry(`Gra rozpoczęta! Runda ${roundNumber}.`);
+    addLogEntry(`Gra rozpoczęta! Tura ${roundNumber}.`);
     updateAllControls();
 }
 
@@ -527,6 +613,13 @@ function updatePlayerControlsVisibility(player) {
         if (cardToResurrectWithAgile && Array.isArray(cardToResurrectWithAgile.row)) {
             cardToResurrectWithAgile.row.forEach(rowKey => rowSelect.add(new Option(translateRowName(rowKey), rowKey)));
         }
+        return;
+    }
+
+    if (isMusterModeActive || isGameOver) {
+        cardSelect.disabled = true;
+        passRoundButton.disabled = true;
+        activateLeaderButton.disabled = true;
         return;
     }
 
@@ -551,7 +644,7 @@ function updatePlayerControlsVisibility(player) {
     cardSelect.disabled = !isPlayerTurn;
     passRoundButton.disabled = !isPlayerTurn;
     activateLeaderButton.disabled = !isPlayerTurn || (player.commander && player.commander.isUsed);
-
+    
     const selectedOption = cardSelect.options[cardSelect.selectedIndex];
     if (!selectedOption || !selectedOption.value || !isPlayerTurn) return;
 
@@ -566,8 +659,10 @@ function updatePlayerControlsVisibility(player) {
         playCardButton.disabled = !rowSelect.value;
     } else if (needsRowChoice(selectedCard)) {
         rowSelect.disabled = false;
-        ['melee', 'ranged', 'siege'].forEach(rowKey => rowSelect.add(new Option(translateRowName(rowKey), rowKey)));
-        playCardButton.disabled = !rowSelect.value;
+        // Róg wojenny tylko na rząd bez rogu (karty Rogu ani jednostki z rogiem, np. Lestera).
+        const rows = ['melee', 'ranged', 'siege'].filter(r => !isHornSpecial(selectedCard) || !rowHasHorn(player, r));
+        rows.forEach(rowKey => rowSelect.add(new Option(translateRowName(rowKey), rowKey)));
+        playCardButton.disabled = !rowSelect.value || rows.length === 0;
     } else {
         playCardButton.disabled = false;
     }
@@ -576,18 +671,26 @@ function updatePlayerControlsVisibility(player) {
 
 function handlePlayerAction(player, action, isFollowUpAction = false) {
     if (!isFollowUpAction) {
-        if (isMedicModeActive) { action(); return; }
-        if (isDecoyModeActive) { action(); return; }
+        if (isGameOver || isMusterModeActive) return;
+        if (isMedicModeActive) { runAction(action); return; }
+        if (isDecoyModeActive) { runAction(action); return; }
         if (!isFirstMoveOfRound && (player !== activePlayer || passedPlayers.includes(player))) { return; }
         if (isFirstMoveOfRound && passedPlayers.includes(player)) return;
     }
-
-    const actionSucceeded = action();
-
+    
+    const actionSucceeded = runAction(action);
+    
     if (!actionSucceeded) { return updateAllControls(); }
     if (isFirstMoveOfRound) { isFirstMoveOfRound = false; activePlayer = player; }
-
+    
     if (isMedicModeActive || isDecoyModeActive) { return updateAllControls(); }
+    if (isMusterModeActive) {
+        updateAllControls();
+        // ui.js pokazuje wybór kart; bez interfejsu przywołujemy całą grupę.
+        if (typeof window.openMusterPicker === 'function') window.openMusterPicker(pendingMuster);
+        else confirmMuster(pendingMuster.candidates.map(c => c.id), true);
+        return;
+    }
 
     if (passedPlayers.length === 2) { return; }
     const opponent = (player === players.player1) ? players.player2 : players.player1;
@@ -599,7 +702,7 @@ function executeRowScorch(player, cardRow) {
     const opponent = (player === players.player1) ? players.player2 : players.player1;
     const targetRow = opponent.board[cardRow];
     const totalPowerInRow = targetRow.reduce((sum, card) => sum + (card.currentPower ?? card.power), 0);
-
+    
     if (totalPowerInRow >= 10) {
         const nonHeroCards = targetRow.filter(card => !card.isHero);
         if (nonHeroCards.length === 0) {
@@ -616,7 +719,7 @@ function executeRowScorch(player, cardRow) {
         });
 
         const cardsToDestroy = nonHeroCards.filter(card => (card.currentPower ?? card.power) === maxPower);
-
+        
         const destroyedNow = [];
         cardsToDestroy.forEach(card => {
             const index = opponent.board[cardRow].findIndex(c => c.instanceId === card.instanceId);
@@ -634,10 +737,11 @@ function executeRowScorch(player, cardRow) {
 }
 
 function playCard(player) {
+    if (isMusterModeActive) return;
     const cardSelect = player.domElements.cardSelect;
     const selectedCardId = cardSelect.value; if (!selectedCardId) return;
     const cardToPlayInfo = getCardDetailsById(selectedCardId);
-
+    
     if (cardToPlayInfo.abilities && cardToPlayInfo.abilities.includes('decoy')) {
         activateDecoyMode(player);
         return;
@@ -654,14 +758,14 @@ function playCard(player) {
         }
 
         if ((cardToPlayInfo.type === 'Unit' || needsRowChoice(cardToPlayInfo)) && !targetRow) {
-            alert("Wybierz rząd!");
+            alert("Wybierz rząd!"); 
+            return false; 
+        }
+        if (isHornSpecial(cardToPlayInfo) && rowHasHorn(player, targetRow)) {
+            alert("W tym rzędzie działa już róg!");
             return false;
         }
-        if (cardToPlayInfo.type === 'Special' && cardToPlayInfo.abilities && cardToPlayInfo.abilities.includes('horn') && player.board.horns[targetRow]) {
-            alert("W tym rzędzie jest już Róg wojenny!");
-            return false;
-        }
-
+        
         const cardIndex = player.availableCards.findIndex(c => c.id === selectedCardId);
         if (cardIndex === -1) { return false; }
         const [cardData] = player.availableCards.splice(cardIndex, 1);
@@ -680,17 +784,13 @@ function playCard(player) {
         } else if (cardInstance.type === 'Unit') {
             player.board[targetRow].push(cardInstance);
             addLogEntry(`${player.name} zagrał ${cardInstance.name} do rzędu ${targetRow}.`);
-
+            
             if (hasAbilities) {
                 if (cardInstance.abilities.includes('muster')) {
-                    const toSummon = collectMusterTargets(player, cardInstance);
-                    if (toSummon.length > 0) {
-                        addLogEntry(`Zbiórka! ${player.name} przywołuje ${toSummon.length} dodatkowe karty.`);
-                        toSummon.forEach(data => {
-                            player.availableCards = player.availableCards.filter(c => c.id !== data.id);
-                            const row = Array.isArray(data.row) ? targetRow : data.row;
-                            player.board[row].push({ ...data, instanceId: nextInstanceId() });
-                        });
+                    const candidates = collectMusterTargets(player, cardInstance);
+                    if (candidates.length > 0) {
+                        isMusterModeActive = true;
+                        pendingMuster = { player, card: cardInstance, targetRow, candidates };
                     }
                 }
                 if (cardInstance.abilities.includes('scorch_row')) {
@@ -720,29 +820,31 @@ function playCard(player) {
             } else if (hasAbilities && cardInstance.abilities.includes('Wyzwolenie siły')) {
                 executePowerRelease(player, cardInstance.transformTargetId, targetRow); // rząd wybrany przez gracza
             }
-
+            
             if (shouldGoToGraveyard) {
                 player.graveyard.push(cardInstance);
             }
         }
-
+        
         updateAllControls();
         return true;
     });
 }
 
 function passRound(player) {
+    if (isMusterModeActive) return;
     deactivateDecoyMode();
     handlePlayerAction(player, () => {
         if (passedPlayers.includes(player)) return false;
         passedPlayers.push(player); addLogEntry(`${player.name} spasował.`);
         updateAllControls();
-        if (passedPlayers.length === 2) { setTimeout(endRound, 500); }
+        if (passedPlayers.length === 2) { endRoundTimer = setTimeout(endRound, 500); }
         return true;
     });
 }
 
 function activateLeaderAbility(player) {
+    if (isMusterModeActive) return;
     deactivateDecoyMode();
     handlePlayerAction(player, () => {
         if (!player.commander || player.commander.isUsed) return false;
@@ -754,23 +856,25 @@ function activateLeaderAbility(player) {
 }
 
 function endRound() {
-    addLogEntry("Runda zakończona!");
+    addLogEntry("Tura zakończona!");
+    endRoundTimer = null;
     const p1Power = calculatePlayerPower(players.player1), p2Power = calculatePlayerPower(players.player2);
-    if (p1Power > p2Power) { players.player2.crystalCount--; addLogEntry(`${players.player1.name} wygrywa rundę!`); }
-    else if (p2Power > p1Power) { players.player1.crystalCount--; addLogEntry(`${players.player2.name} wygrywa rundę!`); }
+    roundResults.push({ round: roundNumber, p1: p1Power, p2: p2Power, winner: p1Power > p2Power ? 'player1' : p2Power > p1Power ? 'player2' : 'draw' });
+    if (p1Power > p2Power) { players.player2.crystalCount--; addLogEntry(`${players.player1.name} wygrywa turę!`); }
+    else if (p2Power > p1Power) { players.player1.crystalCount--; addLogEntry(`${players.player2.name} wygrywa turę!`); }
     else { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
-
+    
     if (checkGameOver()) return;
 
     const avengersForNextRound = { player1: [], player2: [] };
 
     [players.player1, players.player2].forEach(p => {
         const playerKey = (p === players.player1) ? 'player1' : 'player2';
-
+        
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             p.board[rowType].forEach(card => {
                 if (card.abilities && card.abilities.includes('avenger') && card.summons) {
-                    addLogEntry(`Mściciel ${card.name} (${p.name}) przetrwał rundę i zostanie ulepszony.`);
+                    addLogEntry(`Mściciel ${card.name} (${p.name}) przetrwał turę i zostanie ulepszony.`);
                     avengersForNextRound[playerKey].push({ cardId: card.summons, row: rowType });
                 }
                 if (card.abilities && card.abilities.includes('summon_next_round') && card.nextRoundSummonId) {
@@ -799,13 +903,13 @@ function endRound() {
         });
         p.board.horns = { melee: null, ranged: null, siege: null };
     });
-
-    weatherCardsOnBoard = [];
+    
+    weatherCardsOnBoard = []; 
     passedPlayers = [];
-    roundNumber++;
-    isFirstMoveOfRound = true;
+    roundNumber++; 
+    isFirstMoveOfRound = true; 
     activePlayer = null;
-    addLogEntry(`Rozpoczynamy rundę ${roundNumber}!`);
+    addLogEntry(`Rozpoczynamy turę ${roundNumber}!`);
 
     [players.player1, players.player2].forEach(p => {
         const playerKey = (p === players.player1) ? 'player1' : 'player2';
@@ -827,6 +931,10 @@ function checkGameOver() {
     else if (players.player1.crystalCount <= 0) { winner = players.player2; }
     else if (players.player2.crystalCount <= 0) { winner = players.player1; }
     if (winner) {
+        isGameOver = true;
+        updateAllControls();
+        // ui.js pokazuje okno podsumowania (z możliwością cofnięcia ruchu); bez niego – stary komunikat.
+        if (typeof window.showGameSummary === 'function') { window.showGameSummary(winner === 'Remis' ? null : winner); return true; }
         alert(winner === 'Remis' ? "Remis! Obaj gracze przegrali!" : `${winner.name} wygrywa grę!`);
         location.reload(); return true;
     }
@@ -837,7 +945,7 @@ function setupEventListeners() {
     battlefieldScreen.addEventListener('click', (event) => {
         if (!isDecoyModeActive || !activePlayer) return;
         const targetElement = event.target.closest('.card-on-board.targetable');
-
+        
         setTimeout(() => {
             if (!isDecoyModeActive) return;
 
@@ -866,13 +974,13 @@ function setupEventListeners() {
     players.player1.domElements.playCardButton.addEventListener('click', () => playCard(players.player1));
     players.player1.domElements.passRoundButton.addEventListener('click', () => passRound(players.player1));
     players.player1.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player1));
-    players.player1.domElements.cardSelect.addEventListener('change', () => {
-        deactivateDecoyMode();
-        updatePlayerControlsVisibility(players.player1);
+    players.player1.domElements.cardSelect.addEventListener('change', () => { 
+        deactivateDecoyMode(); 
+        updatePlayerControlsVisibility(players.player1); 
     });
-    players.player1.domElements.graveyardSelect.addEventListener('change', (event) => {
-        if (isMedicModeActive && activePlayer === players.player1) {
-            executeResurrection(players.player1, event.target.value);
+    players.player1.domElements.graveyardSelect.addEventListener('change', (event) => { 
+        if (isMedicModeActive && activePlayer === players.player1) { 
+            executeResurrection(players.player1, event.target.value); 
         }
     });
     players.player1.domElements.rowSelect.addEventListener('change', (event) => {
@@ -886,18 +994,18 @@ function setupEventListeners() {
             player.domElements.playCardButton.disabled = !event.target.value;
         }
     });
-
+    
     // --- Gracz 2 ---
     players.player2.domElements.playCardButton.addEventListener('click', () => playCard(players.player2));
     players.player2.domElements.passRoundButton.addEventListener('click', () => passRound(players.player2));
     players.player2.domElements.activateLeaderButton.addEventListener('click', () => activateLeaderAbility(players.player2));
-    players.player2.domElements.cardSelect.addEventListener('change', () => {
-        deactivateDecoyMode();
-        updatePlayerControlsVisibility(players.player2);
+    players.player2.domElements.cardSelect.addEventListener('change', () => { 
+        deactivateDecoyMode(); 
+        updatePlayerControlsVisibility(players.player2); 
     });
-    players.player2.domElements.graveyardSelect.addEventListener('change', (event) => {
-        if (isMedicModeActive && activePlayer === players.player2) {
-            executeResurrection(players.player2, event.target.value);
+    players.player2.domElements.graveyardSelect.addEventListener('change', (event) => { 
+        if (isMedicModeActive && activePlayer === players.player2) { 
+            executeResurrection(players.player2, event.target.value); 
         }
     });
     players.player2.domElements.rowSelect.addEventListener('change', (event) => {
@@ -914,5 +1022,36 @@ function setupEventListeners() {
 }
 
 // === Inicjalizacja gry ===
+// Pamiętaj, aby zdefiniować swoją tablicę `allCards` przed wywołaniem tych funkcji!
+// Np. dodaj te karty, aby przetestować mechanikę Mściciela:
+/*
+const allCards = [
+    // ... inne karty
+    {
+        id: 'golem_1',
+        name: 'Golem',
+        type: 'Unit',
+        power: 3,
+        faction: 'Neutral',
+        row: 'melee',
+        abilities: ['avenger'],
+        summons: 'golem_fiend_1', // ID karty, którą przyzywa
+        isHero: false
+    },
+    {
+        id: 'golem_fiend_1',
+        name: 'Większy Golem',
+        type: 'Unit',
+        power: 9,
+        faction: 'Neutral',
+        row: 'melee',
+        abilities: [],
+        isHero: false,
+        isToken: true // Oznacza, że karta nie może być w talii startowej
+    },
+    // ... inne karty
+];
+*/
+
 setupGame();
 setupEventListeners();

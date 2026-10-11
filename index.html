@@ -49,14 +49,16 @@
                 <span class="sb-gems" id="sb-gems-1"></span>
                 <span class="sb-total" id="sb-total-1">0</span>
             </div>
-            <div class="sb-round" id="sb-round">R1</div>
+            <div class="sb-center">
+                <div class="sb-round" id="sb-round">Tura 1</div>
+                <button id="undo-btn" class="btn-undo" type="button" disabled title="Cofnij ostatni ruch">↶ Cofnij</button>
+            </div>
             <div class="sb-player sb-p2" data-player="2">
                 <span class="sb-total" id="sb-total-2">0</span>
                 <span class="sb-gems" id="sb-gems-2"></span>
                 <span class="sb-name" id="sb-name-2">Gracz 2</span>
             </div>
             <div id="status-banner" class="status-banner" role="status" aria-live="polite"></div>
-            <div id="last-action" class="last-action"></div>
         </header>
 
         <div class="side-column">
@@ -128,7 +130,6 @@
         <div class="main-board-column">
             <div class="player-board-area player1-area" data-player="1">
                 <div class="total-power-display">
-                    <p>Siła</p>
                     <span id="player1-power">0</span>
                 </div>
                 <div class="battlefield-rows player1-board">
@@ -152,7 +153,6 @@
 
             <div class="player-board-area player2-area" data-player="2">
                 <div class="total-power-display">
-                    <p>Siła</p>
                     <span id="player2-power">0</span>
                 </div>
                 <div class="battlefield-rows player2-board">
@@ -197,6 +197,26 @@
             <div class="sheet-foot" id="sheet-foot"></div>
         </div>
     </div>
+
+    <!-- Podsumowanie gry – wypełnia ui.js -->
+    <div id="summary" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+            <h2 id="summary-title">Koniec gry</h2>
+            <p id="summary-winner" class="summary-winner"></p>
+            <div class="summary-table-wrap"><table class="summary-table" id="summary-table"></table></div>
+            <h3 class="summary-sub">Historia gry</h3>
+            <textarea id="summary-text" class="summary-text" readonly></textarea>
+            <div class="summary-actions">
+                <button id="summary-copy" type="button">Kopiuj</button>
+                <button id="summary-download" type="button">Pobierz .txt</button>
+                <button id="summary-undo" type="button" class="btn-small">↶ Cofnij ostatni ruch</button>
+                <button id="summary-new" type="button" class="btn-primary">Nowa gra</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="cards.js"></script>
     <script src="script.js"></script>
