@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-11d';
+const APP_VERSION = '2026-10-11f';
 
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
@@ -42,6 +42,9 @@ let pendingMuster = null; // { player, card, targetRow, candidates }
 // Wyniki zakończonych tur i stan końca gry (do podsumowania).
 let roundResults = []; // { round, p1, p2, winner: 'player1' | 'player2' | 'draw' }
 let isGameOver = false;
+// Koniec tury ze zdolnościami talii, które wymagają wyboru (Potwory, Orkowie, Bandyci).
+// { stage: 'keep'|'post', queue: [{ kind, player, count, candidates: [instanceId] }], kept: { player1: [], player2: [] }, losers: [] }
+let roundEndFlow = null;
 let endRoundTimer = null;
 
 // ===== Cofanie ruchu: migawki stanu przed każdą akcją gracza =====
@@ -59,7 +62,7 @@ function takeSnapshot() {
         isMedicModeActive, isAgileResurrectionModeActive, cardToResurrectWithAgile: clone(cardToResurrectWithAgile),
         isMusterModeActive,
         pendingMuster: pendingMuster ? { ...clone({ ...pendingMuster, player: null }), player: playerKeyOf(pendingMuster.player) } : null,
-        iid: __iid, roundResults: clone(roundResults), isGameOver, log: historyLog.innerHTML
+        iid: __iid, roundResults: clone(roundResults), isGameOver, roundEndFlow: clone(roundEndFlow), log: historyLog.innerHTML
     };
 }
 function pushUndo(snap) {
@@ -72,8 +75,11 @@ function canRedo() { return redoStack.length > 0; }
 function restoreSnapshot(s) {
     clearTimeout(endRoundTimer); endRoundTimer = null;
     deactivateDecoyMode();
-    Object.assign(players.player1, s.p1);
-    Object.assign(players.player2, s.p2);
+    // Przywróć graczy dokładnie: usuń też pola, których w migawce nie było (np. skipUsed).
+    [['player1', s.p1], ['player2', s.p2]].forEach(([k, snap]) => {
+        Object.keys(players[k]).forEach(key => { if (key !== 'domElements' && !(key in snap)) delete players[k][key]; });
+        Object.assign(players[k], snap);
+    });
     activePlayer = s.activePlayer ? players[s.activePlayer] : null;
     roundNumber = s.roundNumber;
     passedPlayers = s.passed.map(k => players[k]);
@@ -87,10 +93,12 @@ function restoreSnapshot(s) {
     __iid = s.iid;
     roundResults = s.roundResults;
     isGameOver = s.isGameOver;
+    roundEndFlow = s.roundEndFlow || null;
     historyLog.innerHTML = s.log;
     updateAllControls();
     // Stan „obaj spasowali, tura jeszcze nieprzeliczona” – dokończ turę.
-    if (passedPlayers.length === 2 && !isGameOver) endRoundTimer = setTimeout(endRound, 500);
+    if (passedPlayers.length === 2 && !isGameOver && !roundEndFlow) endRoundTimer = setTimeout(endRound, 500);
+    if (roundEndFlow && roundEndFlow.queue.length && typeof window.openFactionChoice === 'function') window.openFactionChoice(getPendingChoice());
     if (isMusterModeActive && typeof window.openMusterPicker === 'function') window.openMusterPicker(pendingMuster);
     if (isGameOver && typeof window.showGameSummary === 'function') {
         const c1 = players.player1.crystalCount, c2 = players.player2.crystalCount;
@@ -612,6 +620,7 @@ function startGame() {
         const leaderId = document.getElementById(`${p === players.player1 ? 'player1' : 'player2'}-leader-select`).value;
         if (!p.faction || !leaderId) { return alert("Proszę wybrać frakcję i dowódcę dla obu graczy!"); }
         p.commander = { ...getCardDetailsById(leaderId), isUsed: false }; // własna kopia dla każdego gracza
+        p.skipUsed = false;
         p.availableCards = allCards.filter(card => 
             card.type !== 'Leader' && 
             !card.isToken &&
@@ -621,6 +630,9 @@ function startGame() {
     gameSetupScreen.style.display = 'none'; battlefieldScreen.style.display = 'grid';
     isFirstMoveOfRound = true; activePlayer = null;
     addLogEntry(`Gra rozpoczęta! Tura ${roundNumber}.`);
+    [players.player1, players.player2].forEach(p => {
+        if (p.faction === 'Najemnicy') addLogEntry(`${p.name} (Najemnicy): na starcie możesz wymienić o 1 kartę więcej (3 zamiast 2).`);
+    });
     updateAllControls();
 }
 
@@ -644,7 +656,7 @@ function updatePlayerControlsVisibility(player) {
         return;
     }
 
-    if (isMusterModeActive || isGameOver) {
+    if (isMusterModeActive || isGameOver || roundEndFlow) {
         cardSelect.disabled = true;
         passRoundButton.disabled = true;
         activateLeaderButton.disabled = true;
@@ -699,7 +711,7 @@ function updatePlayerControlsVisibility(player) {
 
 function handlePlayerAction(player, action, isFollowUpAction = false) {
     if (!isFollowUpAction) {
-        if (isGameOver || isMusterModeActive) return;
+        if (isGameOver || isMusterModeActive || roundEndFlow) return;
         if (isMedicModeActive) { runAction(action); return; }
         if (isDecoyModeActive) { runAction(action); return; }
         if (!isFirstMoveOfRound && (player !== activePlayer || passedPlayers.includes(player))) { return; }
@@ -883,24 +895,63 @@ function activateLeaderAbility(player) {
     });
 }
 
+const otherKey = k => (k === 'player1' ? 'player2' : 'player1');
+const isPlainUnit = c => c.type === 'Unit' && !c.isHero && !c.isDecoy;
+
+// Kandydaci do wyborów ze zdolności talii (instanceId kart).
+function monsterKeepCandidates(p) {
+    return ['melee', 'ranged', 'siege'].flatMap(r => p.board[r]).filter(c => isPlainUnit(c) && c.faction === 'Potwory');
+}
+function orcReviveCandidates(p) { return p.graveyard.filter(c => isPlainUnit(c) && c.faction === 'Orkowie'); }
+function banditStealCandidates(p) { return players[otherKey(playerKeyOf(p))].graveyard.filter(isPlainUnit); }
+
 function endRound() {
     addLogEntry("Tura zakończona!");
     endRoundTimer = null;
     const p1Power = calculatePlayerPower(players.player1), p2Power = calculatePlayerPower(players.player2);
-    roundResults.push({ round: roundNumber, p1: p1Power, p2: p2Power, winner: p1Power > p2Power ? 'player1' : p2Power > p1Power ? 'player2' : 'draw' });
-    if (p1Power > p2Power) { players.player2.crystalCount--; addLogEntry(`${players.player1.name} wygrywa turę!`); }
-    else if (p2Power > p1Power) { players.player1.crystalCount--; addLogEntry(`${players.player2.name} wygrywa turę!`); }
-    else { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
-    
+    let winner = p1Power > p2Power ? 'player1' : p2Power > p1Power ? 'player2' : 'draw';
+    // Khorinis: wygrywa turę w przypadku remisu (gdy tylko jeden gracz gra Khorinis).
+    if (winner === 'draw') {
+        const k1 = players.player1.faction === 'Khorinis', k2 = players.player2.faction === 'Khorinis';
+        if (k1 !== k2) {
+            winner = k1 ? 'player1' : 'player2';
+            addLogEntry(`Remis ${p1Power}:${p2Power} – ${players[winner].name} wygrywa dzięki zdolności talii Khorinis.`);
+        }
+    }
+    roundResults.push({ round: roundNumber, p1: p1Power, p2: p2Power, winner });
+    if (winner === 'draw') { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
+    else { players[otherKey(winner)].crystalCount--; addLogEntry(`${players[winner].name} wygrywa turę!`); }
+
     if (checkGameOver()) return;
 
+    // Nieumarli: dobór 1 losowej karty z talii po wygranej turze (fizycznie przy stole).
+    if (winner !== 'draw' && players[winner].faction === 'Nieumarli') {
+        addLogEntry(`${players[winner].name} (Nieumarli): dobierz 1 losową kartę z talii.`);
+    }
+
+    // Przegrani tury (remis = przegrana obu) – dla Bandytów.
+    const losers = winner === 'draw' ? ['player1', 'player2'] : [otherKey(winner)];
+    roundEndFlow = { stage: 'keep', queue: [], kept: { player1: [], player2: [] }, losers };
+    // Potwory: po każdej turze jedna karta Potworów zostaje na planszy.
+    ['player1', 'player2'].forEach(k => {
+        if (players[k].faction !== 'Potwory') return;
+        const c = monsterKeepCandidates(players[k]);
+        if (c.length) roundEndFlow.queue.push({ kind: 'keep', player: k, count: 1, candidates: c.map(x => x.instanceId) });
+    });
+    continueRoundEnd();
+}
+
+function clearBoardsForNextRound(kept) {
     const avengersForNextRound = { player1: [], player2: [] };
 
     [players.player1, players.player2].forEach(p => {
         const playerKey = (p === players.player1) ? 'player1' : 'player2';
-        
+        const keepIds = kept[playerKey] || [];
+
         ['melee', 'ranged', 'siege'].forEach(rowType => {
+            const stays = [];
             p.board[rowType].forEach(card => {
+                if (keepIds.includes(card.instanceId)) { stays.push(card); return; } // zdolność Potworów
                 if (card.abilities && card.abilities.includes('avenger') && card.summons) {
                     addLogEntry(`Mściciel ${card.name} (${p.name}) przetrwał turę i zostanie ulepszony.`);
                     avengersForNextRound[playerKey].push({ cardId: card.summons, row: rowType });
@@ -918,7 +969,7 @@ function endRound() {
                     sendToGraveyard(p, card);
                 }
             });
-            p.board[rowType] = [];
+            p.board[rowType] = stays;
         });
 
         // Karty Rogu wojennego też idą na cmentarz (jako oryginalne karty specjalne).
@@ -931,11 +982,11 @@ function endRound() {
         });
         p.board.horns = { melee: null, ranged: null, siege: null };
     });
-    
-    weatherCardsOnBoard = []; 
+
+    weatherCardsOnBoard = [];
     passedPlayers = [];
-    roundNumber++; 
-    isFirstMoveOfRound = true; 
+    roundNumber++;
+    isFirstMoveOfRound = true;
     activePlayer = null;
     addLogEntry(`Rozpoczynamy turę ${roundNumber}!`);
 
@@ -948,8 +999,110 @@ function endRound() {
             });
         }
     });
+}
 
+// Prowadzi koniec tury: najpierw wybory przed sprzątaniem planszy, potem po nim.
+function continueRoundEnd() {
+    const f = roundEndFlow;
+    if (!f) return;
+    if (f.queue.length) {
+        updateAllControls();
+        if (typeof window.openFactionChoice === 'function') window.openFactionChoice(getPendingChoice());
+        else { const q = f.queue[0]; confirmFactionChoice(q.candidates.slice(0, q.count), true); } // bez interfejsu
+        return;
+    }
+    if (f.stage === 'keep') {
+        clearBoardsForNextRound(f.kept);
+        f.stage = 'post';
+        // Orkowie: w trzeciej turze 2 karty poległe Orków wracają na planszę.
+        if (roundNumber === 3) ['player1', 'player2'].forEach(k => {
+            if (players[k].faction !== 'Orkowie') return;
+            const c = orcReviveCandidates(players[k]);
+            if (c.length) f.queue.push({ kind: 'revive', player: k, count: Math.min(2, c.length), candidates: c.map(x => x.instanceId) });
+        });
+        // Bandyci: po przegranej turze 1 karta z cmentarza przeciwnika do ręki.
+        f.losers.forEach(k => {
+            if (players[k].faction !== 'Bandyci') return;
+            const c = banditStealCandidates(players[k]);
+            if (c.length) f.queue.push({ kind: 'steal', player: k, count: 1, candidates: c.map(x => x.instanceId) });
+        });
+        return continueRoundEnd();
+    }
+    roundEndFlow = null;
     updateAllControls();
+}
+
+const CHOICE_TEXT = {
+    keep: { title: 'Potwory – która karta zostaje na planszy?', banner: 'wybierz kartę Potworów, która zostaje na planszy' },
+    revive: { title: 'Orkowie – które karty wracają z cmentarza?', banner: 'wybierz karty Orków, które wracają z cmentarza' },
+    steal: { title: 'Bandyci – którą kartę zabierasz z cmentarza przeciwnika?', banner: 'wybierz kartę z cmentarza przeciwnika' }
+};
+// Opis bieżącego wyboru dla interfejsu: karty (obiekty) + ile trzeba wybrać.
+function getPendingChoice() {
+    if (!roundEndFlow || !roundEndFlow.queue.length) return null;
+    const q = roundEndFlow.queue[0];
+    const p = players[q.player];
+    const pool = q.kind === 'keep' ? ['melee', 'ranged', 'siege'].flatMap(r => p.board[r])
+        : q.kind === 'revive' ? p.graveyard : players[otherKey(q.player)].graveyard;
+    const cards = q.candidates.map(id => pool.find(c => c.instanceId === id)).filter(Boolean);
+    return { kind: q.kind, player: p, count: q.count, cards, ...CHOICE_TEXT[q.kind] };
+}
+function isFactionChoiceActive() { return !!(roundEndFlow && roundEndFlow.queue.length); }
+
+function confirmFactionChoice(instanceIds, skipUndo = false) {
+    if (!isFactionChoiceActive()) return false;
+    const q = roundEndFlow.queue[0];
+    const ids = instanceIds.filter(id => q.candidates.includes(id));
+    if (ids.length !== q.count) return false;
+    if (!skipUndo) pushUndo(takeSnapshot());
+    const p = players[q.player];
+    if (q.kind === 'keep') {
+        roundEndFlow.kept[q.player].push(...ids);
+        const names = ['melee', 'ranged', 'siege'].flatMap(r => p.board[r]).filter(c => ids.includes(c.instanceId)).map(c => c.name);
+        addLogEntry(`${p.name} (Potwory): ${names.join(', ')} zostaje na planszy.`);
+    } else if (q.kind === 'revive') {
+        const back = [];
+        ids.forEach(id => {
+            const i = p.graveyard.findIndex(c => c.instanceId === id);
+            if (i < 0) return;
+            const [card] = p.graveyard.splice(i, 1);
+            const row = Array.isArray(card.row) ? card.row[0] : card.row;
+            const { currentPower, ...clean } = card;
+            p.board[row].push({ ...clean, instanceId: nextInstanceId() });
+            back.push(card.name);
+        });
+        addLogEntry(`${p.name} (Orkowie): z cmentarza wracają ${back.join(', ')}.`);
+    } else if (q.kind === 'steal') {
+        const opp = players[otherKey(q.player)];
+        const i = opp.graveyard.findIndex(c => c.instanceId === ids[0]);
+        if (i >= 0) {
+            const [card] = opp.graveyard.splice(i, 1);
+            const { currentPower, instanceId, ...clean } = card;
+            p.availableCards.push(clean);
+            addLogEntry(`${p.name} (Bandyci): zabiera ${card.name} z cmentarza ${opp.name} do ręki.`);
+        }
+    }
+    roundEndFlow.queue.shift();
+    continueRoundEnd();
+    return true;
+}
+
+// Klasztor: raz na grę można przeczekać swój ruch (bez pasowania).
+function canSkipTurn(player) {
+    const opp = player === players.player1 ? players.player2 : players.player1;
+    return player.faction === 'Klasztor' && !player.skipUsed && !isGameOver && !roundEndFlow &&
+        !isMusterModeActive && !isMedicModeActive && !isAgileResurrectionModeActive &&
+        !passedPlayers.includes(player) && !passedPlayers.includes(opp) &&
+        (isFirstMoveOfRound || activePlayer === player);
+}
+function skipTurn(player) {
+    if (!canSkipTurn(player)) return;
+    deactivateDecoyMode();
+    handlePlayerAction(player, () => {
+        player.skipUsed = true;
+        addLogEntry(`${player.name} przeczekuje ruch (zdolność talii Klasztoru).`);
+        return true;
+    });
 }
 
 

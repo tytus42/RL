@@ -32,6 +32,7 @@
     --radius: 10px;
     --tap: 44px;
     --head-font: 'GothicRK', Georgia, 'Times New Roman', serif;
+    font-synthesis: none; /* czcionka ma jedną grubość – bez sztucznego pogrubiania */
     color-scheme: dark;
 }
 
@@ -45,7 +46,7 @@ body {
     min-height: 100dvh;
     background: radial-gradient(ellipse at top, #241d14 0%, var(--bg) 60%) fixed;
     color: var(--text);
-    font: 15px/1.35 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    font: 16px/1.35 var(--head-font); /* czcionka Gothic II z repozytorium – w całej aplikacji */
     -webkit-tap-highlight-color: transparent;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
@@ -78,7 +79,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .btn-pass { background: transparent; border-color: #6b3a32; color: #f0b3a9; }
 .btn-pass.armed { background: var(--danger); color: #fff; border-color: #ff8d80; }
 
-select, input[type="text"], input[type="search"] {
+select, input[type="text"], input[type="search"], textarea {
+    font-family: inherit;
     font-size: 16px; /* < 16px powoduje automatyczny zoom na iPhone */
     min-height: var(--tap);
     width: 100%;
@@ -179,7 +181,17 @@ select:disabled { opacity: .5; }
     .scorebar { gap: 4px 4px; padding-inline: 6px; }
     .sb-player { gap: 4px; padding: 4px 6px; }
     .sb-total { min-width: 1.2em; font-size: 1.45em; }
-    .gem { width: 9px; height: 9px; }
+    .gem { width: 8px; height: 8px; }
+    .sb-gems { gap: 2px; }
+    .sb-name { font-size: .85em; }
+    .sb-round { padding: 1px 7px; font-size: .9em; }
+}
+@media (max-width: 370px) {
+    .scorebar { padding-inline: 4px; gap: 4px 2px; }
+    .sb-player { padding: 3px 4px; gap: 3px; }
+    .sb-name { font-size: .8em; }
+    .sb-total { font-size: 1.3em; min-width: 1.1em; }
+    .sb-round { padding: 1px 5px; font-size: .82em; }
 }
 .btn-undo:not(:disabled) { color: var(--text); border-color: var(--gold); }
 .sb-gems { display: inline-flex; gap: 3px; flex-shrink: 0; }
@@ -247,7 +259,10 @@ select:disabled { opacity: .5; }
 
 .player-controls { display: grid; gap: 8px; }
 .card-play-section { display: grid; gap: 8px; }
-.secondary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.secondary-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.btn-skip { border-color: var(--p1); }
+.player2-sidebar .btn-skip { border-color: var(--p2); }
+.faction-ability { grid-column: 1 / -1; margin: 0; font-size: .8em; color: var(--muted); font-style: italic; }
 .secondary-actions button { min-height: 40px; font-size: .92em; }
 
 /* Gracz czekający: zwinięte sterowanie, żeby nie zabierało ekranu */
@@ -256,6 +271,8 @@ select:disabled { opacity: .5; }
 .player-sidebar.is-waiting, .player-sidebar.is-passed { padding-block: 6px; }
 .player-sidebar.is-waiting .info-faction,
 .player-sidebar.is-passed .info-faction { display: none; }
+.player-sidebar.is-waiting .faction-ability,
+.player-sidebar.is-passed .faction-ability { display: none; }
 
 .card-pick-btn {
     display: flex; align-items: center; gap: 10px;
@@ -349,7 +366,7 @@ select:disabled { opacity: .5; }
 .siege-row { border-left-color: var(--siege); }
 .row h3 {
     position: absolute; top: 3px; left: 7px;
-    font: 600 .66em/1 system-ui, sans-serif;
+    font: .72em/1 var(--head-font);
     text-transform: uppercase; letter-spacing: .08em;
     color: var(--muted); pointer-events: none;
 }
@@ -376,7 +393,7 @@ select:disabled { opacity: .5; }
     min-width: 24px; height: 24px; padding: 0 5px;
     border-radius: 999px;
     background: #efe6d2; color: #1d160c;
-    font: 700 .95em/1 system-ui, sans-serif;
+    font: 1em/1 var(--head-font);
     font-variant-numeric: tabular-nums;
 }
 .card-power.card-icon { background: transparent; color: var(--text); font-size: 1em; min-width: 18px; padding: 0; }
@@ -465,7 +482,7 @@ select:disabled { opacity: .5; }
     display: grid; grid-template-columns: 1fr; gap: 6px; align-content: start;
 }
 @media (min-width: 520px) { .sheet-list { grid-template-columns: 1fr 1fr; } }
-.sheet-group { grid-column: 1 / -1; font-size: .8em; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 8px 2px 0; font-family: system-ui, sans-serif; }
+.sheet-group { grid-column: 1 / -1; font-size: .8em; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 8px 2px 0; }
 .sheet-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: 24px 0; }
 .tile {
     display: flex; align-items: center; gap: 10px; text-align: left;
@@ -478,7 +495,7 @@ select:disabled { opacity: .5; }
 .tile-power {
     flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: #efe6d2; color: #1d160c; font: 700 1.05em/1 system-ui, sans-serif;
+    background: #efe6d2; color: #1d160c; font: 1.15em/1 var(--head-font);
 }
 .tile.hero .tile-power { background: var(--gold-hi); }
 .tile-main { display: grid; min-width: 0; }
@@ -530,7 +547,7 @@ select:disabled { opacity: .5; }
 .summary-sub { font-size: 1em; color: var(--muted); margin-top: 4px; }
 .summary-text {
     width: 100%; min-height: 160px; flex: 1; resize: vertical;
-    font: .8em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font: .9em/1.45 var(--head-font);
     background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px;
 }
 .summary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -557,6 +574,7 @@ select:disabled { opacity: .5; }
     .player-sidebar { flex: 0 0 auto; }
     .player-sidebar.is-waiting .player-controls, .player-sidebar.is-passed .player-controls { display: grid; opacity: .45; pointer-events: none; }
     .player-sidebar.is-waiting .info-faction, .player-sidebar.is-passed .info-faction { display: block; }
+    .player-sidebar.is-waiting .faction-ability, .player-sidebar.is-passed .faction-ability { display: block; }
     .global-weather-row { flex: 1; border-radius: 14px; min-height: 60px; }
 
     .player-board-area { flex: 1; padding: 8px; }

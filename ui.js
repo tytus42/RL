@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-11d';
+    const UI_VERSION = '2026-10-11f';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -46,6 +46,16 @@
         Orkowie: '#FFFF00', Bandyci: '#999999', Nieumarli: '#9900FF', Neutral: '#A61C00'
     };
     const DEFAULT_COLORS = ['#e0a83c', '#6fa8dc'];
+    // Zdolności talii (instrukcja, str. 19) – krótki opis w panelu gracza.
+    const FACTION_ABILITY = {
+        Khorinis: 'Wygrywa turę w przypadku remisu.',
+        Potwory: 'Po każdej turze 1 karta Potworów zostaje na planszy.',
+        Najemnicy: 'Na starcie wymiana 1 karty więcej.',
+        Klasztor: 'Raz na grę może przeczekać ruch bez pasowania.',
+        Orkowie: 'W 3. turze 2 karty Orków wracają z cmentarza.',
+        Bandyci: 'Po przegranej turze bierze 1 kartę z cmentarza przeciwnika.',
+        Nieumarli: 'Po wygranej turze dobiera 1 kartę z talii.'
+    };
     const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const rgbToHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
     const mixWhite = (h, t) => rgbToHex(hexToRgb(h).map(v => v + (255 - v) * t));
@@ -136,6 +146,10 @@
 
     function statusText() {
         const act = activePlayer;
+        if (typeof isFactionChoiceActive === 'function' && isFactionChoiceActive()) {
+            const ch = getPendingChoice();
+            return { cls: 'mode', text: `${ch.player.name}: ${ch.banner}.`, action: 'faction' };
+        }
         if (isMusterModeActive && pendingMuster) return { cls: 'mode', text: `📯 ${pendingMuster.player.name}: Wezwanie – wybierz karty, które kładziesz.`, action: 'muster' };
         if (isDecoyModeActive && act) return { cls: 'mode', text: `🪲 ${act.name}: dotknij jednostkę na swoim polu. Dotknięcie gdzie indziej anuluje.` };
         if (isAgileResurrectionModeActive && act) return { cls: 'mode', text: `${act.name}: wybierz rząd dla „${cardToResurrectWithAgile ? cardToResurrectWithAgile.name : ''}”.` };
@@ -172,11 +186,12 @@
         const banner = $('#status-banner');
         banner.className = 'status-banner ' + st.cls;
         banner.textContent = st.text;
-        if (st.action === 'medic' || st.action === 'muster') {
+        if (st.action === 'medic' || st.action === 'muster' || st.action === 'faction') {
             const b = document.createElement('button');
             b.className = 'btn-small banner-btn';
             b.textContent = st.action === 'medic' ? 'Cmentarz' : 'Wybierz karty';
-            b.addEventListener('click', () => (st.action === 'medic' ? openGraveyard(activePlayer, true) : openMusterPicker(pendingMuster)));
+            b.addEventListener('click', () => (st.action === 'medic' ? openGraveyard(activePlayer, true)
+                : st.action === 'muster' ? openMusterPicker(pendingMuster) : openFactionChoice(getPendingChoice())));
             banner.appendChild(b);
         }
 
@@ -200,6 +215,7 @@
         if (!isMedicModeActive && medicWasActive && sheetState && sheetState.kind === 'medic') closeSheet();
         medicWasActive = isMedicModeActive;
         if (!isMusterModeActive && sheetState && sheetState.kind === 'muster') closeSheet();
+        if (!isFactionChoiceActive() && sheetState && sheetState.kind === 'faction') closeSheet();
     }
 
     // ---------- Sterowanie gracza: przycisk karty, przyciski rzędu, cmentarz ----------
@@ -228,6 +244,20 @@
         grave.addEventListener('click', () => openGraveyard(pl, isMedicModeActive && activePlayer === pl));
         const sec = $(`.player${n}-sidebar .secondary-actions`);
         sec.insertBefore(grave, sec.firstChild);
+
+        const skip = document.createElement('button');
+        skip.type = 'button';
+        skip.className = 'btn-skip';
+        skip.id = `skip-btn-${n}`;
+        skip.title = 'Zdolność Klasztoru: raz na grę przeczekaj ruch bez pasowania';
+        skip.addEventListener('click', () => { skipTurn(pl); scheduleRefresh(); });
+        sec.insertBefore(skip, pl.domElements.passRoundButton);
+
+        const abil = document.createElement('p');
+        abil.className = 'faction-ability';
+        abil.id = `faction-ability-${n}`;
+        const info = $(`.player${n}-sidebar .info-faction`);
+        info.parentNode.insertBefore(abil, info.nextSibling);
     }
 
     function refreshControls(pl) {
@@ -272,6 +302,13 @@
         grave.disabled = pl.graveyard.length === 0;
         grave.classList.toggle('pulse', isMedicModeActive && activePlayer === pl);
 
+        // Zdolność talii
+        $(`#faction-ability-${n}`).textContent = FACTION_ABILITY[pl.faction] ? `Zdolność talii: ${FACTION_ABILITY[pl.faction]}` : '';
+        const skip = $(`#skip-btn-${n}`);
+        skip.hidden = pl.faction !== 'Klasztor';
+        skip.disabled = !canSkipTurn(pl);
+        skip.textContent = pl.skipUsed ? 'Przeczekano' : 'Przeczekaj';
+
         // Dowódca
         const lb = d.activateLeaderButton;
         if (pl.commander && pl.commander.isUsed) { lb.textContent = 'Użyty'; lb.classList.add('used'); }
@@ -295,7 +332,7 @@
         d.playCardButton.hidden = !selected && !isAgileResurrectionModeActive;
         if (isMedicModeActive && activePlayer === pl) d.playCardButton.hidden = true;
         if (isAgileResurrectionModeActive && activePlayer === pl) d.playCardButton.hidden = true;
-        if (isMusterModeActive) d.playCardButton.hidden = true;
+        if (isMusterModeActive || isFactionChoiceActive()) d.playCardButton.hidden = true;
     }
 
     // ---------- Potwierdzenie pasowania (dwa dotknięcia) ----------
@@ -419,7 +456,10 @@
                 (cfg.multi ? '<span class="tile-check" aria-hidden="true"></span>' : '');
             if (cfg.multi && !it.disabled) {
                 b.addEventListener('click', () => {
-                    if (cfg.selected.has(it.key)) cfg.selected.delete(it.key); else cfg.selected.add(it.key);
+                    if (cfg.selected.has(it.key)) cfg.selected.delete(it.key);
+                    else if (cfg.max === 1) { cfg.selected.clear(); cfg.selected.add(it.key); }
+                    else if (cfg.max && cfg.selected.size >= cfg.max) { toast(`Możesz wybrać ${cfg.max}.`); return; }
+                    else cfg.selected.add(it.key);
                     renderSheetList();
                     renderSheetFoot();
                 });
@@ -558,6 +598,45 @@
         openSheet(cfg);
     }
     window.openMusterPicker = openMusterPicker;
+
+    // ---------- Zdolności talii: wybór kart (Potwory / Orkowie / Bandyci) ----------
+    // Przy stole kartę losuje sędzia – tu można ją wskazać albo wylosować przyciskiem „Losuj”.
+    function openFactionChoice(ch) {
+        if (!ch) return;
+        const items = ch.cards.map(c => cardItem(c, { key: c.instanceId, meta: [c.faction !== 'Neutral' ? c.faction : '', cardItem(c).meta].filter(Boolean).join(' · ') }));
+        const cfg = {
+            kind: 'faction',
+            title: `${ch.player.name}: ${ch.title}`,
+            searchable: items.length > 8,
+            multi: true,
+            max: ch.count,
+            selected: new Set(),
+            items,
+            onClose: () => scheduleRefresh(),
+            footer: () => [
+                {
+                    label: 'Losuj', cls: 'btn-small', onClick: () => {
+                        const pool = items.map(it => it.key);
+                        cfg.selected.clear();
+                        while (cfg.selected.size < ch.count && pool.length) cfg.selected.add(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+                        renderSheetList();
+                        renderSheetFoot();
+                    }
+                },
+                {
+                    label: `Zatwierdź (${cfg.selected.size}/${ch.count})`, cls: 'btn-primary', disabled: cfg.selected.size !== ch.count,
+                    onClick: () => {
+                        const ids = [...cfg.selected];
+                        closeSheet();
+                        confirmFactionChoice(ids);
+                        scheduleRefresh();
+                    }
+                }
+            ]
+        };
+        openSheet(cfg);
+    }
+    window.openFactionChoice = openFactionChoice;
 
     // ---------- Cofanie ruchu ----------
     let toastTimer = null;
