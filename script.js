@@ -1,5 +1,29 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-12h';
+const APP_VERSION = '2026-10-12i';
+
+// ===== Zasady (ustawienia ogólne) =====
+// Domyślnie = instrukcja. ui.js pozwala je przełączać na ekranie startowym i zapisywać jako zestawy.
+// W trakcie gry zasady się nie zmieniają; zapis partii przechowuje zasady, z którymi ją zaczęto.
+const RULE_DEFAULTS = {
+    // z instrukcji
+    beliarHalvesWeather: true,        // Beliar z nami (Orkowie): pogoda dzieli siłę ich jednostek przez 2 zamiast do 1
+    banditDrawIsLoss: true,           // Bandyci: remis liczy się jako przegrana tura (zdolność talii działa)
+    klasztorSkipPerRound: false,      // Klasztor: przeczekanie raz na turę zamiast raz na grę
+    // warianty (testy balansu)
+    khorinisDrawWinsMatch: false,     // Khorinis: wygrana tury w remisie = wygrana całego meczu
+    undeadMusterFromGraveyard: false, // Nieumarli: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza resztę grupy
+    klasztorAgileWeather: false       // Klasztor: jednostki z Mobilnością pod pogodą mają podwójną siłę (po efekcie pogody)
+};
+let RULES = { ...RULE_DEFAULTS };
+function setRules(r) { RULES = { ...RULE_DEFAULTS, ...(r || {}) }; }
+const isAgileCard = c => (c.abilities && c.abilities.includes('agile')) || (Array.isArray(c.row) && c.row.length > 1);
+// Siła jednostki pod pogodą (przed Jednością, Wzmocnieniem i Rogiem).
+function weatherPower(owner, card) {
+    const beliar = RULES.beliarHalvesWeather && owner.commander && owner.commander.id === 'Beliar_z_nami';
+    let v = beliar ? Math.floor(card.power / 2) : 1;
+    if (RULES.klasztorAgileWeather && owner.faction === 'Klasztor' && isAgileCard(card)) v *= 2;
+    return v;
+}
 
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
@@ -121,10 +145,11 @@ function redoLastMove() {
 }
 // ===== Zapis partii (ui.js trzyma go w localStorage) =====
 function exportGameState(maxUndo = 25) {
-    return { version: APP_VERSION, snap: takeSnapshot(), undo: undoStack.slice(-maxUndo), started: true };
+    return { version: APP_VERSION, snap: takeSnapshot(), undo: undoStack.slice(-maxUndo), started: true, rules: { ...RULES } };
 }
 function importGameState(o) {
     if (!o || !o.snap) return false;
+    setRules(o.rules); // starsze zapisy bez zasad = instrukcja
     gameSetupScreen.style.display = 'none';
     battlefieldScreen.style.display = 'grid';
     undoStack.length = 0; redoStack.length = 0;
@@ -149,7 +174,12 @@ function explainCardPower(instanceId) {
     const row = owner.board[rowType];
     let p = card.power;
     const weather = weatherCardsOnBoard.find(w => w.rowAffected && w.rowAffected.includes(rowType));
-    if (weather) { p = 1; steps.push({ label: `Pogoda: ${weather.name} → 1`, value: p }); }
+    if (weather) {
+        const beliar = RULES.beliarHalvesWeather && owner.commander && owner.commander.id === 'Beliar_z_nami';
+        p = beliar ? Math.floor(card.power / 2) : 1;
+        steps.push({ label: beliar ? `Pogoda: ${weather.name} → ½ (Beliar z nami)` : `Pogoda: ${weather.name} → 1`, value: p });
+        if (RULES.klasztorAgileWeather && owner.faction === 'Klasztor' && isAgileCard(card)) { p *= 2; steps.push({ label: 'Klasztor: Mobilność pod pogodą ×2', value: p }); }
+    }
     if (card.abilities && card.abilities.includes('tight_bond')) {
         // ten sam klucz grupy co w liczeniu siły (baseId albo początek id)
         const key = c => c.baseId || c.id.split('_')[0];
@@ -232,12 +262,30 @@ function executePowerRelease(player, targets, onlyRow) {
 // Karta z musterRole 'master' (Czarny wilk, Hosh-Pak, Saturas) może przyzywać pozostałe,
 // ale sama nie może być przyzwana przez karty, które nie są 'master'.
 function collectMusterTargets(player, playedCard) {
-    const matches = c => c.id !== playedCard.id &&
+    return player.availableCards.filter(musterMatches(playedCard));
+}
+
+function musterMatches(playedCard) {
+    return c => c.id !== playedCard.id &&
         !(c.musterRole === 'master' && playedCard.musterRole !== 'master') && (
             (playedCard.musterGroup && c.musterGroup === playedCard.musterGroup) ||
             (playedCard.musterRole === 'master' && String(playedCard.musterGroup).endsWith('*') && c.musterRole === 'slug' && c.faction === playedCard.faction)
         );
-    return player.availableCards.filter(matches);
+}
+// Wariant Nieumarłych: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza pozostałe jednostki swojej grupy.
+// Wracają bez uruchamiania własnych umiejętności (jak przy zwykłym Wezwaniu); mobilne – do rzędu wskrzeszonej karty, jeśli mogą.
+function undeadMusterFromGraveyard(player, card, targetRow) {
+    if (!RULES.undeadMusterFromGraveyard || player.faction !== 'Nieumarli') return;
+    const match = musterMatches(card);
+    const back = player.graveyard.filter(c => c.type === 'Unit' && !c.isDecoy && match(c));
+    if (!back.length) return;
+    player.graveyard = player.graveyard.filter(c => !back.includes(c));
+    back.forEach(data => {
+        const rows = Array.isArray(data.row) ? data.row : [data.row];
+        const row = rows.includes(targetRow) ? targetRow : rows[0];
+        player.board[row].push({ ...data, instanceId: nextInstanceId() });
+    });
+    addLogEntry(`Nieumarli: z cmentarza razem z ${card.name} wracają: ${back.map(c => c.name).join(', ')}.`);
 }
 
 // Tokeny też trafiają na cmentarz i mogą zostać wskrzeszone.
@@ -365,7 +413,7 @@ function applyAllEffects() {
                 delete card.currentPower;
                 if (card.type === 'Unit' && !card.isHero && !card.isDecoy) {
                     let power = card.power;
-                    if (activeWeatherRows.has(rowType)) { power = 1; }
+                    if (activeWeatherRows.has(rowType)) { power = weatherPower(player, card); }
                     
                     const baseId = card.baseId || card.id.split('_')[0];
                     if (card.abilities && card.abilities.includes('tight_bond') && bondGroups[baseId] && bondGroups[baseId].length > 1) {
@@ -606,6 +654,7 @@ function placeResurrectedCard(player, cardInstance, targetRow) {
     } else {
         player.board[targetRow].push(cardInstance);
         addLogEntry(`${player.name} wskrzesił ${cardInstance.name} i położył ją w rzędzie ${translateRowName(targetRow)}.`);
+        if (hasAbilities && cardInstance.abilities.includes('muster')) undeadMusterFromGraveyard(player, cardInstance, targetRow);
         
         if (hasAbilities) {
             if (cardInstance.abilities.includes('medic')) {
@@ -960,15 +1009,23 @@ function endRound() {
     endRoundTimer = null;
     const p1Power = calculatePlayerPower(players.player1), p2Power = calculatePlayerPower(players.player2);
     let winner = p1Power > p2Power ? 'player1' : p2Power > p1Power ? 'player2' : 'draw';
+    let khorinisMatch = false;
     // Khorinis: wygrywa turę w przypadku remisu (gdy tylko jeden gracz gra Khorinis).
     if (winner === 'draw') {
         const k1 = players.player1.faction === 'Khorinis', k2 = players.player2.faction === 'Khorinis';
         if (k1 !== k2) {
             winner = k1 ? 'player1' : 'player2';
             addLogEntry(`Remis ${p1Power}:${p2Power} – ${players[winner].name} wygrywa dzięki zdolności talii Khorinis.`);
+            khorinisMatch = !!RULES.khorinisDrawWinsMatch;
         }
     }
     roundResults.push({ round: roundNumber, p1: p1Power, p2: p2Power, winner });
+    if (khorinisMatch) {
+        players[otherKey(winner)].crystalCount = 0;
+        addLogEntry(`${players[winner].name} wygrywa cały mecz (wariant Khorinis: wygrany remis kończy grę).`);
+        checkGameOver();
+        return;
+    }
     if (winner === 'draw') { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
     else { players[otherKey(winner)].crystalCount--; addLogEntry(`${players[winner].name} wygrywa turę!`); }
 
@@ -980,7 +1037,7 @@ function endRound() {
     }
 
     // Przegrani tury (remis = przegrana obu) – dla Bandytów.
-    const losers = winner === 'draw' ? ['player1', 'player2'] : [otherKey(winner)];
+    const losers = winner === 'draw' ? (RULES.banditDrawIsLoss ? ['player1', 'player2'] : []) : [otherKey(winner)];
     roundEndFlow = { stage: 'keep', queue: [], kept: { player1: [], player2: [] }, losers };
     // Potwory: po każdej turze jedna karta Potworów zostaje na planszy.
     ['player1', 'player2'].forEach(k => {
@@ -992,6 +1049,7 @@ function endRound() {
 }
 
 function clearBoardsForNextRound(kept) {
+    if (RULES.klasztorSkipPerRound) [players.player1, players.player2].forEach(p => { p.skipUsed = false; });
     const avengersForNextRound = { player1: [], player2: [] };
 
     [players.player1, players.player2].forEach(p => {

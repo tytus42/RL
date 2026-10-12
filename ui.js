@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-12h';
+    const UI_VERSION = '2026-10-12i';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -776,9 +776,11 @@
             showUse = !!info.use;
             if (info.use) {
                 canUse = canSkipTurn(pl);
-                note = pl.skipUsed ? 'Zdolność została już użyta w tej grze.' : canUse ? info.how
+                note = pl.skipUsed ? `Zdolność została już użyta w tej ${RULES.klasztorSkipPerRound ? 'turze' : 'grze'}.` : canUse ? (RULES.klasztorSkipPerRound ? 'Raz na turę (ustawienia zasad): oddajesz ruch przeciwnikowi bez pasowania.' : info.how)
                     : 'Teraz nie można jej użyć (nie twój ruch, przeciwnik spasował albo trwa inna akcja).';
             } else note = info.how || '';
+            const extra = ruleNotesFor(pl.faction);
+            if (extra) note = [note, extra].filter(Boolean).join(' ');
         } else {
             const c = pl.commander, info = leaderInfo(c);
             $('#ability-kind').textContent = `${pl.name} · karta przewodnia${info.passive ? ' (pasywna)' : ' (aktywowana, raz na grę)'}`;
@@ -786,7 +788,8 @@
             $('#ability-desc').textContent = info.text;
             showUse = !info.passive;
             canUse = showUse && !pl.domElements.activateLeaderButton.disabled;
-            note = info.passive ? 'Działa przez całą rozgrywkę – nie wymaga aktywacji.'
+            note = c && c.id === 'Beliar_z_nami' ? (RULES.beliarHalvesWeather ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.' : 'Wyłączone w ustawieniach zasad.')
+                : info.passive ? 'Działa przez całą rozgrywkę – nie wymaga aktywacji.'
                 : c && c.isUsed ? 'Karta przewodnia została już użyta.'
                 : canUse ? 'Efekt wykonaj przy stole – kalkulator zaznaczy użycie.' : 'Teraz nie można jej użyć (nie twój ruch albo trwa inna akcja).';
         }
@@ -898,6 +901,7 @@
         const out = [];
         out.push('Ryżowy Książę – podsumowanie gry');
         if (gameMeta.event) out.push(`Rozgrywka: ${gameMeta.event}`);
+        out.push(`Zasady: ${rulesSummary(RULES)}`);
         out.push(`Data: ${stamp(new Date())}`);
         out.push('');
         out.push(`Gracz 1: ${line(a)}`);
@@ -1237,6 +1241,118 @@
     });
     $('#resume-discard').addEventListener('click', () => { clearSave(); $('#resume-box').hidden = true; });
 
+    // ---------- Ustawienia zasad (warianty do testów balansu) ----------
+    // Klucze i domyślne wartości są w script.js (RULE_DEFAULTS). Tu: opisy, przełączniki i zapisane zestawy.
+    const RULE_INFO = [
+        { group: 'Zasady z instrukcji', items: [
+            { key: 'beliarHalvesWeather', faction: 'Orkowie', label: 'Beliar z nami', desc: 'Dowódca Orków: zła pogoda dzieli siłę jego jednostek przez 2 (w dół) zamiast obniżać ją do 1.' },
+            { key: 'banditDrawIsLoss', faction: 'Bandyci', label: 'Bandyci: remis to przegrana', desc: 'Po remisie Bandyci też biorą kartę z cmentarza przeciwnika.' },
+            { key: 'klasztorSkipPerRound', faction: 'Klasztor', label: 'Klasztor: przeczekanie raz na turę', desc: 'Wyłączone: raz na grę (instrukcja). Włączone: raz w każdej turze.' }
+        ] },
+        { group: 'Warianty – testy balansu', items: [
+            { key: 'khorinisDrawWinsMatch', faction: 'Khorinis', label: 'Khorinis: wygrany remis = wygrany mecz', desc: 'Gdy Khorinis wygra turę dzięki remisowi, wygrywa całą grę. Gdy obaj gracze grają Khorinis, remis rozstrzyga się normalnie.' },
+            { key: 'undeadMusterFromGraveyard', faction: 'Nieumarli', label: 'Nieumarli: Wezwanie z cmentarza', desc: 'Gdy jednostka z Wezwaniem wraca z cmentarza (Leczenie), razem z nią wracają pozostałe jednostki jej grupy, które leżą na cmentarzu.' },
+            { key: 'klasztorAgileWeather', faction: 'Klasztor', label: 'Klasztor: Mobilność pod pogodą ×2', desc: 'Jednostki z Mobilnością pod złą pogodą mają podwójną siłę po efekcie pogody: 2 zamiast 1 (z Beliarem: połowa siły ×2).' }
+        ] }
+    ];
+    const RULE_BY_KEY = Object.fromEntries(RULE_INFO.flatMap(g => g.items).map(i => [i.key, i]));
+    const PRESETS_KEY = 'rk-rule-presets', RULES_KEY = 'rk-rules';
+    const sameRules = (a, b) => Object.keys(RULE_DEFAULTS).every(k => !!a[k] === !!b[k]);
+    const changedRules = r => Object.keys(RULE_DEFAULTS).filter(k => !!r[k] !== !!RULE_DEFAULTS[k]);
+    function rulesSummary(r) {
+        const ch = changedRules(r);
+        if (!ch.length) return 'instrukcja';
+        return ch.map(k => `${RULE_BY_KEY[k] ? RULE_BY_KEY[k].label : k}: ${r[k] ? 'wł.' : 'wył.'}`).join('; ');
+    }
+    // Dopisek w oknie zdolności talii, gdy wariant dotyczy tej talii
+    function ruleNotesFor(faction) {
+        const out = [];
+        if (faction === 'Khorinis' && RULES.khorinisDrawWinsMatch) out.push('Wariant: wygrany remis kończy cały mecz.');
+        if (faction === 'Nieumarli' && RULES.undeadMusterFromGraveyard) out.push('Wariant: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza resztę swojej grupy.');
+        if (faction === 'Klasztor' && RULES.klasztorAgileWeather) out.push('Wariant: jednostki z Mobilnością pod złą pogodą ×2.');
+        if (faction === 'Bandyci' && !RULES.banditDrawIsLoss) out.push('Ustawienie: remis nie liczy się jako przegrana.');
+        return out.join(' ');
+    }
+    function readPresets() {
+        try { const v = JSON.parse(store.get(PRESETS_KEY) || '[]'); return Array.isArray(v) ? v.filter(p => p && p.name && p.rules) : []; }
+        catch (e) { return []; }
+    }
+    const writePresets = list => store.set(PRESETS_KEY, JSON.stringify(list));
+    let currentRules = (() => { try { return { ...RULE_DEFAULTS, ...JSON.parse(store.get(RULES_KEY) || '{}') }; } catch (e) { return { ...RULE_DEFAULTS }; } })();
+    const saveCurrentRules = () => store.set(RULES_KEY, JSON.stringify(currentRules));
+    function presetNameFor(r) {
+        if (sameRules(r, RULE_DEFAULTS)) return 'instrukcja';
+        const p = readPresets().find(x => sameRules(x.rules, r));
+        return p ? p.name : null;
+    }
+    function refreshRulesButton() {
+        const name = presetNameFor(currentRules), n = changedRules(currentRules).length;
+        $('#rules-status').textContent = name || `własne (${n} ${n === 1 ? 'zmiana' : n < 5 ? 'zmiany' : 'zmian'})`;
+        $('#rules-btn').classList.toggle('changed', n > 0);
+    }
+    const rulesDlg = $('#rules-dialog');
+    function renderRules() {
+        const presets = readPresets();
+        const sel = $('#rules-preset');
+        const match = sameRules(currentRules, RULE_DEFAULTS) ? '__default' : (presets.find(p => sameRules(p.rules, currentRules)) || {}).name;
+        sel.innerHTML = `<option value="__default">Instrukcja (domyślne)</option>` +
+            presets.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('') +
+            (match ? '' : '<option value="__custom">— własne, niezapisane —</option>');
+        sel.value = match || '__custom';
+        $('#rules-delete').disabled = !match || match === '__default';
+        $('#rules-list').innerHTML = RULE_INFO.map(g => `
+            <section class="rules-group">
+                <h3>${esc(g.group)}</h3>
+                ${g.items.map(i => {
+                    const on = !!currentRules[i.key], changed = on !== !!RULE_DEFAULTS[i.key];
+                    return `<label class="rule-row${changed ? ' changed' : ''}" style="--rule-color:${FACTION_COLORS[i.faction] || '#777'}">
+                        <span class="rule-text"><b>${esc(i.label)}</b><small>${esc(i.desc)}</small></span>
+                        <input type="checkbox" class="switch" role="switch" data-rule="${i.key}"${on ? ' checked' : ''}>
+                    </label>`;
+                }).join('')}
+            </section>`).join('');
+        refreshRulesButton();
+    }
+    $('#rules-btn').addEventListener('click', () => { renderRules(); rulesDlg.hidden = false; });
+    rulesDlg.addEventListener('click', e => { if (e.target.closest('[data-close-rules]')) rulesDlg.hidden = true; });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !rulesDlg.hidden) rulesDlg.hidden = true; });
+    $('#rules-list').addEventListener('change', e => {
+        const k = e.target.dataset.rule;
+        if (!k) return;
+        currentRules[k] = e.target.checked;
+        saveCurrentRules();
+        renderRules();
+    });
+    $('#rules-preset').addEventListener('change', e => {
+        const v = e.target.value;
+        if (v === '__custom') return;
+        const p = v === '__default' ? { rules: RULE_DEFAULTS } : readPresets().find(x => x.name === v);
+        if (!p) return;
+        currentRules = { ...RULE_DEFAULTS, ...p.rules };
+        saveCurrentRules();
+        renderRules();
+    });
+    $('#rules-save').addEventListener('click', () => {
+        const inp = $('#rules-name'), name = inp.value.trim();
+        if (!name) { inp.focus(); toast('Wpisz nazwę zestawu', true); return; }
+        if (name === 'instrukcja' || name === 'Instrukcja (domyślne)') { toast('Ta nazwa jest zajęta', true); return; }
+        const list = readPresets().filter(p => p.name !== name);
+        list.push({ name, rules: { ...currentRules } });
+        writePresets(list);
+        inp.value = '';
+        renderRules();
+        toast(`Zapisano zestaw „${name}”`);
+    });
+    $('#rules-delete').addEventListener('click', () => {
+        const v = $('#rules-preset').value;
+        if (!v || v.startsWith('__')) return;
+        writePresets(readPresets().filter(p => p.name !== v));
+        renderRules();
+        toast(`Usunięto zestaw „${v}”`);
+    });
+    $('#rules-reset').addEventListener('click', () => { currentRules = { ...RULE_DEFAULTS }; saveCurrentRules(); renderRules(); });
+    refreshRulesButton();
+
     // ---------- Ekran konfiguracji ----------
     const nameInputs = [$('#player1-name-input'), $('#player2-name-input')];
     const eventInput = $('#event-input');
@@ -1270,6 +1386,9 @@
         });
         gameMeta.event = eventInput.value.trim();
         store.set('rk-event', gameMeta.event);
+        setRules(currentRules);
+        const changed = changedRules(RULES);
+        if (changed.length) setTimeout(() => addLogEntry(`Zasady: ${rulesSummary(RULES)}.`), 0);
         gameRunning = true;
         clearSave();
         requestWakeLock();
