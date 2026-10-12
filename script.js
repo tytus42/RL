@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-12b';
+const APP_VERSION = '2026-10-12f';
 
 // === Elementy DOM ===
 const gameSetupScreen = document.getElementById('game-setup-screen');
@@ -151,7 +151,9 @@ function explainCardPower(instanceId) {
     const weather = weatherCardsOnBoard.find(w => w.rowAffected && w.rowAffected.includes(rowType));
     if (weather) { p = 1; steps.push({ label: `Pogoda: ${weather.name} → 1`, value: p }); }
     if (card.abilities && card.abilities.includes('tight_bond')) {
-        const n = row.filter(c => c.abilities && c.abilities.includes('tight_bond') && c.baseId === card.baseId).length;
+        // ten sam klucz grupy co w liczeniu siły (baseId albo początek id)
+        const key = c => c.baseId || c.id.split('_')[0];
+        const n = row.filter(c => c.abilities && c.abilities.includes('tight_bond') && key(c) === key(card)).length;
         if (n > 1) { p *= n; steps.push({ label: `Jedność ×${n}`, value: p }); }
     }
     const morale = row.filter(c => c.abilities && c.abilities.includes('morale_boost') && c.instanceId !== card.instanceId).length;

@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ryżowy Książę – kalkulator</title>
-    <link rel="stylesheet" href="style.css?v=2026-10-12b">
+    <link rel="stylesheet" href="style.css?v=2026-10-12f">
 </head>
 <body>
     <!-- ============ KONFIGURACJA ============ -->
@@ -256,10 +256,38 @@
         </div>
     </div>
 
+    <!-- Pełny widok karty (kliknięcie karty na stole) – wypełnia ui.js -->
+    <div id="card-view" class="modal card-view" hidden>
+        <div class="modal-backdrop" data-close-card></div>
+        <div class="card-view-panel" role="dialog" aria-modal="true" aria-labelledby="cf-name">
+            <!-- Układ jak w instrukcji („Struktura karty”): ramka, siła, postać, szereg, umiejętności, pasek, nazwa, tablica, opis -->
+            <div id="cf-frame" class="cf-frame">
+                <div id="cf-art" class="cf-art"></div>
+                <span class="cf-corner" aria-hidden="true"></span>
+                <span class="cf-sash" aria-hidden="true"></span>
+                <div class="cf-circles">
+                    <span id="cf-power" class="cf-circle cf-power" title="Siła"></span>
+                    <span id="cf-row" class="cf-circle cf-row" title="Szereg"></span>
+                    <div id="cf-abilities" class="cf-abilities"></div>
+                </div>
+                <div class="cf-plate">
+                    <h2 id="cf-name" class="cf-name"></h2>
+                    <p id="cf-desc" class="cf-desc"></p>
+                </div>
+            </div>
+            <p id="cf-hint" class="cf-hint"></p>
+            <ul id="cf-ability-desc" class="cf-ability-desc"></ul>
+            <div id="cf-why" class="cf-why" aria-label="Wyliczenie siły">
+                <ol id="cf-why-list" class="power-steps"></ol>
+            </div>
+            <button type="button" class="cf-close" data-close-card>Zamknij</button>
+        </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="cards.js?v=2026-10-12b"></script>
-    <script src="script.js?v=2026-10-12b"></script>
-    <script src="ui.js?v=2026-10-12b"></script>
+    <script src="cards.js?v=2026-10-12f"></script>
+    <script src="script.js?v=2026-10-12f"></script>
+    <script src="ui.js?v=2026-10-12f"></script>
 </body>
 </html>

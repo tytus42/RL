@@ -787,3 +787,99 @@ select:disabled { opacity: .5; }
 @media (orientation: landscape) and (min-width: 600px) {
     .sb-p2 .sb-name { text-align: left; } /* w poziomie każdy gracz ma swój wiersz – imię z lewej, suma z prawej */
 }
+
+/* =========================================================
+   Pełny widok karty – wg „Struktury karty” z instrukcji:
+   ramka (złota u bohatera), siła, postać, szereg, umiejętności (kółka na pasku talii),
+   pasek w kolorze talii zakończony grotem, tablica z nazwą (+ wskazówka) i opisem.
+   ========================================================= */
+.card-view { z-index: 210; }
+.card-view-panel {
+    position: relative; width: min(330px, 92vw); max-height: 94dvh; overflow-y: auto;
+    display: grid; gap: 8px; padding: 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+    animation: sheet-up .18s ease-out;
+}
+.cf-frame {
+    --cf-color: #777;
+    --cf-iron: #6f6a62;
+    position: relative; width: 100%; aspect-ratio: 5 / 7; max-height: 64dvh; margin: 0 auto;
+    border: 6px solid #0b0a08; border-radius: 10px; overflow: hidden;
+    background: #0b0a08;
+}
+.cf-frame.is-hero { border-color: #d9a441; --cf-iron: #d9a441; box-shadow: 0 0 18px rgba(243, 200, 103, .45); }
+/* Postać – górne ~70% karty */
+.cf-art {
+    position: absolute; inset: 0 0 30% 0;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--cf-color) 55%, #0b0a08), color-mix(in srgb, var(--cf-color) 18%, #0b0a08));
+    display: flex; align-items: center; justify-content: center;
+}
+.cf-art img { width: 100%; height: 100%; object-fit: cover; }
+.cf-initial { font: 7em/1 var(--head-font); color: #fff; opacity: .22; margin-left: 18%; }
+/* Ramka – złoty trójkąt w lewym górnym rogu tylko u bohatera */
+.cf-corner { display: none; }
+.cf-frame.is-hero .cf-corner {
+    display: block; position: absolute; left: 0; top: 0; width: 26%; height: 18%; z-index: 1;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    background: linear-gradient(135deg, #f3c867, #b98629);
+}
+/* Pasek – pionowa szarfa w kolorze talii, kończy się grotem na tablicy */
+.cf-sash {
+    position: absolute; left: 9%; width: 11%; top: 0; bottom: 9%; z-index: 2;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--cf-color) 70%, #000), var(--cf-color), color-mix(in srgb, var(--cf-color) 70%, #000));
+    clip-path: polygon(0 0, 100% 0, 100% 94%, 50% 100%, 0 94%);
+    box-shadow: 0 0 0 1px #000;
+}
+/* Kółka: siła, szereg, umiejętności – na pasku */
+.cf-circles {
+    position: absolute; left: 9%; width: 11%; top: 5%; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.cf-abilities { display: flex; flex-direction: column; gap: 6px; }
+.cf-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 35% 30%, #fff3c4, #e8c45a 60%, #a8801f);
+    border: 2px solid #3a2a08; color: #1d160c;
+    font: 1.1em/1 var(--head-font); box-shadow: 0 2px 6px rgba(0, 0, 0, .6);
+}
+.cf-circle img { width: 80%; height: 80%; object-fit: contain; }
+.cf-power { width: 48px; height: 48px; font-size: 1.6em; font-variant-numeric: tabular-nums; }
+.cf-power.up { background: radial-gradient(circle at 35% 30%, #d6ffd6, #6cc56c 60%, #2f7a2f); }
+.cf-power.down { background: radial-gradient(circle at 35% 30%, #ffd9d4, #ff6b5e 60%, #a3372b); }
+.cf-row.multi { font-size: .85em; letter-spacing: -1px; }
+/* Tablica – dolne ~30%, żelazna (złota u bohatera) ramka */
+.cf-plate {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 30%; z-index: 1;
+    padding: 8px 10px 8px calc(9% + 11% + 10px);
+    background: linear-gradient(180deg, #2b2620, #1a1712);
+    border-top: 4px solid var(--cf-iron);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cf-iron) 45%, #000);
+    display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; text-align: center;
+    padding-top: 12px;
+}
+/* nazwa w stałym polu (1–2 linie), cytat zawsze zaczyna się w tym samym miejscu */
+.cf-name {
+    font-size: 1.2em; color: var(--text); line-height: 1.1; margin: 0; text-align: center;
+    height: 2.2em; display: flex; align-items: center; justify-content: center; flex: none;
+}
+.cf-frame.is-hero .cf-name { color: var(--gold-hi); }
+.cf-desc { margin: 0; font-size: .78em; font-style: italic; line-height: 1.25; text-align: center; color: var(--muted); }
+.cf-desc.empty { display: none; }
+.cf-hint { margin: 0; text-align: center; font-size: .85em; color: var(--muted); }
+.cf-ability-desc { margin: 0; padding-left: 4px; list-style: none; font-size: .85em; color: var(--muted); display: grid; gap: 3px; }
+.cf-why { border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; background: var(--panel-2); }
+.cf-why[hidden] { display: none; }
+.cf-why .power-steps { margin: 0; }
+.cf-close { width: 100%; }
+.row .card-on-board, .horn-slot .card-on-board, .global-weather-row .card-on-board { cursor: pointer; }
+@media (orientation: landscape) and (max-height: 560px) {
+    .card-view-panel { width: min(660px, 94vw); grid-template-columns: 230px 1fr; align-items: start; }
+    .cf-frame { grid-row: 1 / 5; max-height: 88dvh; }
+    .cf-hint { grid-column: 2; text-align: left; }
+    .cf-close { grid-column: 2; }
+    .cf-circle { width: 34px; height: 34px; font-size: .95em; }
+    .cf-power { width: 40px; height: 40px; font-size: 1.35em; }
+    .cf-circles { gap: 4px; }
+}

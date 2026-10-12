@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-12b';
+    const UI_VERSION = '2026-10-12f';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -24,8 +24,8 @@
     const ROW_LABEL = { melee: 'Wręcz', ranged: 'Dystans', siege: 'Oblężnicze' };
     const ROW_ICON = { melee: '⚔', ranged: '➶', siege: '⛫' };
     const ABILITY_LABEL = {
-        tight_bond: 'Więź', morale_boost: 'Wzmocnienie', spy: 'Szpieg', medic: 'Medyk',
-        muster: 'Wezwanie', agile: 'Zwinna', scorch_row: 'Deszcz ognia (rząd)', scorch: 'Deszcz ognia',
+        tight_bond: 'Jedność', morale_boost: 'Wzmocnienie', spy: 'Szpieg', medic: 'Medyk',
+        muster: 'Wezwanie', agile: 'Mobilność', scorch_row: 'Deszcz ognia (rząd)', scorch: 'Deszcz ognia',
         scorch_strongest: 'Deszcz ognia', horn: 'Róg', decoy: 'Chrząszcz', avenger: 'Mściciel',
         summon_next_round: 'Przywołanie', 'Moc': 'Moc', 'Wyzwolenie siły': 'Wyzwolenie siły'
     };
@@ -593,7 +593,7 @@
     const GROUP_ORDER = { hero: 0, unit: 1, special: 2, weather: 3 };
     // Filtry umiejętności w arkuszu wyboru kart
     const ABILITY_FILTERS = [
-        { key: 'tight_bond', label: 'Więź', keys: ['tight_bond'] },
+        { key: 'tight_bond', label: 'Jedność', keys: ['tight_bond'] },
         { key: 'morale_boost', label: 'Wzmocnienie', keys: ['morale_boost'] },
         { key: 'muster', label: 'Wezwanie', keys: ['muster'] },
         { key: 'medic', label: 'Medyk', keys: ['medic'] },
@@ -923,49 +923,160 @@
     $('#summary-undo').addEventListener('click', () => doUndo());
     $('#summary-new').addEventListener('click', () => { gameRunning = false; clearSave(); location.reload(); });
 
-    // ---------- Podgląd siły karty: przytrzymanie palca albo prawy przycisk myszy ----------
-    function showPowerInfo(instanceId) {
-        const info = explainCardPower(instanceId);
-        if (!info) return;
-        const c = info.card;
-        abilityState = null;
-        $('#ability-kind').textContent = `${info.owner.name} · ${ROW_LABEL[info.rowType] || ''}${c.isHero ? ' · bohater' : ''}`;
-        $('#ability-title').textContent = c.isDecoy ? 'Chrząszcz' : c.name;
-        $('#ability-desc').innerHTML = '<ol class="power-steps">' + info.steps.map(s =>
-            `<li><span>${esc(s.label)}</span><b>${s.value}</b></li>`).join('') + `</ol><p class="power-final">Siła na planszy: <b>${info.final}</b></p>`;
-        const ab = (c.abilities || []).map(a => ABILITY_LABEL[a] || a).join(', ');
-        $('#ability-note').textContent = [ab && `Umiejętności: ${ab}`, c.description && `„${c.description}”`].filter(Boolean).join(' · ');
-        $('#ability-use').hidden = true;
-        abilityDlg.hidden = false;
+    // ---------- Pełny widok karty (kliknięcie karty na stole) ----------
+    // Miejsca na przyszłe grafiki: włącz CARD_ART.enabled i wrzuć pliki do podanych folderów.
+    // Gdy pliku brak, zostaje zastępczy wygląd (kolor talii + inicjał), a umiejętności jako napisy.
+    const CARD_ART = {
+        enabled: false,
+        card: id => `grafiki/karty/${id}.webp`,          // ilustracja karty
+        ability: key => `grafiki/umiejetnosci/${key}.png`  // ikona umiejętności
+    };
+    const ABILITY_DESC = {
+        tight_bond: 'Jedność – siła × liczba kart z tą samą Jednością w rzędzie.',
+        morale_boost: 'Wzmocnienie – +1 dla pozostałych jednostek w rzędzie.',
+        muster: 'Wezwanie – przyzywa powiązane karty z ręki i talii.',
+        medic: 'Leczenie – wskrzesza jednostkę z cmentarza.',
+        spy: 'Szpiegostwo – kładziona po stronie przeciwnika.',
+        agile: 'Mobilność – może stać w jednym z kilku rzędów.',
+        scorch_row: 'Szeregowy deszcz ognia – niszczy najsilniejsze karty przeciwnika w tym rzędzie (gdy suma ≥ 10).',
+        scorch: 'Globalny deszcz ognia – niszczy najsilniejsze karty na planszy.',
+        scorch_strongest: 'Deszcz ognia – niszczy najsilniejsze karty na planszy.',
+        horn: 'Róg wojenny – podwaja siłę pozostałych jednostek w rzędzie.',
+        decoy: 'Chrząszcz – zastępuje kartę na planszy, która wraca do ręki.',
+        avenger: 'Po zniszczeniu lub końcu tury zamienia się w silniejszą jednostkę.',
+        summon_next_round: 'Po zniknięciu z planszy przyzywa Herszta orków.',
+        'Moc': 'Moc – może zostać przemieniona przez Wyzwolenie siły.',
+        'Wyzwolenie siły': 'Wyzwolenie siły – przemienia jednostki z Mocą w silniejsze.'
+    };
+    // Symbole umiejętności w kółkach (zastępcze, dopóki nie ma grafik)
+    const ABILITY_ICON = {
+        tight_bond: '⛓', morale_boost: '⬆', muster: '⚑', medic: '✚', spy: '👁', agile: '⇄',
+        scorch_row: '🔥', scorch: '🔥', scorch_strongest: '🔥', horn: '📯', decoy: '🪲',
+        avenger: '♻', summon_next_round: '♻', 'Moc': 'ϟ', 'Wyzwolenie siły': '✦'
+    };
+    // Wskazówka pod nazwą: karty powiązane (Jedność, Wezwanie, Moc, przemiana)
+    function relatedHint(c) {
+        const out = [];
+        const names = list => [...new Set(list.map(x => x.name))];
+        const ab = c.abilities || [];
+        if (ab.includes('tight_bond')) {
+            const grp = allCards.filter(x => x.baseId === c.baseId && (x.abilities || []).includes('tight_bond'));
+            const others = names(grp).filter(n => n !== c.name);
+            out.push(others.length ? `Jedność z: ${others.join(', ')}` : `Jedność: ${c.name} ×${grp.length}`);
+        }
+        if (ab.includes('muster')) {
+            const grp = allCards.filter(x => x.id !== c.id && (x.abilities || []).includes('muster') && (
+                (c.musterGroup && x.musterGroup === c.musterGroup && !(x.musterRole === 'master' && c.musterRole !== 'master')) ||
+                (c.musterRole === 'master' && String(c.musterGroup).endsWith('*') && x.musterRole === 'slug' && x.faction === c.faction)));
+            const n = names(grp);
+            if (n.length) out.push(`Wzywa: ${n.join(', ')}`);
+        }
+        const into = c.transformId || c.summons || c.nextRoundSummonId;
+        if (into) { const t = getCardDetailsById(into); if (t) out.push(`Zamienia się w: ${t.name}`); }
+        if (c.transformTargetId) out.push(`Działa na: ${c.transformTargetId.map(b => (allCards.find(x => x.baseId === b) || { name: b }).name).join(', ')}`);
+        return out.join(' · ');
     }
-    let pressTimer = null, pressStart = null, suppressClick = false;
-    battlefieldScreen.addEventListener('pointerdown', e => {
-        const el = e.target.closest('.row .card-on-board');
-        if (!el) return;
-        pressStart = { x: e.clientX, y: e.clientY };
-        clearTimeout(pressTimer);
-        pressTimer = setTimeout(() => { suppressClick = true; showPowerInfo(el.dataset.instanceId); buzz(10); }, 450);
-    });
-    const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
-    battlefieldScreen.addEventListener('pointerup', cancelPress);
-    battlefieldScreen.addEventListener('pointercancel', cancelPress);
-    battlefieldScreen.addEventListener('pointermove', e => {
-        if (pressTimer && pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > 10) cancelPress();
+    const cardView = $('#card-view');
+    function closeCardView() { cardView.hidden = true; }
+    cardView.addEventListener('click', e => { if (e.target.closest('[data-close-card]')) closeCardView(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !cardView.hidden) closeCardView(); });
+
+    // Szuka karty po instanceId: rzędy, rogi, pogoda.
+    function findBoardCard(instanceId) {
+        const info = explainCardPower(instanceId);
+        if (info) return info;
+        for (const p of P()) for (const r of ROWS) {
+            const h = p.board.horns[r];
+            if (h && h.instanceId == instanceId) return { card: getCardDetailsById(h.id) || h, owner: p, rowType: r, steps: [], final: null, horn: true };
+        }
+        const w = weatherCardsOnBoard.find(c => c.instanceId == instanceId);
+        return w ? { card: w, owner: null, rowType: null, steps: [], final: null } : null;
+    }
+
+    function showCardView(instanceId) {
+        const info = findBoardCard(instanceId);
+        if (!info) return;
+        const c = info.card.isDecoy ? (getCardDetailsById(info.card.id) || info.card) : info.card;
+        const isUnit = c.type === 'Unit';
+        const frame = $('#cf-frame');
+        frame.className = 'cf-frame' + (c.isHero ? ' is-hero' : '') + (c.isToken ? ' is-token' : '');
+        frame.style.setProperty('--cf-color', FACTION_COLORS[c.faction] || '#777');
+        // siła (kółko 1)
+        const fin = info.final, base = c.power;
+        const pw = $('#cf-power');
+        pw.hidden = !isUnit;
+        pw.textContent = isUnit ? (fin ?? base) : '';
+        pw.className = 'cf-circle cf-power' + (isUnit && fin != null && fin > base ? ' up' : isUnit && fin != null && fin < base ? ' down' : '');
+        pw.title = isUnit ? `Siła: ${fin ?? base} (bazowa ${base})` : '';
+        // szereg (kółko 2)
+        const rows = isUnit ? (Array.isArray(c.row) ? c.row : [c.row]) : (c.type === 'Weather' && c.rowAffected ? c.rowAffected : []);
+        const rowEl = $('#cf-row');
+        rowEl.textContent = rows.length ? rows.map(r => ROW_ICON[r]).join('') : (c.type === 'Weather' ? (WEATHER_ICON[c.name] || '☁') : '★');
+        rowEl.title = rows.length ? rows.map(r => ROW_LABEL[r]).join(' / ') : (c.type === 'Weather' ? 'wszystkie rzędy' : 'karta specjalna');
+        rowEl.classList.toggle('multi', rows.length > 1);
+        // postać
+        const art = $('#cf-art');
+        art.innerHTML = '';
+        const fallback = () => { art.innerHTML = `<span class="cf-initial">${esc((c.name || '?').charAt(0))}</span>`; };
+        if (CARD_ART.enabled) {
+            const img = new Image();
+            img.alt = c.name; img.onerror = fallback; img.src = CARD_ART.card(c.id);
+            art.appendChild(img);
+        } else fallback();
+        // umiejętności (kolejne kółka)
+        const ab = $('#cf-abilities');
+        ab.innerHTML = '';
+        (c.abilities || []).forEach(k => {
+            const el = document.createElement('span');
+            el.className = 'cf-circle cf-ability';
+            el.title = ABILITY_DESC[k] || ABILITY_LABEL[k] || k;
+            const sym = () => { el.textContent = ABILITY_ICON[k] || (ABILITY_LABEL[k] || k).charAt(0); };
+            if (CARD_ART.enabled) {
+                const img = new Image();
+                img.alt = ABILITY_LABEL[k] || k;
+                img.onerror = () => { el.innerHTML = ''; sym(); };
+                img.src = CARD_ART.ability(k);
+                el.appendChild(img);
+            } else sym();
+            ab.appendChild(el);
+        });
+        // nazwa + wskazówka, tablica, opis
+        $('#cf-name').textContent = c.name;
+        const hint = relatedHint(c);
+        $('#cf-hint').textContent = hint;
+        $('#cf-hint').hidden = !hint;
+        const desc = $('#cf-desc');
+        desc.textContent = c.description ? `„${c.description}”` : '';
+        desc.classList.toggle('empty', !c.description);
+        const abDesc = (c.abilities || []).filter(k => ABILITY_DESC[k]).map(k => `${ABILITY_ICON[k] || '•'} ${ABILITY_DESC[k]}`);
+        $('#cf-ability-desc').innerHTML = abDesc.map(t => `<li>${esc(t)}</li>`).join('');
+        $('#cf-ability-desc').hidden = !abDesc.length;
+        // dlaczego tyle punktów
+        const why = $('#cf-why');
+        if (isUnit && info.steps && info.steps.length) {
+            why.hidden = false;
+            $('#cf-why-list').innerHTML = info.steps.map(s => `<li><span>${esc(s.label)}</span><b>${s.value}</b></li>`).join('');
+        } else why.hidden = true;
+        cardView.hidden = false;
+    }
+    function pointsWord(n) {
+        const a = Math.abs(n) % 100, b = a % 10;
+        if (n === 1) return 'punkt';
+        return (b >= 2 && b <= 4 && (a < 12 || a > 14)) ? 'punkty' : 'punktów';
+    }
+    // Kliknięcie karty na stole (poza trybem wyboru celu Chrząszcza) otwiera pełny widok.
+    battlefieldScreen.addEventListener('click', e => {
+        if (isDecoyModeActive) return;
+        const el = e.target.closest('.card-on-board');
+        if (!el || !el.dataset.instanceId) return;
+        showCardView(el.dataset.instanceId);
     });
     battlefieldScreen.addEventListener('contextmenu', e => {
-        const el = e.target.closest('.row .card-on-board');
-        if (!el) return;
+        const el = e.target.closest('.card-on-board');
+        if (!el || !el.dataset.instanceId) return;
         e.preventDefault();
-        cancelPress();
-        showPowerInfo(el.dataset.instanceId);
+        showCardView(el.dataset.instanceId);
     });
-    // Po przytrzymaniu nie traktuj puszczenia palca jak kliknięcia (np. wyboru celu Chrząszcza).
-    document.addEventListener('click', e => {
-        if (!suppressClick) return;
-        suppressClick = false;
-        e.stopImmediatePropagation();
-        e.preventDefault();
-    }, true);
 
     // ---------- Talia (opcjonalnie): wybór kart, które gracz ma fizycznie ----------
     const deckKey = (n, faction) => `rk-deck-${n}-${faction}`;
