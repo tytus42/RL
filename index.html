@@ -8,13 +8,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ryżowy Książę – kalkulator</title>
-    <link rel="stylesheet" href="style.css?v=2026-10-12f">
+    <link rel="stylesheet" href="style.css?v=2026-10-12h">
 </head>
 <body>
     <!-- ============ KONFIGURACJA ============ -->
     <div id="game-setup-screen" class="game-screen">
         <h1>Ryżowy Książę</h1>
-        <p class="setup-subtitle">Kalkulator punktów do gry przy stole</p>
+        <label class="setup-subtitle" for="event-input">
+            <span class="sr-only">Nazwa rozgrywki</span>
+            <input type="text" id="event-input" class="event-input" maxlength="60" autocomplete="off"
+                   placeholder="Nazwa rozgrywki, np. Turniej 2026 – ćwierćfinał">
+        </label>
         <div id="resume-box" class="resume-box" hidden>
             <p id="resume-text"></p>
             <div class="resume-actions">
@@ -28,20 +32,24 @@
                 <label for="player1-name-input">Imię</label>
                 <input type="text" id="player1-name-input" placeholder="Gracz 1" maxlength="16" autocomplete="off">
                 <label for="player1-faction-select">Frakcja</label>
-                <select id="player1-faction-select"></select>
+                <div class="faction-row">
+                    <select id="player1-faction-select"></select>
+                    <button type="button" class="deck-btn" id="deck-btn-1" disabled title="Talia: wybierz najpierw frakcję" aria-label="Ustawienia talii"><span aria-hidden="true">⚙</span><span class="deck-count" hidden></span></button>
+                </div>
                 <label for="player1-leader-select">Dowódca</label>
                 <select id="player1-leader-select" disabled></select>
-                <button type="button" class="deck-btn" id="deck-btn-1" disabled>Talia: wybierz najpierw frakcję</button>
             </div>
             <div class="player-setup p2">
                 <h2>Gracz 2</h2>
                 <label for="player2-name-input">Imię</label>
                 <input type="text" id="player2-name-input" placeholder="Gracz 2" maxlength="16" autocomplete="off">
                 <label for="player2-faction-select">Frakcja</label>
-                <select id="player2-faction-select"></select>
+                <div class="faction-row">
+                    <select id="player2-faction-select"></select>
+                    <button type="button" class="deck-btn" id="deck-btn-2" disabled title="Talia: wybierz najpierw frakcję" aria-label="Ustawienia talii"><span aria-hidden="true">⚙</span><span class="deck-count" hidden></span></button>
+                </div>
                 <label for="player2-leader-select">Dowódca</label>
                 <select id="player2-leader-select" disabled></select>
-                <button type="button" class="deck-btn" id="deck-btn-2" disabled>Talia: wybierz najpierw frakcję</button>
             </div>
         </div>
         <p id="setup-hint" class="setup-hint">Wybierz frakcję i dowódcę dla obu graczy.</p>
@@ -245,13 +253,17 @@
     <div id="ability-dialog" class="modal" hidden>
         <div class="modal-backdrop" data-close-ability></div>
         <div class="modal-panel ability-panel" role="dialog" aria-modal="true" aria-labelledby="ability-title">
-            <p id="ability-kind" class="ability-kind"></p>
-            <h2 id="ability-title"></h2>
-            <p id="ability-desc" class="ability-desc"></p>
-            <p id="ability-note" class="ability-note"></p>
-            <div class="ability-actions">
-                <button id="ability-close" type="button" data-close-ability>Zamknij</button>
-                <button id="ability-use" type="button" class="btn-primary">Użyj</button>
+            <!-- podgląd: rewers talii (zdolność talii) albo karta przewodnia (dowódca); proporcje 63 × 88 mm -->
+            <div id="ability-card" class="ab-card" aria-hidden="true"></div>
+            <div class="ability-body">
+                <p id="ability-kind" class="ability-kind"></p>
+                <h2 id="ability-title"></h2>
+                <p id="ability-desc" class="ability-desc"></p>
+                <p id="ability-note" class="ability-note"></p>
+                <div class="ability-actions">
+                    <button id="ability-close" type="button" data-close-ability>Zamknij</button>
+                    <button id="ability-use" type="button" class="btn-primary">Użyj</button>
+                </div>
             </div>
         </div>
     </div>
@@ -275,19 +287,21 @@
                     <p id="cf-desc" class="cf-desc"></p>
                 </div>
             </div>
-            <p id="cf-hint" class="cf-hint"></p>
-            <ul id="cf-ability-desc" class="cf-ability-desc"></ul>
-            <div id="cf-why" class="cf-why" aria-label="Wyliczenie siły">
-                <ol id="cf-why-list" class="power-steps"></ol>
+            <div class="cf-info">
+                <p id="cf-hint" class="cf-hint"></p>
+                <ul id="cf-ability-desc" class="cf-ability-desc"></ul>
+                <div id="cf-why" class="cf-why" aria-label="Wyliczenie siły">
+                    <ol id="cf-why-list" class="power-steps"></ol>
+                </div>
+                <button type="button" class="cf-close" data-close-card>Zamknij</button>
             </div>
-            <button type="button" class="cf-close" data-close-card>Zamknij</button>
         </div>
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="cards.js?v=2026-10-12f"></script>
-    <script src="script.js?v=2026-10-12f"></script>
-    <script src="ui.js?v=2026-10-12f"></script>
+    <script src="cards.js?v=2026-10-12h"></script>
+    <script src="script.js?v=2026-10-12h"></script>
+    <script src="ui.js?v=2026-10-12h"></script>
 </body>
 </html>

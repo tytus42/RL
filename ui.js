@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-12f';
+    const UI_VERSION = '2026-10-12h';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -276,9 +276,11 @@
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveNow, 250);
     }
+    // Nazwa rozgrywki (pole pod tytułem) i czy imiona zostały wpisane – do podsumowania i nazwy pliku .txt
+    const gameMeta = { event: '', named: [false, false] };
     function saveNow() {
         for (const n of [15, 5, 0]) {
-            try { localStorage.setItem(SAVE_KEY, JSON.stringify(exportGameState(n))); return; }
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(Object.assign(exportGameState(n), { meta: gameMeta }))); return; }
             catch (e) { /* za mało miejsca – spróbuj z krótszą historią cofania */ }
         }
     }
@@ -731,8 +733,39 @@
         abilityDlg.hidden = false;
     }
     function closeAbility() { abilityDlg.hidden = true; abilityState = null; }
+    // Podgląd w oknie zdolności: rewers talii (bez napisów) albo karta przewodnia (grafika, nazwa, podpis)
+    function renderAbilityCard(pl, kind) {
+        const box = $('#ability-card');
+        box.style.setProperty('--cf-color', FACTION_COLORS[pl.faction] || '#777');
+        if (kind === 'faction') {
+            box.className = 'ab-card card-back';
+            box.innerHTML = '<span class="cb-pattern"></span><span class="cb-frame"></span><span class="cb-emblem"><span></span></span>';
+            if (CARD_ART.enabled) {
+                const img = new Image();
+                img.className = 'cb-img'; img.alt = '';
+                img.onerror = () => img.remove();
+                img.src = CARD_ART.back(pl.faction);
+                box.appendChild(img);
+            }
+            return;
+        }
+        const c = pl.commander, info = leaderInfo(c);
+        box.className = 'ab-card leader-card' + (c && c.isUsed ? ' is-used' : '');
+        box.innerHTML = '<div class="cf-art"></div><div class="lc-plate"><h3 class="lc-name"></h3><p class="lc-caption"></p></div>';
+        const art = box.querySelector('.cf-art');
+        const fallback = () => { art.innerHTML = `<span class="cf-initial">${esc(((c && c.name) || '?').charAt(0))}</span>`; };
+        if (CARD_ART.enabled && c) {
+            const img = new Image();
+            img.alt = ''; img.onerror = fallback; img.src = CARD_ART.card(c.id);
+            art.appendChild(img);
+        } else fallback();
+        box.querySelector('.lc-name').textContent = c ? c.name : '';
+        box.querySelector('.lc-caption').textContent = info.text || '';
+    }
     function renderAbility() {
         const { player: pl, kind } = abilityState;
+        renderAbilityCard(pl, kind);
+        abilityDlg.querySelector('.ability-panel').classList.toggle('is-leader', kind === 'leader');
         const use = $('#ability-use');
         let canUse = false, showUse = true, note = '';
         if (kind === 'faction') {
@@ -864,6 +897,7 @@
         const line = pl => `${pl.name} – ${pl.faction}, dowódca: ${pl.commander ? pl.commander.name : '-'}`;
         const out = [];
         out.push('Ryżowy Książę – podsumowanie gry');
+        if (gameMeta.event) out.push(`Rozgrywka: ${gameMeta.event}`);
         out.push(`Data: ${stamp(new Date())}`);
         out.push('');
         out.push(`Gracz 1: ${line(a)}`);
@@ -910,11 +944,26 @@
             try { document.execCommand('copy'); toast('Skopiowano podsumowanie'); } catch (e2) { toast('Zaznacz tekst i skopiuj ręcznie'); }
         }
     });
+    // Nazwa pliku: [nazwa rozgrywki]_[nick1-vs-nick2]_data.txt (bez polskich znaków i spacji)
+    const PL_CHARS = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z', Ą: 'A', Ć: 'C', Ę: 'E', Ł: 'L', Ń: 'N', Ó: 'O', Ś: 'S', Ź: 'Z', Ż: 'Z' };
+    const fileSlug = s => String(s || '').replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, ch => PL_CHARS[ch]).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    function summaryFileName() {
+        const [a, b] = P();
+        const parts = [];
+        const ev = fileSlug(gameMeta.event);
+        if (ev) parts.push(ev);
+        if (gameMeta.named[0] || gameMeta.named[1]) parts.push(`${fileSlug(a.name) || 'Gracz-1'}-vs-${fileSlug(b.name) || 'Gracz-2'}`);
+        if (!parts.length) parts.push('ryzowy-ksiaze');
+        const d = new Date();
+        parts.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`);
+        return parts.join('_') + '.txt';
+    }
+    window.summaryFileName = summaryFileName;
     $('#summary-download').addEventListener('click', () => {
         const blob = new Blob([$('#summary-text').value], { type: 'text/plain;charset=utf-8' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `ryzowy-ksiaze-${stamp(new Date(), '-')}.txt`;
+        a.download = summaryFileName();
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -929,7 +978,8 @@
     const CARD_ART = {
         enabled: false,
         card: id => `grafiki/karty/${id}.webp`,          // ilustracja karty
-        ability: key => `grafiki/umiejetnosci/${key}.png`  // ikona umiejętności
+        ability: key => `grafiki/umiejetnosci/${key}.png`, // ikona umiejętności
+        back: faction => `grafiki/rewersy/${faction}.webp`   // rewers talii (okno zdolności talii)
     };
     const ABILITY_DESC = {
         tight_bond: 'Jedność – siła × liczba kart z tą samą Jednością w rzędzie.',
@@ -1091,11 +1141,16 @@
         [1, 2].forEach(n => {
             const btn = $(`#deck-btn-${n}`);
             const faction = $(`#player${n}-faction-select`).value;
+            const badge = btn.querySelector('.deck-count');
             btn.disabled = !faction;
-            if (!faction) { btn.textContent = 'Talia: wybierz najpierw frakcję'; return; }
+            btn.classList.remove('custom');
+            badge.hidden = true;
+            if (!faction) { btn.title = 'Talia: wybierz najpierw frakcję'; btn.setAttribute('aria-label', btn.title); return; }
             const pool = deckPool(faction), deck = readDeck(n, faction);
             const cnt = deck ? pool.filter(c => deck.includes(c.id)).length : pool.length;
-            btn.textContent = deck ? `Talia: ${cnt} z ${pool.length} kart (zmień)` : `Talia: wszystkie karty (${pool.length}) – ustaw`;
+            btn.title = deck ? `Talia: ${cnt} z ${pool.length} kart – zmień` : `Talia: wszystkie karty (${pool.length}) – ustaw`;
+            btn.setAttribute('aria-label', btn.title);
+            if (deck) { btn.classList.add('custom'); badge.textContent = cnt; badge.hidden = false; }
         });
     }
     function openDeckEditor(n) {
@@ -1155,9 +1210,10 @@
         const saved = loadSave();
         if (!saved || !saved.snap) { box.hidden = true; return; }
         const a = saved.snap.p1, b = saved.snap.p2;
-        $('#resume-text').textContent = saved.snap.isGameOver
+        const ev = saved.meta && saved.meta.event ? `${saved.meta.event}: ` : '';
+        $('#resume-text').textContent = ev + (saved.snap.isGameOver
             ? `Zakończona gra: ${a.name} (${a.faction}) vs ${b.name} (${b.faction}).`
-            : `Niedokończona gra: ${a.name} (${a.faction}) vs ${b.name} (${b.faction}), tura ${saved.snap.roundNumber}.`;
+            : `Niedokończona gra: ${a.name} (${a.faction}) vs ${b.name} (${b.faction}), tura ${saved.snap.roundNumber}.`);
         $('#resume-btn').textContent = saved.snap.isGameOver ? 'Pokaż podsumowanie' : 'Wznów grę';
         box.hidden = false;
     }
@@ -1166,6 +1222,7 @@
         try {
             suppressFx = true;
             if (!importGameState(saved)) throw new Error('brak zapisu');
+            if (saved.meta) Object.assign(gameMeta, { event: saved.meta.event || '', named: saved.meta.named || [false, false] });
             gameRunning = !isGameOver;
             battlefieldScreen.style.display = '';
             applyFactionColors();
@@ -1182,6 +1239,9 @@
 
     // ---------- Ekran konfiguracji ----------
     const nameInputs = [$('#player1-name-input'), $('#player2-name-input')];
+    const eventInput = $('#event-input');
+    eventInput.value = store.get('rk-event') || '';
+    eventInput.addEventListener('input', () => store.set('rk-event', eventInput.value.trim()));
     nameInputs.forEach((inp, i) => { inp.value = store.get(`rk-name-${i + 1}`) || ''; });
 
     function setupComplete() {
@@ -1205,8 +1265,11 @@
         P().forEach((pl, i) => {
             const v = nameInputs[i].value.trim();
             pl.name = v || `Gracz ${i + 1}`;
+            gameMeta.named[i] = !!v;
             store.set(`rk-name-${i + 1}`, v);
         });
+        gameMeta.event = eventInput.value.trim();
+        store.set('rk-event', gameMeta.event);
         gameRunning = true;
         clearSave();
         requestWakeLock();

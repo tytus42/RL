@@ -27,7 +27,14 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
 
-## Zmiany 2026-10-12 (wersja 2026-10-12f)
+## Zmiany 2026-10-12 (wersja 2026-10-12h)
+- **Nazwa rozgrywki:** podtytuł na ekranie startowym to pole tekstowe (`#event-input`, zapamiętywane w `rk-event`), np. „Turniej 2026 – ćwierćfinał”. Trafia do podsumowania („Rozgrywka: …”), do okienka wznowienia i do nazwy pliku. Razem z informacją, czy imiona zostały wpisane, jest zapisywana w zapisie partii (`meta`).
+- **Nazwa pliku .txt:** `[nazwa rozgrywki]_[nick1-vs-nick2]_RRRR-MM-DD_GG-MM.txt` – części pomijane, gdy puste (nicki tylko, gdy wpisano choć jedno imię); bez polskich znaków i spacji. Bez żadnej z nich: `ryzowy-ksiaze_RRRR-MM-DD_GG-MM.txt`.
+- **Ekran startowy:** talia ustawiana kwadratowym przyciskiem ⚙ obok wyboru frakcji; własna talia = podświetlony przycisk z plakietką liczby kart, szczegóły w podpowiedzi (title).
+- **Okno zdolności talii:** u góry podgląd rewersu karty (kolor talii, kratka, ramka, emblemat – bez napisów), pod nim (w poziomie obok) podpis: nazwa talii, opis, przycisk Użyj. Grafika rewersu: `grafiki/rewersy/<frakcja>.webp` (`CARD_ART.back`).
+- **Okno karty przewodniej:** podgląd karty bez szarfy – grafika (`grafiki/karty/<id dowódcy>.webp`), nazwa i podpis (opis zdolności) zamiast cytatu; zużyta karta jest wyszarzona.
+- **Proporcje kart 63 × 88 mm** (widok karty ze stołu, rewers, karta przewodnia) – zachowane także na niskich ekranach.
+- Widok karty: wszystko pod kartą (w poziomie – obok karty) siedzi w jednej zwartej kolumnie `.cf-info`; wcześniej w poziomie opisy rozkładały się na wysokość karty (siatka dzieliła ją na wiersze), więc karty z mniejszą liczbą opisów wyglądały na „rozsiane”. Nazwa karty przesunięta tuż pod ilustrację.
 - Widok karty: nazwa w stałym polu u góry tablicy (1–2 linie), cytat zawsze zaczyna się w tym samym miejscu pod nią – oba wyśrodkowane w poziomie. Kółka (siła, szereg, umiejętności) wyśrodkowane na szarfie. Wyliczenie siły bez tytułu „Dlaczego N punktów?” – sama lista kroków w kolejności liczenia: siła bazowa → pogoda (=1) → Jedność (×n) → Wzmocnienie (+n) → Róg (×2); obok każdego kroku wynik po nim. Grupowanie Jedności w wyjaśnieniu używa tego samego klucza co liczenie siły.
 - Poprawki widoku karty: nazwa i cytat bez ramek, wyśrodkowane (pusty cytat jest ukryty); wskazówka o powiązanych kartach („Jedność z: …”) pod kartą zamiast na tablicy; usunięta linijka „talia · na polu: gracz”; trójkąt w narożniku tylko u bohatera (złoty), zwykła karta nie ma trójkąta.
 - Potwierdzone decyzje: remis to dla Bandytów przegrana runda (biorą kartę z cmentarza przeciwnika); pominięcie tury Klasztoru – raz na grę.
@@ -66,7 +73,7 @@ Khorinis #E69138, Potwory #6AA84F, Najemnicy #4285F4, Klasztor #EA4335, Orkowie 
 - Kolory rzędów (wręcz/dystans/oblężnicze) bez zmian.
 
 ## Wersje plików (ważne przy publikacji)
-- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-12f` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
+- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-12h` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
 - Powód: 2026-10-11 po wgraniu nowych plików nie dało się zagrać żadnej karty – przeglądarka/GitHub Pages podawała stary `script.js` z pamięci, a nowy `ui.js` się na nim wywracał (nie powstawał przycisk wyboru karty). Teraz przy niezgodnych wersjach pokazuje się czerwony komunikat „Wczytały się pliki z różnych wersji” z przyciskiem „Odśwież”.
 - Wgrywać zawsze komplet: `index.html`, `cards.js`, `script.js`, `ui.js`, `style.css`.
 
