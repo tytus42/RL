@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-11i';
+    const UI_VERSION = '2026-10-12b';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -210,7 +210,6 @@
             sb.classList.toggle('is-passed', passedPlayers.includes(pl));
             sb.classList.toggle('is-leading', pl.power > (pl === players.player1 ? players.player2 : players.player1).power);
         });
-        $('#sb-round').textContent = `Tura ${roundNumber}`;
         $('#undo-btn').disabled = !canUndo();
         $('#redo-btn').disabled = !canRedo();
 
@@ -237,6 +236,7 @@
                 el.classList.add(state);
             });
             const sidebar = $(`.player${n}-sidebar`);
+            sidebar.classList.toggle('is-leading', pl.power > (pl === players.player1 ? players.player2 : players.player1).power);
             $('.turn-badge', sidebar).textContent = state === 'is-passed' ? 'spasował' : state === 'is-active' ? (isFirstMoveOfRound ? 'może zacząć' : 'twój ruch') : 'czeka';
             $(`#player${n}-name-display`).textContent = pl.name;
             refreshControls(pl);
@@ -317,6 +317,12 @@
         const sec = $(`.player${n}-sidebar .secondary-actions`);
         sec.insertBefore(grave, sec.firstChild);
 
+        // Suma i kryształy w nagłówku panelu (widoczne w układzie poziomym na telefonie)
+        const ps = document.createElement('span');
+        ps.className = 'ps-score';
+        ps.id = `ps-score-${n}`;
+        const badge = $(`.player${n}-sidebar .turn-badge`);
+        badge.parentNode.insertBefore(ps, badge);
         $(`#faction-btn-${n}`).addEventListener('click', () => openAbility(pl, 'faction'));
         $(`#leader-btn-${n}`).addEventListener('click', () => openAbility(pl, 'leader'));
     }
@@ -362,6 +368,8 @@
         grave.textContent = `Cmentarz (${pl.graveyard.length})`;
         grave.disabled = pl.graveyard.length === 0;
         grave.classList.toggle('pulse', isMedicModeActive && activePlayer === pl);
+
+        $(`#ps-score-${n}`).innerHTML = `<span class="sb-gems">${gemsHtml(pl.crystalCount)}</span><span class="ps-total">${pl.power}</span>`;
 
         // Przyciski zdolności talii i dowódcy
         const fb = $(`#faction-btn-${n}`), lbtn = $(`#leader-btn-${n}`);
@@ -442,8 +450,31 @@
         $('#sheet-title').textContent = cfg.title;
         const search = $('#sheet-search');
         search.value = '';
-        search.parentElement.hidden = !cfg.searchable;
+        $('#sheet-searchrow').hidden = !cfg.searchable;
         cfg.filter = 'all';
+        cfg.ability = 'all';
+        cfg.sort = cfg.sortable ? (store.get('rk-sort') || 'group') : 'group';
+        const sortSel = $('#sheet-sort');
+        sortSel.hidden = !cfg.sortable;
+        sortSel.value = cfg.sort;
+        // Filtry umiejętności – tylko te, które występują w kartach na liście
+        const abil = $('#sheet-abil');
+        abil.innerHTML = '';
+        const present = cfg.abilityFilters ? ABILITY_FILTERS.filter(f => cfg.items.some(it => f.keys.some(k => (it.abil || []).includes(k)))) : [];
+        if (present.length) [{ key: 'all', label: 'Każda umiejętność' }, ...present].forEach(f => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'chip chip-abil';
+            b.textContent = f.label;
+            b.setAttribute('aria-pressed', String(f.key === 'all'));
+            b.addEventListener('click', () => {
+                cfg.ability = f.key;
+                abil.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+                renderSheetList();
+            });
+            abil.appendChild(b);
+        });
+        abil.hidden = !present.length;
         const filters = $('#sheet-filters');
         filters.innerHTML = '';
         (cfg.filters || []).forEach(f => {
@@ -460,6 +491,7 @@
             filters.appendChild(b);
         });
         filters.hidden = !(cfg.filters && cfg.filters.length);
+        $('.sheet-tools').hidden = !cfg.searchable && filters.hidden && abil.hidden;
         renderSheetFoot();
         renderSheetList();
         sheet.hidden = false;
@@ -488,9 +520,17 @@
         if (!cfg) return;
         const q = $('#sheet-search').value.trim().toLocaleLowerCase('pl');
         const list = $('#sheet-list');
+        const abilKeys = cfg.ability && cfg.ability !== 'all' ? (ABILITY_FILTERS.find(f => f.key === cfg.ability) || { keys: [] }).keys : null;
         const items = cfg.items.filter(it =>
             (cfg.filter === 'all' || it.group === cfg.filter || (it.tags || []).includes(cfg.filter)) &&
+            (!abilKeys || abilKeys.some(k => (it.abil || []).includes(k))) &&
             (!q || it.name.toLocaleLowerCase('pl').includes(q)));
+        const byName = (a, b) => a.name.localeCompare(b.name, 'pl');
+        const pw = it => (typeof it.power === 'number' ? it.power : -1);
+        if (cfg.sort === 'az') items.sort(byName);
+        else if (cfg.sort === 'pdesc') items.sort((a, b) => pw(b) - pw(a) || byName(a, b));
+        else if (cfg.sort === 'pasc') items.sort((a, b) => pw(a) - pw(b) || byName(a, b));
+        const grouped = cfg.groupLabels && cfg.sort === 'group';
         list.innerHTML = '';
         if (!items.length) {
             list.innerHTML = `<p class="sheet-empty">${cfg.emptyText || 'Brak kart.'}</p>`;
@@ -498,7 +538,7 @@
         }
         let lastGroup = null;
         items.forEach(it => {
-            if (cfg.groupLabels && it.group !== lastGroup) {
+            if (grouped && it.group !== lastGroup) {
                 lastGroup = it.group;
                 const h = document.createElement('h4');
                 h.className = 'sheet-group';
@@ -546,10 +586,31 @@
         return Object.assign({
             id: card.id, name: card.name, group, hero: !!card.isHero, count: 1, meta,
             badge: card.type === 'Unit' ? card.power : isWeather ? (WEATHER_ICON[card.name] || '☁') : '★',
+            abil: card.abilities || [], power: card.type === 'Unit' ? card.power : undefined,
             tags: Array.isArray(card.row) ? card.row : card.row ? [card.row] : []
         }, extra);
     }
     const GROUP_ORDER = { hero: 0, unit: 1, special: 2, weather: 3 };
+    // Filtry umiejętności w arkuszu wyboru kart
+    const ABILITY_FILTERS = [
+        { key: 'tight_bond', label: 'Więź', keys: ['tight_bond'] },
+        { key: 'morale_boost', label: 'Wzmocnienie', keys: ['morale_boost'] },
+        { key: 'muster', label: 'Wezwanie', keys: ['muster'] },
+        { key: 'medic', label: 'Medyk', keys: ['medic'] },
+        { key: 'spy', label: 'Szpieg', keys: ['spy'] },
+        { key: 'agile', label: 'Mobilność', keys: ['agile'] },
+        { key: 'scorch', label: 'Deszcz ognia', keys: ['scorch', 'scorch_row', 'scorch_strongest'] },
+        { key: 'horn', label: 'Róg', keys: ['horn'] },
+        { key: 'moc', label: 'Moc / Wyzwolenie', keys: ['Moc', 'Wyzwolenie siły'] },
+        { key: 'summon', label: 'Przywołanie', keys: ['avenger', 'summon_next_round'] },
+        { key: 'decoy', label: 'Chrząszcz', keys: ['decoy'] }
+    ];
+    $('#sheet-sort').addEventListener('change', e => {
+        if (!sheetState) return;
+        sheetState.sort = e.target.value;
+        store.set('rk-sort', e.target.value);
+        renderSheetList();
+    });
     const GROUP_LABELS = { hero: 'Bohaterowie', unit: 'Jednostki', special: 'Karty specjalne', weather: 'Pogoda' };
 
     function openCardPicker(pl) {
@@ -567,7 +628,7 @@
         openSheet({
             kind: 'cards',
             title: `${pl.name} – zagraj kartę`,
-            searchable: true,
+            searchable: true, sortable: true, abilityFilters: true,
             groupLabels: GROUP_LABELS,
             filters: [
                 { key: 'all', label: 'Wszystkie' }, { key: 'melee', label: ROW_ICON.melee + ' Wręcz' },
@@ -941,7 +1002,7 @@
         const cfg = {
             kind: 'deck',
             title: `Talia gracza ${n} – ${faction}`,
-            searchable: true,
+            searchable: true, sortable: true, abilityFilters: true,
             multi: true,
             groupLabels: GROUP_LABELS,
             filters: [
