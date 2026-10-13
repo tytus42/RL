@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-13g';
+    const UI_VERSION = '2026-10-13j';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -1380,32 +1380,20 @@
             const o = r.abilities[d.id];
             if (!o) return;
             const n = {};
-            if ('on' in o && !!o.on !== d.on) n.on = !!o.on;
-            if (o.name && o.name.trim() && o.name.trim() !== d.name) n.name = o.name.trim();
-            if (o.desc && o.desc.trim() && o.desc.trim() !== d.desc) n.desc = o.desc.trim();
-            const ps = {};
-            Object.entries(d.params || {}).forEach(([k, p]) => { if (o.params && k in o.params && o.params[k] !== p.value) ps[k] = o.params[k]; });
-            if (Object.keys(ps).length) n.params = ps;
-            if (Object.keys(n).length) out.abilities[d.id] = n;
+            // zdolności talii można tylko włączać i wyłączać (bez edycji nazw, opisów i parametrów)
+            if ('on' in o && !!o.on !== d.on) out.abilities[d.id] = { on: !!o.on };
         });
-        out.custom = (Array.isArray(r.custom) ? r.custom : []).filter(c => c && c.name && FACTIONS.includes(c.faction))
-            .map(c => ({ id: c.id, faction: c.faction, name: c.name, desc: c.desc || '', trigger: CUSTOM_TRIGGERS[c.trigger] ? c.trigger : 'none', on: c.on !== false }));
         return out;
     }
     const rulesKey = r => JSON.stringify(normalizeRules(r));
     const sameRules = (a, b) => rulesKey(a) === rulesKey(b);
-    const fmtParam = (p, v) => p.options ? (p.options[v] || v) : p.type === 'bool' ? (v ? 'tak' : 'nie') : String(v);
     // Zdolności talii (wbudowane + własne) z tekstem po wstawieniu parametrów
     function factionAbilities(faction, rules) {
         const built = ABILITY_DEFS.filter(d => d.faction === faction).map(d => {
             const st = abilityInfo(d.id, rules);
             return { ...st, text: fillAbilityText(st.desc, st) };
         });
-        const custom = (rules.custom || []).filter(c => c.faction === faction).map(c => ({
-            ...c, on: c.on !== false, custom: true, origin: 'własna',
-            text: (c.desc || '') + (c.trigger && c.trigger !== 'none' ? ` (przypomnienie ${CUSTOM_TRIGGERS[c.trigger]})` : '')
-        }));
-        return [...built, ...custom];
+        return built;
     }
     // Lista zmian względem instrukcji (do statusu, historii i podsumowania)
     function changesOf(rules) {
@@ -1415,12 +1403,8 @@
             if (!o) return;
             const st = abilityInfo(d.id, r), parts = [];
             if ('on' in o) parts.push(o.on ? 'wł.' : 'wył.');
-            Object.entries(o.params || {}).forEach(([k, v]) => parts.push(`${d.params[k].label.toLowerCase()}: ${fmtParam(d.params[k], v)}`));
-            if (o.name) parts.push('zmieniona nazwa');
-            if (o.desc) parts.push('zmieniony opis');
             out.push({ faction: d.faction, text: `${d.faction} – ${st.name}: ${parts.join(', ')}` });
         });
-        r.custom.forEach(c => out.push({ faction: c.faction, text: `${c.faction} – ${c.name}: własna${c.on ? '' : ' (wył.)'}` }));
         if (r.general && r.general.tournament) out.push({ faction: null, text: 'Tryb turniejowy: wł.' });
         return out;
     }
@@ -1447,15 +1431,14 @@
         $('#rules-btn').classList.toggle('changed', n > 0);
     }
 
-    // --- Okno: widoki main → faction → edit ---
+    // --- Okno: widoki main → faction (talia) / cards (koncept edycji umiejętności kart) ---
     const rulesDlg = $('#rules-dialog');
     let rulesView = { name: 'main' };
-    let editDraft = null; // kopia edytowanej zdolności
     const foot = buttons => { $('#rules-foot').innerHTML = buttons.map((b, i) => `<button type="button" data-foot="${i}" class="${b.cls || ''}">${esc(b.label)}</button>`).join(''); footActions = buttons.map(b => b.onClick); };
     let footActions = [];
     $('#rules-foot').addEventListener('click', e => { const b = e.target.closest('[data-foot]'); if (b && footActions[+b.dataset.foot]) footActions[+b.dataset.foot](); });
     function openRules() { rulesView = { name: 'main' }; renderRules(); rulesDlg.hidden = false; }
-    function closeRules() { rulesDlg.hidden = true; editDraft = null; refreshRulesButton(); }
+    function closeRules() { rulesDlg.hidden = true; refreshRulesButton(); }
     function goRules(v) { rulesView = v; renderRules(); $('#rules-body').scrollTop = 0; }
 
     function renderRules() {
@@ -1465,7 +1448,7 @@
         panel.style.setProperty('--rule-color', v.faction ? (FACTION_COLORS[v.faction] || '#777') : 'var(--gold)');
         if (v.name === 'main') renderRulesMain();
         else if (v.name === 'faction') renderRulesFaction(v.faction);
-        else renderRulesEdit();
+        else renderCardAbilities();
         refreshRulesButton();
     }
     function renderRulesMain() {
@@ -1497,6 +1480,12 @@
                 </label>
                 <div class="rule-ctrl"><input type="checkbox" class="switch" role="switch" id="rule-tournament" data-general="tournament"${currentRules.general && currentRules.general.tournament ? ' checked' : ''}></div>
             </div>
+            <h3 class="rules-sub">Umiejętności kart</h3>
+            <button type="button" class="rules-faction" data-view="cards" style="--rule-color:var(--muted)">
+                <span class="rf-name">Edycja umiejętności <span class="rule-tag tag-var">koncept</span></span>
+                <span class="rf-meta">Jedność, Wzmocnienie, Róg, Leczenie, Szpiegostwo… – podgląd, jeszcze nie działa</span>
+                <span class="rf-go" aria-hidden="true">›</span>
+            </button>
             <h3 class="rules-sub">Talie</h3>
             <div class="rules-factions">
                 ${FACTIONS.map(f => {
@@ -1519,31 +1508,26 @@
         $('#rules-title').textContent = f;
         const list = factionAbilities(f, currentRules);
         $('#rules-body').innerHTML = `
-            <p class="rules-intro">Włącz zdolności, którymi gra ta talia. Zdolności z instrukcji są domyślnie włączone, propozycje – wyłączone. ✎ zmienia nazwę, opis i parametry.</p>
+            <p class="rules-intro">Włącz zdolności, którymi gra ta talia. Zdolności z instrukcji są domyślnie włączone, propozycje – wyłączone.</p>
             <div class="rules-list">
                 ${list.map(a => {
                     const d = ABILITY_BY_ID[a.id];
-                    const changed = a.custom || (currentRules.abilities[a.id] && Object.keys(currentRules.abilities[a.id]).length);
-                    const params = d && d.params ? Object.entries(d.params).map(([k, p]) => `<span class="rp">${esc(p.label)}: <b>${esc(fmtParam(p, a.params[k]))}</b></span>`).join('') : '';
+                    const changed = !!currentRules.abilities[a.id];
                     return `<div class="rule-row${changed ? ' changed' : ''}${a.on ? '' : ' off'}">
                         <label class="rule-text">
-                            <span class="rule-name"><b>${esc(a.name)}</b><span class="rule-tag tag-${a.custom ? 'own' : a.origin === 'propozycja' ? 'var' : 'orig'}">${esc(a.origin)}</span></span>
+                            <span class="rule-name"><b>${esc(a.name)}</b><span class="rule-tag tag-${a.origin === 'propozycja' ? 'var' : 'orig'}">${esc(a.origin)}</span></span>
                             <small>${esc(a.text)}</small>
-                            ${params ? `<span class="rule-params">${params}</span>` : ''}
                         </label>
                         <div class="rule-ctrl">
                             <input type="checkbox" class="switch" role="switch" aria-label="${esc(a.name)}" data-ab="${esc(a.id)}"${a.on ? ' checked' : ''}>
-                            <button type="button" class="btn-small rule-edit" data-edit="${esc(a.id)}" title="Edytuj zdolność" aria-label="Edytuj: ${esc(a.name)}">✎</button>
                         </div>
                     </div>`;
                 }).join('')}
-            </div>
-            <button type="button" class="rules-add" id="rules-add">+ Dodaj własną zdolność</button>`;
+            </div>`;
         foot([
             { label: 'Przywróć instrukcję talii', onClick: () => {
                 const r = normalizeRules(currentRules);
                 ABILITY_DEFS.filter(d => d.faction === f).forEach(d => delete r.abilities[d.id]);
-                r.custom = r.custom.filter(c => c.faction !== f);
                 setCurrentRules(r); renderRules();
             } },
             { label: 'Gotowe', cls: 'btn-primary', onClick: closeRules }
@@ -1551,104 +1535,69 @@
     }
     function setAbilityOn(id, on) {
         const r = normalizeRules(currentRules);
-        const c = r.custom.find(x => x.id === id);
-        if (c) c.on = on;
-        else {
-            const d = ABILITY_BY_ID[id];
-            r.abilities[id] = { ...(r.abilities[id] || {}), on };
-            // zdolności z tej samej grupy wykluczają się (np. Khorinis: remis = tura albo remis = mecz)
-            if (on && d.group) ABILITY_DEFS.filter(x => x.group === d.group && x.id !== id).forEach(x => { r.abilities[x.id] = { ...(r.abilities[x.id] || {}), on: false }; });
-        }
+        const d = ABILITY_BY_ID[id];
+        r.abilities[id] = { on };
+        // zdolności z tej samej grupy wykluczają się (np. Khorinis: remis = tura albo remis = mecz)
+        if (on && d.group) ABILITY_DEFS.filter(x => x.group === d.group && x.id !== id).forEach(x => { r.abilities[x.id] = { on: false }; });
         setCurrentRules(r);
     }
-    function startEdit(id, faction) {
-        if (!id) { editDraft = { custom: true, isNew: true, id: 'own_' + Date.now().toString(36), faction, name: '', desc: '', trigger: 'none', on: true }; }
-        else {
-            const c = currentRules.custom.find(x => x.id === id);
-            if (c) editDraft = { ...c, custom: true };
-            else { const st = abilityInfo(id, currentRules); editDraft = { id, faction: st.faction, name: st.name, desc: st.desc, params: { ...st.params }, on: st.on }; }
-        }
-        goRules({ name: 'edit', faction: editDraft.faction });
-    }
-    function renderRulesEdit() {
-        const e = editDraft, d = e.custom ? null : ABILITY_BY_ID[e.id];
-        $('#rules-title').textContent = e.isNew ? 'Nowa zdolność' : 'Edycja zdolności';
-        const paramHtml = d && d.params ? Object.entries(d.params).map(([k, p]) => {
-            const v = e.params[k];
-            if (p.options) return `<label class="re-field"><span>${esc(p.label)}</span><select data-param="${k}">${Object.entries(p.options).map(([ov, ol]) => `<option value="${ov}"${ov === v ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select></label>`;
-            if (p.type === 'bool') return `<label class="re-field re-bool"><span>${esc(p.label)}</span><input type="checkbox" class="switch" role="switch" data-param="${k}"${v ? ' checked' : ''}></label>`;
-            return `<label class="re-field"><span>${esc(p.label)}: <b class="re-val" data-val="${k}">${v}</b> <small>(instrukcja: ${p.value})</small></span>
-                <input type="range" min="${p.min}" max="${p.max}" step="1" value="${v}" data-param="${k}"></label>`;
-        }).join('') : '';
+    // Koncept: edycja umiejętności kart (abilities). Na razie tylko podgląd – kontrolki są wyłączone i nic nie zapisują.
+    const CARD_ABILITY_CONCEPT = [
+        { key: 'tight_bond', name: 'Jedność', desc: 'Karty o tej samej nazwie w jednym rzędzie wzmacniają się nawzajem.',
+          params: [{ label: 'Siła kart z Jednością', kind: 'select', options: ['× liczba takich kart (instrukcja)', '+1 za każdą inną taką kartę', '+2 za każdą inną taką kartę'] }] },
+        { key: 'morale_boost', name: 'Wzmocnienie', desc: 'Dodaje siłę pozostałym jednostkom w rzędzie.',
+          params: [{ label: 'Premia dla innych jednostek', kind: 'range', min: 1, max: 3, value: 1, unit: '+' }] },
+        { key: 'horn', name: 'Róg wojenny', desc: 'Mnoży siłę jednostek w rzędzie (karta Rogu i jednostki jak Lester).',
+          params: [{ label: 'Mnożnik', kind: 'range', min: 2, max: 3, value: 2, unit: '×' }] },
+        { key: 'medic', name: 'Leczenie', desc: 'Wskrzesza jednostkę z cmentarza na planszę.',
+          params: [{ label: 'Ile jednostek', kind: 'range', min: 1, max: 2, value: 1 }, { label: 'Działa na bohaterów', kind: 'bool', value: false }] },
+        { key: 'spy', name: 'Szpiegostwo', desc: 'Karta trafia na stronę przeciwnika, a ty dobierasz karty.',
+          params: [{ label: 'Ile kart dobierasz (przy stole)', kind: 'range', min: 1, max: 3, value: 2 }] },
+        { key: 'agile', name: 'Mobilność', desc: 'Jednostka może stanąć w jednym z kilku rzędów.',
+          params: [{ label: 'Wybór rzędu także przy wskrzeszeniu', kind: 'bool', value: true }] },
+        { key: 'muster', name: 'Wezwanie', desc: 'Przyzywa karty ze swojej grupy (master – całą grupę, slug – tylko slugi).',
+          params: [{ label: 'Skąd przyzywa', kind: 'select', options: ['Ręka i talia (instrukcja)', 'Tylko talia', 'Tylko ręka'] }] },
+        { key: 'scorch_row', name: 'Szeregowy deszcz ognia', desc: 'Niszczy najsilniejsze karty przeciwnika w rzędzie.',
+          params: [{ label: 'Próg siły rzędu', kind: 'range', min: 5, max: 20, value: 10 }, { label: 'Bohaterowie liczą się do progu', kind: 'bool', value: true }] },
+        { key: 'scorch', name: 'Deszcz ognia', desc: 'Niszczy najsilniejsze karty na całej planszy.',
+          params: [{ label: 'Działa też na twoje karty', kind: 'bool', value: true }] },
+        { key: 'decoy', name: 'Chrząszcz', desc: 'Podmienia kartę na planszy – wraca ona do ręki.',
+          params: [{ label: 'Można podmienić bohatera', kind: 'bool', value: false }] },
+        { key: 'Moc', name: 'Moc / Wyzwolenie siły', desc: 'Jednostki z Mocą przemieniają się w silniejsze po Wyzwoleniu siły.',
+          params: [{ label: 'Przemienione karty można wskrzesić', kind: 'bool', value: false }] },
+        { key: 'avenger', name: 'Przemiana po zniszczeniu', desc: 'Xardas i Orkowa mapa wojenna zamieniają się w silniejszą jednostkę.',
+          params: [{ label: 'Kiedy', kind: 'select', options: ['Po zniszczeniu i na koniec tury (instrukcja)', 'Tylko po zniszczeniu'] }] }
+    ];
+    function renderCardAbilities() {
+        $('#rules-title').textContent = 'Edycja umiejętności';
+        const ctrl = p => {
+            if (p.kind === 'range') return `<label class="re-field"><span>${esc(p.label)}: <b>${p.unit || ''}${p.value}</b> <small>(instrukcja: ${p.unit || ''}${p.value})</small></span>
+                <input type="range" min="${p.min}" max="${p.max}" value="${p.value}" disabled></label>`;
+            if (p.kind === 'bool') return `<label class="re-field re-bool"><span>${esc(p.label)}</span><input type="checkbox" class="switch" role="switch"${p.value ? ' checked' : ''} disabled></label>`;
+            return `<label class="re-field"><span>${esc(p.label)}</span><select disabled>${p.options.map(o => `<option>${esc(o)}</option>`).join('')}</select></label>`;
+        };
         $('#rules-body').innerHTML = `
-            <p class="rules-intro">${esc(e.faction)}${d ? ` · ${esc(d.origin)}` : ' · własna zdolność'}</p>
-            <label class="re-field"><span>Nazwa</span><input type="text" id="re-name" maxlength="50" value="${esc(e.name)}" placeholder="Nazwa zdolności"></label>
-            <label class="re-field"><span>Opis</span><textarea id="re-desc" rows="4" maxlength="400" placeholder="Co robi zdolność">${esc(e.desc)}</textarea></label>
-            ${d && d.params ? `<p class="re-hint">W opisie wstawiane są wartości: ${Object.entries(d.params).map(([k, p]) => `{${k}} – ${esc(p.label.toLowerCase())}`).join(', ')}. Zapis {${Object.keys(d.params)[0]}|kartę|karty|kart} dodaje liczbę z odmianą słowa.</p>` : ''}
-            ${paramHtml ? `<div class="re-params">${paramHtml}</div>` : ''}
-            ${e.custom ? `<label class="re-field"><span>Przypomnienie w historii</span><select id="re-trigger">${Object.entries(CUSTOM_TRIGGERS).map(([k, l]) => `<option value="${k}"${k === e.trigger ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
-                <p class="re-hint">Kalkulator nie zna działania własnej zdolności – pokaże ją w oknie talii i przypomni o niej w historii.</p>` : ''}
-            <div class="re-preview"><span>Podgląd</span><p id="re-preview"></p></div>`;
-        updateEditPreview();
-        const actions = [];
-        if (e.custom && !e.isNew) actions.push({ label: 'Usuń zdolność', onClick: () => {
-            const r = normalizeRules(currentRules); r.custom = r.custom.filter(c => c.id !== e.id);
-            setCurrentRules(r); editDraft = null; goRules({ name: 'faction', faction: e.faction }); toast('Usunięto zdolność');
-        } });
-        if (!e.custom) actions.push({ label: 'Przywróć domyślne', onClick: () => {
-            editDraft = { ...e, name: d.name, desc: d.desc, params: Object.fromEntries(Object.entries(d.params || {}).map(([k, p]) => [k, p.value])) };
-            renderRules();
-        } });
-        actions.push({ label: 'Zapisz', cls: 'btn-primary', onClick: saveEdit });
-        foot(actions);
-    }
-    function readEditForm() {
-        const e = editDraft;
-        e.name = $('#re-name').value; e.desc = $('#re-desc').value;
-        if ($('#re-trigger')) e.trigger = $('#re-trigger').value;
-        $('#rules-body').querySelectorAll('[data-param]').forEach(el => {
-            const k = el.dataset.param, p = ABILITY_BY_ID[e.id].params[k];
-            e.params[k] = p.options ? el.value : p.type === 'bool' ? el.checked : +el.value;
-            const out = $(`[data-val="${k}"]`); if (out) out.textContent = e.params[k];
-        });
-    }
-    function updateEditPreview() {
-        const e = editDraft;
-        const st = { id: e.id, params: e.params || {} };
-        const text = e.custom ? (e.desc || '') + (e.trigger !== 'none' ? ` (przypomnienie ${CUSTOM_TRIGGERS[e.trigger]})` : '') : fillAbilityText(e.desc, st);
-        $('#re-preview').innerHTML = `<b>${esc(e.name || '…')}</b> – ${esc(text || '…')}`;
-    }
-    function saveEdit() {
-        readEditForm();
-        const e = editDraft;
-        if (!e.name.trim()) { $('#re-name').focus(); toast('Wpisz nazwę zdolności', true); return; }
-        const r = normalizeRules(currentRules);
-        if (e.custom) {
-            const item = { id: e.id, faction: e.faction, name: e.name.trim(), desc: e.desc.trim(), trigger: e.trigger, on: e.on !== false };
-            const i = r.custom.findIndex(c => c.id === e.id);
-            if (i >= 0) r.custom[i] = item; else r.custom.push(item);
-        } else {
-            r.abilities[e.id] = { ...(r.abilities[e.id] || {}), name: e.name.trim(), desc: e.desc.trim(), params: { ...e.params } };
-        }
-        setCurrentRules(r);
-        editDraft = null;
-        goRules({ name: 'faction', faction: e.faction });
-        toast('Zapisano zdolność');
+            <p class="concept-note"><b>Koncept.</b> Tak mogłaby wyglądać edycja umiejętności kart. Pokazane wartości to zasady z instrukcji; kontrolki są na razie wyłączone i nic nie zmieniają. Daj znać, które ustawienia mają działać.</p>
+            <div class="rules-list">
+                ${CARD_ABILITY_CONCEPT.map(a => `<div class="concept-ab">
+                    <div class="concept-head"><span class="concept-icon" aria-hidden="true">${esc(ABILITY_ICON[a.key] || '•')}</span>
+                        <span class="rule-text"><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span></div>
+                    <div class="re-params">${a.params.map(ctrl).join('')}</div>
+                </div>`).join('')}
+            </div>`;
+        foot([{ label: 'Gotowe', cls: 'btn-primary', onClick: closeRules }]);
     }
 
     $('#rules-btn').addEventListener('click', openRules);
     $('#rules-back').addEventListener('click', () => {
-        if (rulesView.name === 'edit') { const f = editDraft && editDraft.faction; editDraft = null; goRules({ name: 'faction', faction: f }); }
-        else goRules({ name: 'main' });
+        goRules({ name: 'main' });
     });
     rulesDlg.addEventListener('click', e => { if (e.target.closest('[data-close-rules]')) closeRules(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !rulesDlg.hidden) closeRules(); });
     $('#rules-body').addEventListener('click', e => {
         const fb = e.target.closest('[data-faction]');
         if (fb) return goRules({ name: 'faction', faction: fb.dataset.faction });
-        const ed = e.target.closest('[data-edit]');
-        if (ed) return startEdit(ed.dataset.edit);
-        if (e.target.closest('#rules-add')) return startEdit(null, rulesView.faction);
+        if (e.target.closest('[data-view="cards"]')) return goRules({ name: 'cards' });
         if (e.target.closest('#rules-save')) {
             const inp = $('#rules-name'), name = inp.value.trim();
             if (!name) { inp.focus(); toast('Wpisz nazwę zestawu', true); return; }
@@ -1682,9 +1631,7 @@
             r.general = { ...(r.general || {}), [e.target.dataset.general]: e.target.checked };
             setCurrentRules(r); renderRules(); return;
         }
-        if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); }
     });
-    $('#rules-body').addEventListener('input', () => { if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); } });
     refreshRulesButton();
 
     // ---------- Ekran konfiguracji ----------

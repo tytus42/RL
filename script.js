@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-13g';
+const APP_VERSION = '2026-10-13j';
 
 // ===== Umiejętności talii (ustawienia umiejętności na ekranie startowym) =====
 // Każda talia ma listę zdolności: z instrukcji (domyślnie włączone) i proponowane warianty (domyślnie wyłączone).

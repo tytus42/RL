@@ -1,4 +1,4 @@
-# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13g)
+# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13j)
 
 Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z arkusza wyboru (brak talii i ręki).
 Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `ui.js` (warstwa interfejsu pod telefon), `index.html`, `style.css`.
@@ -26,6 +26,18 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Dowódca: raz na całą grę, osobna kopia dla każdego gracza (sama zdolność to jeszcze alert).
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
+
+## Zdolności talii bez edycji + koncept edycji umiejętności kart (wersja 2026-10-13j)
+- Zdolności talii (Ustawienia umiejętności → talia) można już tylko włączać i wyłączać – usunięta edycja nazw, opisów, parametrów i własne zdolności (decyzja 2026-10-13: „edycja” miała dotyczyć umiejętności kart). `normalizeRules` zostawia tylko wł./wył.; zapisane wcześniej zmiany nazw/parametrów są pomijane. Parametry w `ABILITY_DEFS` zostają (wartości z instrukcji), logika `customReminders` jest nieużywana.
+- Nowy widok „Edycja umiejętności” (przycisk w sekcji „Umiejętności kart”) – **koncept**: lista umiejętności kart (Jedność, Wzmocnienie, Róg, Leczenie, Szpiegostwo, Mobilność, Wezwanie, Szeregowy deszcz ognia, Deszcz ognia, Chrząszcz, Moc/Wyzwolenie siły, przemiana po zniszczeniu) z propozycjami ustawień (`CARD_ABILITY_CONCEPT` w `ui.js`). Kontrolki są wyłączone i nic nie zapisują – do decyzji, które ustawienia mają działać.
+
+## Karty wg tabeli kart (wersja 2026-10-13h)
+Statystyki porównane z tabelą wszystkich kart (obraz od użytkownika) i poprawione w `cards.js` i `Karty_RL.xlsx` (arkusz „Zmiany”):
+- Karty dodatkowe (beżowe w tabeli; w kodzie `isToken: true` – status bez zmian): uzupełniona siła i rząd – Bilgot 2, Abuyin 3, Peck 4, Preriowy ścierwojad 4, Jaszczuroczłek 5, Topielec spod tamy 5, Pandrodor/Feodaron/Pedrakhan/Finkregh 10 (bohaterowie), Baloro 3 (dystans), Okyl 6, Sergio 5, Ork niewolnik 2 i Ogar 4 (wręcz), Wódz hordy 7 (dystans), Quentin 3 (dystans), Varrag-Kasorg/Unhilqt/Ruuushk 5 (wręcz/dystans, Mobilność), Kamienny strażnik 5, Grimes 3, Gestath 5 i golemy 5 (oblężnicze).
+- Zwykłe karty: Parlan 4 (dystans), Isgaroth i Marduk – Mobilność (wręcz/dystans), Gorax i Jorgen – nie są bohaterami, Orkowy bębniarz – Róg (zamiast Wzmocnienia).
+- Pisownia: Abuyin, „Wiesz jak często pada tu deszcz?” (id bez zmian).
+- Goblin wojownik: rola `slug` (jak pozostałe gobliny). Zasada ról: master przyzywa całą swoją grupę (grupa z `*` – wszystkie slugi tej talii), slug i karta bez roli przyzywają tylko karty swojej grupy bez mastera.
+- Bez zmian mimo tabeli: Xardas (zamiana w Demona Ognia – instrukcja), Szkielet goblin i Ork wojownik (Wezwanie – instrukcja str. 18 wymienia je wśród kart z Wezwaniem; Hosh-Pak przyzywa orków wojowników).
 
 ## Podsumowanie i tryb turniejowy (wersja 2026-10-13g)
 - Okno podsumowania: tabela tur bez kolumny „Wygrał” (zwycięzca tury jest wyróżniony w swojej kolumnie). Historia gry domyślnie ukryta; przyciski **Pokaż/Ukryj · Kopiuj · Zapisz** (Zapisz = plik .txt).
@@ -126,7 +138,7 @@ Khorinis #E69138, Potwory #6AA84F, Najemnicy #4285F4, Klasztor #EA4335, Orkowie 
 - Kolory rzędów (wręcz/dystans/oblężnicze) bez zmian.
 
 ## Wersje plików (ważne przy publikacji)
-- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13g` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
+- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13j` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
 - Powód: 2026-10-11 po wgraniu nowych plików nie dało się zagrać żadnej karty – przeglądarka/GitHub Pages podawała stary `script.js` z pamięci, a nowy `ui.js` się na nim wywracał (nie powstawał przycisk wyboru karty). Teraz przy niezgodnych wersjach pokazuje się czerwony komunikat „Wczytały się pliki z różnych wersji” z przyciskiem „Odśwież”.
 - Wgrywać zawsze komplet: `index.html`, `cards.js`, `script.js`, `ui.js`, `style.css`.
 

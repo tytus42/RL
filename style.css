@@ -1121,3 +1121,15 @@ select:disabled { opacity: .5; }
 .cf-frame.is-special .cf-orn { display: none; }
 
 .cf-circle[hidden] { display: none; }
+
+/* Koncept: edycja umiejętności kart (kontrolki wyłączone) */
+.concept-note { margin: 0; padding: 8px 10px; border: 1px dashed var(--gold); border-radius: 10px; color: var(--muted); font-size: .85em; line-height: 1.4; }
+.concept-note b { color: var(--gold-hi); }
+.concept-ab { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.concept-head { display: flex; align-items: center; gap: 10px; }
+.concept-icon {
+    flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 40% 35%, #4a4a4a, #1a1a1a 65%, #0b0b0b); border: 2px solid #c9ccd0; color: #fff; font-size: 1.1em;
+}
+.concept-ab .re-params { opacity: .75; }
+.concept-ab input:disabled, .concept-ab select:disabled { cursor: not-allowed; }
