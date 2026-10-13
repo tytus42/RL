@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-13j';
+    const UI_VERSION = '2026-10-13m';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -654,29 +654,41 @@
     function openGraveyard(pl, medic) {
         if (!pl) return;
         const d = pl.domElements;
-        const items = pl.graveyard.map(c => {
+        const items = pl.graveyard.map((c, i) => {
             const valid = c.type === 'Unit' && !c.isHero && !c.isDecoy;
-            return cardItem(c, { disabled: medic && !valid, meta: medic && !valid ? 'nie można wskrzesić' : cardItem(c).meta });
+            return cardItem(c, { key: i, disabled: medic && !valid, meta: medic && !valid ? 'nie można wskrzesić' : cardItem(c).meta });
         });
-        openSheet({
-            kind: medic ? 'medic' : 'grave',
-            title: medic ? `${pl.name} – wskrześ jednostkę` : `Cmentarz: ${pl.name} (${pl.graveyard.length})`,
+        if (!medic) {
+            openSheet({ kind: 'grave', title: `Cmentarz: ${pl.name} (${pl.graveyard.length})`, searchable: pl.graveyard.length > 8, items, emptyText: 'Cmentarz jest pusty.' });
+            return;
+        }
+        // Leczenie: jak przy Wezwaniu – najpierw zaznaczasz kartę, potem potwierdzasz.
+        const resurrect = id => {
+            closeSheet();
+            d.graveyardSelect.value = id;
+            d.graveyardSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            // Łańcuch Leczenia: wskrzeszony medyk wskrzesza dalej – ten sam gracz wybiera kolejną kartę.
+            setTimeout(() => {
+                if (isMedicModeActive && activePlayer === pl && !(sheetState && sheetState.kind === 'medic')) openGraveyard(pl, true);
+            }, 0);
+        };
+        const cfg = {
+            kind: 'medic',
+            title: `${pl.name} – wskrześ jednostkę`,
             searchable: pl.graveyard.length > 8,
+            multi: true, max: 1, selected: new Set(),
             items,
             emptyText: 'Cmentarz jest pusty.',
-            onPick: medic ? it => {
-                closeSheet();
-                d.graveyardSelect.value = it.id;
-                d.graveyardSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            } : null,
-            footer: medic ? [{
-                label: 'Pomiń wskrzeszenie', cls: 'btn-pass', onClick: () => {
-                    closeSheet();
-                    d.graveyardSelect.value = '';
-                    d.graveyardSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            footer: () => [
+                { label: 'Pomiń wskrzeszenie', cls: 'btn-pass', onClick: () => resurrect('') },
+                {
+                    label: cfg.selected.size ? `Wskrześ: ${items[[...cfg.selected][0]].name}` : 'Wskrześ (wybierz kartę)', cls: 'btn-primary',
+                    disabled: cfg.selected.size === 0,
+                    onClick: () => { const i = [...cfg.selected][0]; if (i != null) resurrect(pl.graveyard[i].id); }
                 }
-            }, { label: 'Zamknij', cls: 'btn-small', onClick: closeSheet }] : null
-        });
+            ]
+        };
+        openSheet(cfg);
     }
 
     // ---------- Wezwanie: wybór kart, które gracz fizycznie kładzie ----------

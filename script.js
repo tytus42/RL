@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-13j';
+const APP_VERSION = '2026-10-13m';
 
 // ===== Umiejętności talii (ustawienia umiejętności na ekranie startowym) =====
 // Każda talia ma listę zdolności: z instrukcji (domyślnie włączone) i proponowane warianty (domyślnie wyłączone).
@@ -704,14 +704,25 @@ function executeResurrection(player, resurrectedCardId) {
     } else {
         const targetRow = Array.isArray(cardInstance.row) ? cardInstance.row[0] : cardInstance.row;
         placeResurrectedCard(player, cardInstance, targetRow);
-        
-        if (!isFirstMoveOfRound) {
-            endTurnAfterFollowUp(player);
-        } else {
-            isFirstMoveOfRound = false;
-            activePlayer = player;
-            updateAllControls();
-        }
+        finishResurrection(player);
+    }
+}
+
+// Po wskrzeszeniu: jeśli wskrzeszony był medyk (łańcuch Leczenia), ten sam gracz wskrzesza dalej;
+// w przeciwnym razie ruch przechodzi na przeciwnika.
+function finishResurrection(player) {
+    if (isMedicModeActive) {
+        activePlayer = player;
+        isFirstMoveOfRound = false;
+        updateAllControls();
+        return;
+    }
+    if (!isFirstMoveOfRound) {
+        endTurnAfterFollowUp(player);
+    } else {
+        isFirstMoveOfRound = false;
+        activePlayer = player;
+        updateAllControls();
     }
 }
 
@@ -747,18 +758,11 @@ function completeAgileResurrection(player, chosenRow) {
     if (!isAgileResurrectionModeActive || !cardToResurrectWithAgile) return;
     pushUndo(takeSnapshot());
 
-    placeResurrectedCard(player, cardToResurrectWithAgile, chosenRow);
-
     isAgileResurrectionModeActive = false;
+    const card = cardToResurrectWithAgile;
     cardToResurrectWithAgile = null;
-    
-    if (!isFirstMoveOfRound) {
-        endTurnAfterFollowUp(player);
-    } else {
-        isFirstMoveOfRound = false;
-        activePlayer = player;
-        updateAllControls();
-    }
+    placeResurrectedCard(player, card, chosenRow);
+    finishResurrection(player);
 }
 
 function setupGame() {
@@ -1048,7 +1052,7 @@ function playCard(player) {
 }
 
 function passRound(player) {
-    if (isMusterModeActive) return;
+    if (isMusterModeActive || isMedicModeActive || isAgileResurrectionModeActive) return;
     deactivateDecoyMode();
     handlePlayerAction(player, () => {
         if (passedPlayers.includes(player)) return false;
@@ -1319,6 +1323,7 @@ function endRound() {
 }
 
 function clearBoardsForNextRound(kept) {
+    isMedicModeActive = false; isAgileResurrectionModeActive = false; cardToResurrectWithAgile = null;
     if (abP('klasztor_skip', 'per') === 'round') [players.player1, players.player2].forEach(p => { p.skipCount = 0; });
     const avengersForNextRound = { player1: [], player2: [] };
 

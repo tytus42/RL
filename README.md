@@ -1,4 +1,4 @@
-# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13j)
+# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13m)
 
 Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z arkusza wyboru (brak talii i ręki).
 Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `ui.js` (warstwa interfejsu pod telefon), `index.html`, `style.css`.
@@ -26,6 +26,14 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Dowódca: raz na całą grę, osobna kopia dla każdego gracza (sama zdolność to jeszcze alert).
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
+
+## Wskrzeszanie a umiejętności (wersja 2026-10-13m)
+Przy wskrzeszeniu Leczeniem działają: Leczenie (łańcuch), Szeregowy deszcz ognia, Deszcz ognia, Szpieg, Mobilność; Jedność/Wzmocnienie/Róg/Moc liczą się same. Wezwanie po wskrzeszeniu nie przyzywa z ręki i talii; dla Nieumarłych jest wariant „Wezwanie z cmentarza” (reszta grupy wraca z cmentarza). Kuchnia polowa i zdolność Orków kładą karty bez uruchamiania umiejętności. (Dodana w 13l osobna opcja „Wezwanie po wskrzeszeniu” z ręki i talii została usunięta – decyzja 2026-10-13: chodziło o wariant z cmentarza.)
+
+## Leczenie: wybór i łańcuch (wersja 2026-10-13k)
+- Okno Leczenia jak przy Wezwaniu: kliknięcie tylko zaznacza kartę, wskrzesza przycisk „Wskrześ: …” (albo „Pomiń wskrzeszenie”).
+- Łańcuch: wskrzeszony medyk od razu wskrzesza dalej – ten sam gracz, okno cmentarza otwiera się ponownie (`finishResurrection` w `script.js`). Ruch przechodzi na przeciwnika dopiero po ostatnim wskrzeszeniu albo pominięciu. Wcześniej tryb wskrzeszania przechodził na przeciwnika (otwierał się jego cmentarz).
+- W trakcie wskrzeszania nie da się spasować; nowa tura zawsze kasuje tryb wskrzeszania.
 
 ## Zdolności talii bez edycji + koncept edycji umiejętności kart (wersja 2026-10-13j)
 - Zdolności talii (Ustawienia umiejętności → talia) można już tylko włączać i wyłączać – usunięta edycja nazw, opisów, parametrów i własne zdolności (decyzja 2026-10-13: „edycja” miała dotyczyć umiejętności kart). `normalizeRules` zostawia tylko wł./wył.; zapisane wcześniej zmiany nazw/parametrów są pomijane. Parametry w `ABILITY_DEFS` zostają (wartości z instrukcji), logika `customReminders` jest nieużywana.
@@ -138,7 +146,7 @@ Khorinis #E69138, Potwory #6AA84F, Najemnicy #4285F4, Klasztor #EA4335, Orkowie 
 - Kolory rzędów (wręcz/dystans/oblężnicze) bez zmian.
 
 ## Wersje plików (ważne przy publikacji)
-- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13j` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
+- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13m` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
 - Powód: 2026-10-11 po wgraniu nowych plików nie dało się zagrać żadnej karty – przeglądarka/GitHub Pages podawała stary `script.js` z pamięci, a nowy `ui.js` się na nim wywracał (nie powstawał przycisk wyboru karty). Teraz przy niezgodnych wersjach pokazuje się czerwony komunikat „Wczytały się pliki z różnych wersji” z przyciskiem „Odśwież”.
 - Wgrywać zawsze komplet: `index.html`, `cards.js`, `script.js`, `ui.js`, `style.css`.
 
