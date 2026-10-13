@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ryżowy Książę – kalkulator</title>
-    <link rel="stylesheet" href="style.css?v=2026-10-13b">
+    <link rel="stylesheet" href="style.css?v=2026-10-13g">
 </head>
 <body>
     <!-- ============ KONFIGURACJA ============ -->
@@ -243,10 +243,13 @@
             <p id="summary-winner" class="summary-winner"></p>
             <div class="summary-table-wrap"><table class="summary-table" id="summary-table"></table></div>
             <h3 class="summary-sub">Historia gry</h3>
-            <textarea id="summary-text" class="summary-text" readonly></textarea>
-            <div class="summary-actions">
+            <div class="summary-hist-actions">
+                <button id="summary-toggle" type="button" aria-expanded="false" aria-controls="summary-text">Pokaż</button>
                 <button id="summary-copy" type="button">Kopiuj</button>
-                <button id="summary-download" type="button">Pobierz .txt</button>
+                <button id="summary-download" type="button">Zapisz</button>
+            </div>
+            <textarea id="summary-text" class="summary-text" readonly hidden></textarea>
+            <div class="summary-actions">
                 <button id="summary-undo" type="button" class="btn-small">↶ Cofnij ostatni ruch</button>
                 <button id="summary-new" type="button" class="btn-primary">Nowa gra</button>
             </div>
@@ -294,7 +297,15 @@
                 <div id="cf-art" class="cf-art"></div>
                 <span class="cf-orn" aria-hidden="true"></span>
                 <span class="cf-sash" aria-hidden="true"></span>
-                <span class="cf-sash-end" aria-hidden="true"><span class="cf-fold"></span><span id="cf-emblem" class="cf-emblem"></span></span>
+                <span class="cf-sash-end" aria-hidden="true">
+                    <!-- koniec szarfy: uskok (załamanie) tuż przed listwą – wchodząc na pole z nazwą szarfa przesuwa się w lewo; jasne brzegi wzdłuż kształtu, szpic -->
+                    <svg viewBox="0 0 152 340" preserveAspectRatio="none">
+                        <polygon class="se-edge" points="22,0 152,0 152,18 130,40 130,290 65,336 0,290 0,40 22,18"/>
+                        <polygon class="se-body" points="35,0 139,0 139,23 117,45 117,283 65,319 13,283 13,45 35,23"/>
+                        <polygon class="se-crease" points="13,45 35,23 139,23 117,45"/>
+                    </svg>
+                    <span id="cf-emblem" class="cf-emblem"></span>
+                </span>
                 <div class="cf-circles">
                     <span id="cf-power" class="cf-circle cf-power" title="Siła"></span>
                     <span id="cf-row" class="cf-circle cf-row" title="Szereg"></span>
@@ -318,8 +329,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="cards.js?v=2026-10-13b"></script>
-    <script src="script.js?v=2026-10-13b"></script>
-    <script src="ui.js?v=2026-10-13b"></script>
+    <script src="cards.js?v=2026-10-13g"></script>
+    <script src="script.js?v=2026-10-13g"></script>
+    <script src="ui.js?v=2026-10-13g"></script>
 </body>
 </html>

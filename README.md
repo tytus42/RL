@@ -1,4 +1,4 @@
-# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13b)
+# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13g)
 
 Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z arkusza wyboru (brak talii i ręki).
 Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `ui.js` (warstwa interfejsu pod telefon), `index.html`, `style.css`.
@@ -26,6 +26,32 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Dowódca: raz na całą grę, osobna kopia dla każdego gracza (sama zdolność to jeszcze alert).
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
+
+## Podsumowanie i tryb turniejowy (wersja 2026-10-13g)
+- Okno podsumowania: tabela tur bez kolumny „Wygrał” (zwycięzca tury jest wyróżniony w swojej kolumnie). Historia gry domyślnie ukryta; przyciski **Pokaż/Ukryj · Kopiuj · Zapisz** (Zapisz = plik .txt).
+- **Tryb turniejowy** (Ustawienia umiejętności → Zasady ogólne; `RULES.general.tournament`, instrukcja str. 6): gdy mecz kończy się remisem (obaj tracą ostatni kryształ), obaj dostają po 1 krysztale i grają dodatkową rundę (w historii: „przetasujcie talie, każdy wykłada po 4 karty”); kolejny remis – kolejna runda. Wliczany do zmian, zestawów, zapisu partii i podsumowania.
+
+## Karty przewodnie – efekty (wersja 2026-10-13f)
+Kalkulator wykonuje teraz efekty kart przewodnich (instrukcja str. 11–13). `LEADER_EFFECTS` w `script.js`, `leaderUsable(p)` (czy można + powód), `useLeader(p, payload)`, w `ui.js` `startLeader(pl)` (okna wyboru) i `LEADER_HOW` (opis w oknie dowódcy). Użycie dowódcy to ruch (oddaje turę), raz na grę.
+- Podwojenie rzędu do końca tury, jak Róg wojenny (decyzja 2026-10-13): Oko Innosa (oblężnicze), Żądza krwi i Mroczny rytuał (wręcz), Święta Aura Innosa (dystans). Kładzione w polu rogu (`isLeaderHorn`), po turze znika, nie trafia na cmentarz; nie można użyć, gdy w rzędzie jest już róg (karta albo jednostka jak Lester) i odwrotnie – po nim nie położysz Rogu.
+- Szeregowy deszcz ognia na rząd przeciwnika (z progiem 10): Zastępy Innosa (oblężnicze), Innos Pan Ognia (dystans), Święty Młot Innosa, Ukryci wśród drzew, Moc Dworu Irdorath (wręcz).
+- Święty płomień: usuwa runy (jak Światło); nie da się użyć, gdy na planszy nie ma run.
+- Runy z talii – tylko gdy runa jest w talii gracza (decyzja): Nie boję się, gdy ciemno jest (Rój owadów), Wiesz jak często pada tu deszcz? (Grom), Tarcza Dominique (Lodowa fala), Zew puszczy (wybór: Światło / Lodowa fala / Grom / Rój owadów). Karta znika z talii, trafia na planszę i cmentarz jak zagrana runa.
+- Instynkt stadny: jednostka ze swojego cmentarza na stół jak Leczenie – działa jej umiejętność (decyzja).
+- Właściciel Ziemski: jednostka z cmentarza przeciwnika do ręki (wybór).
+- Kuchnia polowa: po jednej jednostce z cmentarza każdego gracza wraca na jego planszę (wybór albo „Losuj”).
+- Wojna totalna: cały cmentarz przeciwnika trafia do `destroyed` – nie do wskrzeszenia.
+- Zew hordy: kąsacze → wściekłe kąsacze, wiarusi → fanatyczni wiarusi (bazowe karty znikają, nie na cmentarz).
+- Klasztorny rygor: wybrane jednostki z Mobilnością przechodzą do drugiego rzędu.
+- Selekcja naturalna, Szybki zwiad: efekt przy stole – przypomnienie w historii.
+- Pasywne: Drzewa mają uszy (wszyscy szpiedzy ×2, krok w „wyjaśnieniu siły”), Beliar z nami (pogoda ÷2), Nabór nowicjuszy i Wrota piekieł (przypomnienie o 11 kartach na starcie).
+- Układy i Chłopcy z Kolonii: karta przewodnia przeciwnika nie działa wcale – także pasywna (decyzja 2026-10-13); gdy obaj mają takie karty, obie są zablokowane. Informacja w historii na starcie i w oknie dowódcy.
+
+## Narożnik bohatera (wersja 2026-10-13e)
+Jak na kartach: tylko bohater ma szeroki, rzeźbiony złoty narożnik (`.cf-orn`, maska: pas u góry + pas z lewej + tarcza za kółkiem siły); jego szarfa zaczyna się pod narożnikiem. Zwykła karta: kółko siły ze srebrnym pierścieniem i dwoma małymi zdobieniami (`.cf-power::before/::after`), szarfa biegnie od górnej krawędzi za kółkiem.
+
+## Załamanie szarfy (wersja 2026-10-13d)
+Koniec szarfy jak na kartach: tuż przed metalową listwą tablicy (jeszcze na ilustracji) szarfa skośnie przesuwa się w lewo – uskok o szerokość jasnego brzegu kończy się na górnej krawędzi listwy – potem przechodzi przez listwę i dalej biegnie z herbem w cienkim białym pierścieniu i kończy szpicem; jasne brzegi biegną wzdłuż całego kształtu, także szpica. Kształt to SVG w `.cf-sash-end` (viewBox 152×340 = 15,2×34 cqw, start 5,2cqw nad tablicą); główna szarfa `.cf-sash` kończy się tam, gdzie zaczyna się załamanie. Szarfa: ciemny kolor talii (`--sash-dark`) z jasnymi brzegami (`--sash-edge`).
 
 ## Kółko szeregu (wersja 2026-10-13b)
 Jak na kartach: jednostka, która może stać w kilku rzędach, ma jedno niebieskie kółko szeregu z obiema ikonkami (wariant z osobnymi kółkami z wersji 13a został wycofany). Rozmiary kółek jak w 12l (siła 21cqw, pozostałe 18cqw). Symbol Mobilności: ↕ (jak na kartach). Herb na końcu szarfy jest okrągły.
@@ -100,7 +126,7 @@ Khorinis #E69138, Potwory #6AA84F, Najemnicy #4285F4, Klasztor #EA4335, Orkowie 
 - Kolory rzędów (wręcz/dystans/oblężnicze) bez zmian.
 
 ## Wersje plików (ważne przy publikacji)
-- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13b` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
+- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13g` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
 - Powód: 2026-10-11 po wgraniu nowych plików nie dało się zagrać żadnej karty – przeglądarka/GitHub Pages podawała stary `script.js` z pamięci, a nowy `ui.js` się na nim wywracał (nie powstawał przycisk wyboru karty). Teraz przy niezgodnych wersjach pokazuje się czerwony komunikat „Wczytały się pliki z różnych wersji” z przyciskiem „Odśwież”.
 - Wgrywać zawsze komplet: `index.html`, `cards.js`, `script.js`, `ui.js`, `style.css`.
 
@@ -141,10 +167,8 @@ Nowy `ui.js` (ładowany po `script.js`) + przebudowane `index.html` i `style.css
 - Decyzje do potwierdzenia: remis = przegrana dla Bandytów; przeczekanie Klasztoru raz na grę (nie raz na turę).
 
 ## Zostawione na później
-- Zdolności wszystkich dowódców (m.in. Zastępy Innosa, Oko Innosa, Zew hordy, Beliar z nami) – obecnie alert „Implementacja w toku".
 - Zwycięzca rundy zaczyna następną (obecnie może zacząć każdy).
-- Remis w rundzie: celowo bez zmian (obaj gracze tracą kryształ).
-- Komunikaty `alert()` („Wybierz rząd”, dowódca) – do zamiany na okienka w stylu aplikacji (koniec gry ma już własne okno).
+- Remis w rundzie: obaj gracze tracą kryształ; czwarta runda przy remisie meczu – opcjonalnie w trybie turniejowym.
 
 ## Decyzje (potwierdzone 2026-10-09)
 - Mobilność (agile): rząd wybiera się przy zagrywaniu karty i przy jej wskrzeszeniu – tak działa kod.

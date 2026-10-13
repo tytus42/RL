@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-13b';
+    const UI_VERSION = '2026-10-13g';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -381,8 +381,8 @@
         fb.classList.toggle('used', hasSkip && skipsLeft(pl) === 0);
         const lInfo = leaderInfo(pl.commander);
         lbtn.innerHTML = `<span class="ab-icon">♛</span><span class="ab-name">${esc(pl.commander ? pl.commander.name : '')}</span>`;
-        lbtn.classList.toggle('used', !!(pl.commander && pl.commander.isUsed));
-        lbtn.classList.toggle('can-use', !lInfo.passive && !d.activateLeaderButton.disabled);
+        lbtn.classList.toggle('used', !!(pl.commander && pl.commander.isUsed) || !!leaderBlockedBy(pl));
+        lbtn.classList.toggle('can-use', !lInfo.passive && leaderUsable(pl).ok);
         if (abilityState && abilityState.player === pl) renderAbility();
 
         // Pasowanie – reset uzbrojenia, gdy przycisk się zablokował
@@ -549,6 +549,7 @@
             }
             const b = document.createElement('button');
             b.type = 'button';
+            if (it.key != null) b.dataset.key = it.key;
             const isSel = cfg.multi && cfg.selected.has(it.key);
             b.className = 'tile' + (it.hero ? ' hero' : '') + (it.disabled ? ' is-disabled' : '') + (cfg.multi ? ' is-check' : '') + (isSel ? ' is-selected' : '');
             b.disabled = !!it.disabled || (!cfg.onPick && !cfg.multi);
@@ -789,12 +790,16 @@
             $('#ability-kind').textContent = `${pl.name} · karta przewodnia${info.passive ? ' (pasywna)' : ' (aktywowana, raz na grę)'}`;
             $('#ability-title').textContent = c ? c.name : '';
             $('#ability-desc').textContent = info.text;
-            showUse = !info.passive;
-            canUse = showUse && !pl.domElements.activateLeaderButton.disabled;
-            note = c && c.id === 'Beliar_z_nami' ? (abOn('orkowie_beliar') ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.' : 'Wyłączone w ustawieniach umiejętności.')
+            const chk = leaderUsable(pl), eff = leaderEffect(pl) || { kind: 'reminder' }, by = leaderBlockedBy(pl);
+            showUse = !info.passive && !by;
+            canUse = showUse && chk.ok;
+            note = by ? `Nie działa – blokuje ją karta przeciwnika: ${by.name}.`
+                : c && c.id === 'Beliar_z_nami' ? (abOn('orkowie_beliar') ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.' : 'Wyłączone w ustawieniach umiejętności.')
+                : eff.spies ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.'
+                : eff.block ? 'Działa przez całą rozgrywkę – karta przewodnia przeciwnika nie działa.'
+                : eff.extraCard ? 'Przy stole: na starcie dobierasz 11 kart zamiast 10.'
                 : info.passive ? 'Działa przez całą rozgrywkę – nie wymaga aktywacji.'
-                : c && c.isUsed ? 'Karta przewodnia została już użyta.'
-                : canUse ? 'Efekt wykonaj przy stole – kalkulator zaznaczy użycie.' : 'Teraz nie można jej użyć (nie twój ruch albo trwa inna akcja).';
+                : chk.ok ? (LEADER_HOW[eff.kind] || LEADER_HOW.reminder) : chk.reason;
         }
         $('#ability-note').textContent = note;
         use.hidden = !showUse;
@@ -806,9 +811,82 @@
         const { player: pl, kind } = abilityState;
         closeAbility();
         if (kind === 'faction') skipTurn(pl);
-        else pl.domElements.activateLeaderButton.click();
+        else startLeader(pl);
         scheduleRefresh();
     });
+
+    // ---------- Karty przewodnie: wybór przed użyciem ----------
+    const LEADER_HOW = {
+        double: 'Rząd zostanie podwojony do końca tury (jak Róg wojenny).',
+        scorch: 'Kalkulator wykona Szeregowy deszcz ognia (rząd przeciwnika musi mieć łącznie co najmniej 10 siły).',
+        clear: 'Usuwa wszystkie runy z planszy (jak Światło).',
+        rune: 'Kalkulator zabierze runę z twojej talii i położy ją na planszy.',
+        revive: 'Wybierzesz jednostkę ze swojego cmentarza – wejdzie na stół jak przy Leczeniu.',
+        steal: 'Wybierzesz jednostkę z cmentarza przeciwnika – trafi do twojej ręki.',
+        kitchen: 'Sędzia losuje po jednej jednostce z obu cmentarzy – wskażesz je albo użyjesz „Losuj”.',
+        totalWar: 'Cały cmentarz przeciwnika zostanie zniszczony – tych kart nie da się już wskrzesić.',
+        horde: 'Kąsacze i wiarusi na twojej planszy przemienią się we wściekłe kąsacze i fanatycznych wiarusów.',
+        rigor: 'Wybierzesz jednostki z Mobilnością, które przejdą do drugiego rzędu.',
+        reminder: 'Efekt wykonaj przy stole – kalkulator zaznaczy użycie.'
+    };
+    // Arkusz wyboru kart dla kart przewodnich
+    function pickCards({ title, items, max, min = 1, random = false, confirmLabel, onConfirm }) {
+        const cfg = {
+            kind: 'leader', title, searchable: items.length > 8, multi: true, max, selected: new Set(), items,
+            onClose: () => scheduleRefresh(),
+            footer: () => [
+                random ? {
+                    label: 'Losuj', cls: 'btn-small', onClick: () => {
+                        const pool = items.map(it => it.key);
+                        cfg.selected.clear();
+                        while (cfg.selected.size < max && pool.length) cfg.selected.add(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+                        renderSheetList(); renderSheetFoot();
+                    }
+                } : { label: 'Anuluj', cls: 'btn-small', onClick: () => closeSheet() },
+                {
+                    label: `${confirmLabel} (${cfg.selected.size}${max < items.length || max === 1 ? '/' + max : ''})`, cls: 'btn-primary',
+                    disabled: cfg.selected.size < min,
+                    onClick: () => { const ids = [...cfg.selected]; closeSheet(); onConfirm(ids); scheduleRefresh(); }
+                }
+            ]
+        };
+        openSheet(cfg);
+    }
+    function startLeader(pl) {
+        const chk = leaderUsable(pl);
+        if (!chk.ok) { if (chk.reason) toast(chk.reason, true); return; }
+        const c = pl.commander, opp = P().find(x => x !== pl), kind = leaderChoiceKind(pl);
+        const done = ok => { if (ok) buzz(20); scheduleRefresh(); };
+        const unitItem = x => cardItem(x, { key: x.instanceId });
+        if (!kind) return done(useLeader(pl));
+        if (kind === 'rune') {
+            const seen = new Set();
+            const items = leaderRuneCards(pl).filter(x => !seen.has(x.name) && seen.add(x.name)).map(x => cardItem(x, { key: x.name }));
+            return pickCards({ title: `${c.name} – którą runę aktywować?`, items, max: 1, confirmLabel: 'Aktywuj', onConfirm: ids => done(useLeader(pl, { name: ids[0] })) });
+        }
+        if (kind === 'steal') {
+            return pickCards({ title: `${c.name} – którą jednostkę zabierasz z cmentarza: ${opp.name}?`, items: opp.graveyard.filter(isPlainUnit).map(unitItem), max: 1,
+                confirmLabel: 'Zabierz', onConfirm: ids => done(useLeader(pl, { id: ids[0] })) });
+        }
+        if (kind === 'kitchen') {
+            const mine = pl.graveyard.filter(isPlainUnit), theirs = opp.graveyard.filter(isPlainUnit);
+            const step2 = m => theirs.length
+                ? pickCards({ title: `${c.name} – jednostka z cmentarza: ${opp.name}`, items: theirs.map(unitItem), max: 1, random: true,
+                    confirmLabel: 'Przywróć', onConfirm: ids => done(useLeader(pl, { mine: m, theirs: ids[0] })) })
+                : done(useLeader(pl, { mine: m, theirs: null }));
+            return mine.length
+                ? pickCards({ title: `${c.name} – jednostka z cmentarza: ${pl.name}`, items: mine.map(unitItem), max: 1, random: true,
+                    confirmLabel: theirs.length ? 'Dalej' : 'Przywróć', onConfirm: ids => step2(ids[0]) })
+                : step2(null);
+        }
+        if (kind === 'rigor') {
+            const list = leaderAgileUnits(pl);
+            const items = list.map(({ card, row }) => cardItem(card, { key: card.instanceId, meta: `${ROW_LABEL[row]} → ${ROW_LABEL[card.row.find(r => r !== row)]}` }));
+            return pickCards({ title: `${c.name} – które jednostki przenieść do drugiego rzędu?`, items, max: list.length,
+                confirmLabel: 'Przenieś', onConfirm: ids => done(useLeader(pl, { ids })) });
+        }
+    }
+    window.startLeader = startLeader;
 
     // ---------- Zdolności talii: wybór kart (Potwory / Orkowie / Bandyci) ----------
     // Przy stole kartę losuje sędzia – tu można ją wskazać albo wylosować przyciskiem „Losuj”.
@@ -932,8 +1010,9 @@
             <th scope="row">Tura ${r.round}</th>
             <td class="${r.winner === 'player1' ? 'won' : ''}">${r.p1}</td>
             <td class="${r.winner === 'player2' ? 'won' : ''}">${r.p2}</td>
-            <td>${r.winner === 'draw' ? 'remis' : esc(players[r.winner].name)}</td></tr>`).join('');
-        $('#summary-table').innerHTML = `<thead><tr><th></th><th class="p1">${esc(a.name)}</th><th class="p2">${esc(b.name)}</th><th>Wygrał</th></tr></thead><tbody>${rows}</tbody>`;
+            </tr>`).join('');
+        $('#summary-table').innerHTML = `<thead><tr><th></th><th class="p1">${esc(a.name)}</th><th class="p2">${esc(b.name)}</th></tr></thead><tbody>${rows}</tbody>`;
+        setHistoryShown(false); // historia domyślnie ukryta
         $('#summary-text').value = summaryText(winner);
         $('#summary-undo').disabled = !canUndo();
         $('#summary').hidden = false;
@@ -943,11 +1022,18 @@
     window.showGameSummary = showGameSummary;
     function scheduleSaveFinal() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
 
+    function setHistoryShown(on) {
+        $('#summary-text').hidden = !on;
+        const t = $('#summary-toggle');
+        t.textContent = on ? 'Ukryj' : 'Pokaż';
+        t.setAttribute('aria-expanded', String(on));
+    }
+    $('#summary-toggle').addEventListener('click', () => setHistoryShown($('#summary-text').hidden));
     $('#summary-copy').addEventListener('click', async () => {
         const ta = $('#summary-text');
         try { await navigator.clipboard.writeText(ta.value); toast('Skopiowano podsumowanie'); }
         catch (e) {
-            ta.focus(); ta.select();
+            setHistoryShown(true); ta.focus(); ta.select();
             try { document.execCommand('copy'); toast('Skopiowano podsumowanie'); } catch (e2) { toast('Zaznacz tekst i skopiuj ręcznie'); }
         }
     });
@@ -1289,6 +1375,7 @@
     function normalizeRules(r) {
         const out = emptyRules();
         if (!r || typeof r !== 'object' || !r.abilities) return out;
+        if (r.general && r.general.tournament) out.general = { tournament: true };
         ABILITY_DEFS.forEach(d => {
             const o = r.abilities[d.id];
             if (!o) return;
@@ -1334,6 +1421,7 @@
             out.push({ faction: d.faction, text: `${d.faction} – ${st.name}: ${parts.join(', ')}` });
         });
         r.custom.forEach(c => out.push({ faction: c.faction, text: `${c.faction} – ${c.name}: własna${c.on ? '' : ' (wył.)'}` }));
+        if (r.general && r.general.tournament) out.push({ faction: null, text: 'Tryb turniejowy: wł.' });
         return out;
     }
     function rulesSummary(rules) {
@@ -1400,6 +1488,14 @@
                     <input type="text" id="rules-name" maxlength="40" autocomplete="off" placeholder="Nazwa nowego zestawu, np. Test Khorinis">
                     <button type="button" id="rules-save" class="btn-small">Zapisz</button>
                 </div>
+            </div>
+            <h3 class="rules-sub">Zasady ogólne</h3>
+            <div class="rule-row${currentRules.general && currentRules.general.tournament ? ' changed' : ''}" style="--rule-color:var(--gold)">
+                <label class="rule-text" for="rule-tournament">
+                    <span class="rule-name"><b>Tryb turniejowy</b><span class="rule-tag">instrukcja, str. 6</span></span>
+                    <small>Gdy mecz kończy się remisem (obaj gracze tracą ostatni kryształ), gracze rozgrywają dodatkową rundę: tasują talie i wykładają po 4 karty. Kolejny remis – kolejna runda.</small>
+                </label>
+                <div class="rule-ctrl"><input type="checkbox" class="switch" role="switch" id="rule-tournament" data-general="tournament"${currentRules.general && currentRules.general.tournament ? ' checked' : ''}></div>
             </div>
             <h3 class="rules-sub">Talie</h3>
             <div class="rules-factions">
@@ -1581,6 +1677,11 @@
             return;
         }
         if (e.target.dataset.ab) { setAbilityOn(e.target.dataset.ab, e.target.checked); renderRules(); return; }
+        if (e.target.dataset.general) {
+            const r = normalizeRules(currentRules);
+            r.general = { ...(r.general || {}), [e.target.dataset.general]: e.target.checked };
+            setCurrentRules(r); renderRules(); return;
+        }
         if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); }
     });
     $('#rules-body').addEventListener('input', () => { if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); } });

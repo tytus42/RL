@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-13b';
+const APP_VERSION = '2026-10-13g';
 
 // ===== Umiejętności talii (ustawienia umiejętności na ekranie startowym) =====
 // Każda talia ma listę zdolności: z instrukcji (domyślnie włączone) i proponowane warianty (domyślnie wyłączone).
@@ -41,10 +41,10 @@ const ABILITY_BY_ID = Object.fromEntries(ABILITY_DEFS.map(d => [d.id, d]));
 // Własne zdolności: kalkulator nie zna ich działania – przypomina o nich w historii w wybranym momencie.
 const CUSTOM_TRIGGERS = { start: 'na starcie gry', round: 'na starcie każdej tury', win: 'po wygranej turze', loss: 'po przegranej turze', draw: 'po remisie', none: 'bez przypomnienia' };
 // RULES: { abilities: { id: { on, params, name, desc } }, custom: [{ id, faction, name, desc, trigger, on }] } – tylko zmiany względem domyślnych
-let RULES = { abilities: {}, custom: [] };
+let RULES = { abilities: {}, custom: [], general: {} }; // general.tournament – tryb turniejowy
 function setRules(r) {
     r = r && typeof r === 'object' ? r : {};
-    RULES = { abilities: { ...(r.abilities || {}) }, custom: Array.isArray(r.custom) ? r.custom.map(c => ({ ...c })) : [] };
+    RULES = { abilities: { ...(r.abilities || {}) }, custom: Array.isArray(r.custom) ? r.custom.map(c => ({ ...c })) : [], general: { ...(r.general || {}) } };
 }
 // Pełny, scalony stan zdolności (domyślne + zmiany)
 function abilityInfo(id, rules = RULES) {
@@ -79,7 +79,7 @@ function customReminders(trigger, player) {
 }
 const isAgileCard = c => (c.abilities && c.abilities.includes('agile')) || (Array.isArray(c.row) && c.row.length > 1);
 // Siła jednostki pod pogodą (przed Jednością, Wzmocnieniem i Rogiem).
-function beliarActive(owner) { return abOn('orkowie_beliar') && owner.commander && owner.commander.id === 'Beliar_z_nami'; }
+function beliarActive(owner) { return abOn('orkowie_beliar') && leaderOn(owner, 'Beliar_z_nami'); }
 function weatherPower(owner, card) {
     let v = beliarActive(owner) ? Math.floor(card.power / 2) : 1;
     if (hasAbility(owner, 'klasztor_agile_weather') && isAgileCard(card)) v *= abP('klasztor_agile_weather', 'mult');
@@ -259,7 +259,8 @@ function explainCardPower(instanceId) {
     if (morale) { p += morale; steps.push({ label: `Wzmocnienie +${morale}`, value: p }); }
     const hornCard = owner.board.horns[rowType];
     const hornUnit = row.find(c => c.type === 'Unit' && c.abilities && c.abilities.includes('horn') && c.instanceId !== card.instanceId);
-    if (hornCard || hornUnit) { p *= 2; steps.push({ label: `Róg ×2 (${hornCard ? 'Róg wojenny' : hornUnit.name})`, value: p }); }
+    if (spiesDoubled() && card.abilities && card.abilities.includes('spy')) { p *= 2; steps.push({ label: 'Drzewa mają uszy: szpieg ×2', value: p }); }
+    if (hornCard || hornUnit) { p *= 2; steps.push({ label: `Róg ×2 (${hornCard ? hornCard.name : hornUnit.name})`, value: p }); }
     return { card, owner, rowType, steps, final };
 }
 
@@ -496,6 +497,7 @@ function applyAllEffects() {
                         }
                     }
                     
+                    if (spiesDoubled() && card.abilities && card.abilities.includes('spy')) power *= 2; // Drzewa mają uszy
                     const hornActiveForCard = !!player.board.horns[rowType] || hornUnits.some(h => h.instanceId !== card.instanceId);
                     if (hornActiveForCard) { power *= 2; }
                     if (power !== card.power) { card.currentPower = power; }
@@ -806,6 +808,7 @@ function startGame() {
         customReminders('start', p);
         customReminders('round', p);
     });
+    leaderStartNotes();
     updateAllControls();
 }
 
@@ -856,7 +859,7 @@ function updatePlayerControlsVisibility(player) {
     let isPlayerTurn = isFirstMoveOfRound || (player === activePlayer);
     cardSelect.disabled = !isPlayerTurn;
     passRoundButton.disabled = !isPlayerTurn;
-    activateLeaderButton.disabled = !isPlayerTurn || (player.commander && player.commander.isUsed);
+    activateLeaderButton.disabled = !leaderUsable(player).ok;
     
     const selectedOption = cardSelect.options[cardSelect.selectedIndex];
     if (!selectedOption || !selectedOption.value || !isPlayerTurn) return;
@@ -1056,15 +1059,197 @@ function passRound(player) {
     });
 }
 
-function activateLeaderAbility(player) {
-    if (isMusterModeActive) return;
+// ===== Karty przewodnie (instrukcja, str. 11–13) =====
+// kind: double – podwaja rząd do końca tury (jak Róg wojenny; nie działa, gdy w rzędzie jest już róg),
+// scorch – Szeregowy deszcz ognia na rząd przeciwnika, clear – efekt Światła, rune – runa z talii gracza,
+// revive – jednostka ze swojego cmentarza na stół (jak Leczenie), steal – karta z cmentarza przeciwnika do ręki,
+// kitchen – po jednej jednostce z cmentarzy obu graczy na stół, totalWar – cmentarz przeciwnika zniszczony,
+// horde – przemiana kąsaczy i wiarusów, rigor – jednostki z Mobilnością do drugiego rzędu,
+// reminder – efekt przy stole (kalkulator przypomina), passive – działa cały czas.
+const LEADER_EFFECTS = {
+    Oko_Innosa: { kind: 'double', row: 'siege' },
+    Zadza_krwi: { kind: 'double', row: 'melee' },
+    Swieta_Aura_Innosa: { kind: 'double', row: 'ranged' },
+    Mroczny_rytual: { kind: 'double', row: 'melee' },
+    Zastepy_Innosa: { kind: 'scorch', row: 'siege' },
+    Innos_Pan_Ognia: { kind: 'scorch', row: 'ranged' },
+    Swiety_Mlot_Innosa: { kind: 'scorch', row: 'melee' },
+    Ukryci_wsrod_drzew: { kind: 'scorch', row: 'melee' },
+    Moc_Dworu_Irdorath: { kind: 'scorch', row: 'melee' },
+    Swiety_plomien: { kind: 'clear' },
+    'Nie_boje_sie,_gdy_ciemno_jest': { kind: 'rune', names: ['Rój owadów'] },
+    'Wiesz_jak_czestu_pada_tu_deszcz?': { kind: 'rune', names: ['Grom'] },
+    Tarcza_Dominique: { kind: 'rune', names: ['Lodowa fala'] },
+    Zew_puszczy: { kind: 'rune', names: ['Światło', 'Lodowa fala', 'Grom', 'Rój owadów'], choose: true },
+    Instynkt_stadny: { kind: 'revive' },
+    Wlasciciel_Ziemski: { kind: 'steal' },
+    Kuchnia_polowa: { kind: 'kitchen' },
+    Wojna_totalna: { kind: 'totalWar' },
+    Zew_hordy: { kind: 'horde', targets: ['Kasacz', 'Wiarus'] },
+    Klasztorny_rygor: { kind: 'rigor' },
+    Selekcja_naturalna: { kind: 'reminder', text: 'wymień dwie wybrane karty na jedną dowolną z całej talii' },
+    Szybki_zwiad: { kind: 'reminder', text: 'przeciwnik pokazuje 3 losowe karty ze swojej talii' },
+    Drzewa_maja_uszy: { kind: 'passive', spies: true },
+    Chlopcy_z_Kolonii: { kind: 'passive', block: true },
+    Uklady: { kind: 'passive', block: true },
+    Nabor_nowicjuszy: { kind: 'passive', extraCard: true },
+    Wrota_piekiel: { kind: 'passive', extraCard: true },
+    Beliar_z_nami: { kind: 'passive' }
+};
+const opponentOf = p => (p === players.player1 ? players.player2 : players.player1);
+const leaderEffect = p => (p && p.commander ? LEADER_EFFECTS[p.commander.id] || null : null);
+// Układy / Chłopcy z Kolonii: karta przewodnia przeciwnika nie działa wcale (także pasywna).
+function leaderBlockedBy(p) {
+    const o = opponentOf(p), e = leaderEffect(o);
+    return e && e.block ? o.commander : null;
+}
+const leaderOn = (p, id) => !!(p && p.commander && p.commander.id === id && !leaderBlockedBy(p));
+const spiesDoubled = () => leaderOn(players.player1, 'Drzewa_maja_uszy') || leaderOn(players.player2, 'Drzewa_maja_uszy');
+const leaderRuneCards = p => { const e = leaderEffect(p); return e && e.kind === 'rune' ? p.availableCards.filter(c => c.type === 'Weather' && e.names.includes(c.name)) : []; };
+const leaderAgileUnits = p => ['melee', 'ranged', 'siege'].flatMap(r => p.board[r].map(c => ({ card: c, row: r }))).filter(x => x.card.type === 'Unit' && !x.card.isDecoy && Array.isArray(x.card.row) && x.card.row.length > 1);
+const hordeTargets = (p, e) => ['melee', 'ranged', 'siege'].flatMap(r => p.board[r]).filter(c => c.abilities && c.abilities.includes('Moc') && c.transformId && e.targets.includes(c.baseId));
+// Czy gracz może teraz użyć karty przewodniej; reason – dlaczego nie.
+function leaderUsable(p) {
+    const c = p && p.commander, e = leaderEffect(p);
+    if (!c) return { ok: false, reason: '' };
+    if (leaderBlockedBy(p)) return { ok: false, reason: `Zablokowana przez kartę przeciwnika: ${leaderBlockedBy(p).name}.` };
+    if (e && e.kind === 'passive') return { ok: false, passive: true, reason: 'Działa przez całą rozgrywkę – nie wymaga aktywacji.' };
+    if (c.isUsed) return { ok: false, reason: 'Karta przewodnia została już użyta.' };
+    const opp = opponentOf(p);
+    const canAct = !isGameOver && !roundEndFlow && !isMusterModeActive && !isMedicModeActive && !isAgileResurrectionModeActive &&
+        !passedPlayers.includes(p) && (isFirstMoveOfRound || activePlayer === p);
+    if (!canAct) return { ok: false, reason: 'Teraz nie można jej użyć (nie twój ruch albo trwa inna akcja).' };
+    if (!e) return { ok: true };
+    const rowName = r => translateRowName(r);
+    switch (e.kind) {
+        case 'double': if (rowHasHorn(p, e.row)) return { ok: false, reason: `W rzędzie ${rowName(e.row)} działa już Róg – karta nie zadziała.` }; break;
+        case 'clear': if (!weatherCardsOnBoard.length) return { ok: false, reason: 'Na planszy nie ma run – nie można jej użyć „na przeczekanie”.' }; break;
+        case 'rune': if (!leaderRuneCards(p).length) return { ok: false, reason: `Nie masz w talii runy: ${e.names.join(' / ')}.` }; break;
+        case 'revive': if (!p.graveyard.some(isPlainUnit)) return { ok: false, reason: 'Na twoim cmentarzu nie ma jednostek do wskrzeszenia.' }; break;
+        case 'steal': if (!opp.graveyard.some(isPlainUnit)) return { ok: false, reason: 'Na cmentarzu przeciwnika nie ma jednostek.' }; break;
+        case 'kitchen': if (!p.graveyard.some(isPlainUnit) && !opp.graveyard.some(isPlainUnit)) return { ok: false, reason: 'Na cmentarzach nie ma jednostek.' }; break;
+        case 'totalWar': if (!opp.graveyard.length) return { ok: false, reason: 'Cmentarz przeciwnika jest pusty.' }; break;
+        case 'horde': if (!hordeTargets(p, e).length) return { ok: false, reason: 'Na planszy nie ma kąsaczy ani wiarusów do przemiany.' }; break;
+        case 'rigor': if (!leaderAgileUnits(p).length) return { ok: false, reason: 'Na planszy nie ma twoich jednostek z Mobilnością.' }; break;
+    }
+    return { ok: true };
+}
+// Co trzeba wybrać przed użyciem (ui.js pokazuje okno wyboru); null = nic.
+function leaderChoiceKind(p) {
+    const e = leaderEffect(p);
+    if (!e) return null;
+    if (e.kind === 'rune' && e.choose && new Set(leaderRuneCards(p).map(c => c.name)).size > 1) return 'rune';
+    return ['steal', 'kitchen', 'rigor'].includes(e.kind) ? e.kind : null;
+}
+// payload: { name } (runa), { id } (steal – instanceId), { mine, theirs } (kitchen – instanceId lub null), { ids } (rigor)
+function useLeader(player, payload = {}) {
+    if (isMusterModeActive) return false;
+    const chk = leaderUsable(player);
+    if (!chk.ok) { if (chk.reason) notify(chk.reason); return false; }
     deactivateDecoyMode();
+    let done = false;
     handlePlayerAction(player, () => {
-        if (!player.commander || player.commander.isUsed) return false;
-        addLogEntry(`${player.name} używa karty przewodniej: ${player.commander.name}.`);
-        // Efekt karty przewodniej gracze wykonują przy stole – kalkulator zaznacza tylko użycie.
-        player.commander.isUsed = true; // raz na całą grę
+        const c = player.commander, e = leaderEffect(player) || { kind: 'reminder', text: 'efekt wykonaj przy stole' };
+        const opp = opponentOf(player);
+        const back = (owner, card) => { // jednostka z cmentarza na stół (bez uruchamiania umiejętności)
+            const row = Array.isArray(card.row) ? card.row[0] : card.row;
+            const { currentPower, ...clean } = card;
+            owner.board[row].push({ ...clean, instanceId: nextInstanceId() });
+        };
+        switch (e.kind) {
+            case 'double':
+                player.board.horns[e.row] = { id: c.id, name: c.name, type: 'Horn', faction: c.faction, abilities: ['horn'], isLeaderHorn: true, instanceId: nextInstanceId() };
+                addLogEntry(`${player.name} – ${c.name}: siła rzędu ${translateRowName(e.row)} podwojona do końca tury.`);
+                break;
+            case 'scorch':
+                addLogEntry(`${player.name} – ${c.name}: Szeregowy deszcz ognia na rząd ${translateRowName(e.row)} przeciwnika.`);
+                executeRowScorch(player, e.row);
+                break;
+            case 'clear':
+                weatherCardsOnBoard = [];
+                addLogEntry(`${player.name} – ${c.name}: efekty run usunięte z planszy (jak Światło).`);
+                break;
+            case 'rune': {
+                const pool = leaderRuneCards(player);
+                const card = pool.find(x => x.name === payload.name) || pool[0];
+                if (!card) return false;
+                player.availableCards.splice(player.availableCards.indexOf(card), 1);
+                const inst = { ...card, instanceId: nextInstanceId() };
+                if (!inst.rowAffected) weatherCardsOnBoard = [];
+                else if (!weatherCardsOnBoard.find(w => w.name === inst.name)) weatherCardsOnBoard.push(inst);
+                player.graveyard.push(inst);
+                addLogEntry(`${player.name} – ${c.name}: aktywuje runę ${inst.name} z talii.`);
+                break;
+            }
+            case 'revive':
+                isMedicModeActive = true; // dalej jak Leczenie: wybór z cmentarza, karta wchodzi na stół
+                addLogEntry(`${player.name} – ${c.name}: wskrzesza jednostkę ze swojego cmentarza.`);
+                break;
+            case 'steal': {
+                const i = opp.graveyard.findIndex(x => x.instanceId == payload.id && isPlainUnit(x));
+                if (i < 0) return false;
+                const [card] = opp.graveyard.splice(i, 1);
+                const { currentPower, instanceId, ...clean } = card;
+                player.availableCards.push(clean);
+                addLogEntry(`${player.name} – ${c.name}: zabiera ${card.name} z cmentarza ${opp.name} do ręki.`);
+                break;
+            }
+            case 'kitchen': {
+                const names = [];
+                [[player, payload.mine], [opp, payload.theirs]].forEach(([owner, id]) => {
+                    if (id == null) return;
+                    const i = owner.graveyard.findIndex(x => x.instanceId == id && isPlainUnit(x));
+                    if (i < 0) return;
+                    const [card] = owner.graveyard.splice(i, 1);
+                    back(owner, card);
+                    names.push(`${card.name} (${owner.name})`);
+                });
+                if (!names.length) return false;
+                addLogEntry(`${player.name} – ${c.name}: na planszę wracają ${names.join(', ')}.`);
+                break;
+            }
+            case 'totalWar': {
+                const n = opp.graveyard.length;
+                opp.destroyed = [...(opp.destroyed || []), ...opp.graveyard];
+                opp.graveyard = [];
+                addLogEntry(`${player.name} – ${c.name}: ${n} ${plForm(n, 'karta', 'karty', 'kart')} z cmentarza ${opp.name} zniszczone – nie mogą wrócić.`);
+                break;
+            }
+            case 'horde':
+                addLogEntry(`${player.name} – ${c.name}: kąsacze i wiarusi przemieniają się.`);
+                executePowerRelease(player, e.targets);
+                break;
+            case 'rigor': {
+                const ids = payload.ids || [];
+                const moved = [];
+                leaderAgileUnits(player).filter(x => ids.includes(x.card.instanceId)).forEach(({ card, row }) => {
+                    const to = card.row.find(r => r !== row);
+                    if (!to) return;
+                    player.board[row] = player.board[row].filter(x => x !== card);
+                    player.board[to].push(card);
+                    moved.push(`${card.name} → ${translateRowName(to)}`);
+                });
+                if (!moved.length) return false;
+                addLogEntry(`${player.name} – ${c.name}: przenosi ${moved.join(', ')}.`);
+                break;
+            }
+            default:
+                addLogEntry(`${player.name} używa karty przewodniej: ${c.name} – ${e.text}.`);
+        }
+        c.isUsed = true; // raz na całą grę
+        done = true;
         return true;
+    });
+    return done;
+}
+function activateLeaderAbility(player) { return useLeader(player); }
+// Na starcie gry: przypomnienia o pasywnych kartach przewodnich i blokadach.
+function leaderStartNotes() {
+    [players.player1, players.player2].forEach(p => {
+        const e = leaderEffect(p), by = leaderBlockedBy(p);
+        if (!p.commander) return;
+        if (by) { addLogEntry(`${p.name}: karta przewodnia ${p.commander.name} nie działa (blokuje ją ${by.name}).`); return; }
+        if (e && e.extraCard) addLogEntry(`${p.name} (${p.commander.name}): na starcie dobierasz 11 kart zamiast 10.`);
     });
 }
 
@@ -1104,6 +1289,11 @@ function endRound() {
     }
     if (winner === 'draw') { players.player1.crystalCount--; players.player2.crystalCount--; addLogEntry(`Remis!`); }
     else { players[otherKey(winner)].crystalCount--; addLogEntry(`${players[winner].name} wygrywa turę!`); }
+    // Tryb turniejowy (instrukcja, str. 6): remis w meczu = dodatkowa runda zamiast końca gry.
+    if (RULES.general && RULES.general.tournament && players.player1.crystalCount <= 0 && players.player2.crystalCount <= 0) {
+        players.player1.crystalCount = 1; players.player2.crystalCount = 1;
+        addLogEntry('Tryb turniejowy: remis w meczu – dodatkowa runda. Przetasujcie talie, każdy wykłada po 4 karty.');
+    }
 
     if (checkGameOver()) return;
 
@@ -1163,7 +1353,7 @@ function clearBoardsForNextRound(kept) {
         // Karty Rogu wojennego też idą na cmentarz (jako oryginalne karty specjalne).
         ['melee', 'ranged', 'siege'].forEach(rowType => {
             const hornCard = p.board.horns[rowType];
-            if (hornCard) {
+            if (hornCard && !hornCard.isLeaderHorn) {
                 const original = getCardDetailsById(hornCard.id);
                 sendToGraveyard(p, original ? { ...original, instanceId: hornCard.instanceId } : hornCard);
             }

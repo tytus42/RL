@@ -577,6 +577,8 @@ select:disabled { opacity: .5; }
     background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px;
 }
 .summary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.summary-hist-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.summary-text[hidden] { display: none; }
 
 /* =========================================================
    Ekran poziomy (komputer, tablet i telefon obrócony)
@@ -843,49 +845,60 @@ select:disabled { opacity: .5; }
 }
 .cf-art img { width: 100%; height: 100%; object-fit: cover; }
 .cf-initial { font: 46cqw/1 var(--head-font); color: #fff; opacity: .2; margin-left: 22cqw; }
-/* Ornament wokół kółka siły (jednostki; złoty u bohatera): metalowy narożnik + pierścień */
-.cf-orn {
-    position: absolute; left: 0; top: 0; width: 44cqw; height: 40cqw; z-index: 2; pointer-events: none;
+/* Złoty, rzeźbiony narożnik – tylko bohaterowie (jak na kartach): obejmuje kółko siły i biegnie wzdłuż górnej i lewej krawędzi */
+.cf-orn { display: none; }
+.cf-frame.is-hero .cf-orn {
+    display: block; position: absolute; left: 0; top: 0; width: 52cqw; height: 52cqw; z-index: 2; pointer-events: none;
     background:
-        linear-gradient(90deg, var(--metal-2), var(--metal-1) 55%, transparent) top left / 100% 1.8cqw no-repeat,
-        linear-gradient(180deg, var(--metal-2), var(--metal-1) 55%, transparent) top left / 1.8cqw 100% no-repeat;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .7));
+        repeating-radial-gradient(circle at 30% 35%, rgba(255, 240, 190, .35) 0 0.5cqw, rgba(90, 55, 10, .35) 0.5cqw 1.1cqw, transparent 1.1cqw 1.8cqw),
+        repeating-linear-gradient(45deg, rgba(255, 235, 170, .25) 0 0.6cqw, rgba(80, 50, 10, .3) 0.6cqw 1.3cqw),
+        linear-gradient(135deg, #f4d488, #c9962f 45%, #8a5f12);
+    -webkit-mask:
+        linear-gradient(90deg, #000 60%, transparent) top left / 100% 7.5cqw no-repeat,
+        linear-gradient(180deg, #000 60%, transparent) top left / 7.5cqw 100% no-repeat,
+        radial-gradient(circle at 17.5cqw 13cqw, #000 14cqw, transparent 14.2cqw) top left / 100% 100% no-repeat;
+    mask:
+        linear-gradient(90deg, #000 60%, transparent) top left / 100% 7.5cqw no-repeat,
+        linear-gradient(180deg, #000 60%, transparent) top left / 7.5cqw 100% no-repeat,
+        radial-gradient(circle at 17.5cqw 13cqw, #000 14cqw, transparent 14.2cqw) top left / 100% 100% no-repeat;
+    filter: drop-shadow(0 0.4cqw 0.6cqw rgba(0, 0, 0, .6));
 }
-.cf-orn::after {
-    content: ''; position: absolute; left: 4cqw; top: -0.5cqw; width: 27cqw; height: 27cqw; border-radius: 50%;
-    background:
-        radial-gradient(circle, transparent 0 58%, var(--metal-3) 59%, var(--metal-2) 66%, var(--metal-1) 76%, var(--metal-3) 82%, rgba(0, 0, 0, .55) 86%, transparent 89%);
+/* Zwykła karta: srebrny pierścień z dwoma małymi zdobieniami (u bohatera ukryte pod narożnikiem) */
+.cf-power { position: relative; }
+.cf-power::before, .cf-power::after {
+    content: ''; position: absolute; width: 4cqw; height: 4cqw; transform: translate(-50%, -50%) rotate(45deg);
+    background: linear-gradient(135deg, var(--metal-2), var(--metal-1) 55%, var(--metal-3));
+    border-radius: 0.6cqw; box-shadow: 0 0.3cqw 0.5cqw rgba(0, 0, 0, .5); z-index: -1;
 }
-/* Pasek – pionowa szarfa w kolorze talii (ciemniejsza, z jaśniejszymi brzegami) */
+.cf-power::before { left: 92%; top: 8%; }
+.cf-power::after { left: 8%; top: 92%; }
+/* Pasek – pionowa szarfa w kolorze talii: ciemny środek, jasne brzegi (jak na kartach) */
+.cf-frame {
+    --sash-dark: color-mix(in srgb, var(--cf-color) 52%, #000);
+    --sash-edge: color-mix(in srgb, var(--cf-color) 82%, #fff 18%);
+}
 .cf-sash {
-    --sash-dark: color-mix(in srgb, var(--cf-color) 58%, #000);
-    --sash-edge: color-mix(in srgb, var(--cf-color) 85%, #fff 15%);
-    position: absolute; left: 11cqw; width: 13cqw; top: 12cqw; height: calc(68% - 12cqw); z-index: 3;
-    background: linear-gradient(90deg, var(--sash-edge) 0 9%, var(--sash-dark) 9% 18%, color-mix(in srgb, var(--cf-color) 70%, #000) 50%, var(--sash-dark) 82% 91%, var(--sash-edge) 91%);
-    box-shadow: 1px 0 3px rgba(0, 0, 0, .55), -1px 0 3px rgba(0, 0, 0, .55);
+    /* kończy się tam, gdzie zaczyna się załamanie (koniec szarfy zachodzi na nią o 1cqw) */
+    position: absolute; left: 11cqw; width: 13cqw; top: 0; height: calc(68% - 4.2cqw); z-index: 3;
+    background: linear-gradient(90deg, var(--sash-edge) 0 10%, var(--sash-dark) 10% 90%, var(--sash-edge) 90%);
+    box-shadow: 1px 0 3px rgba(0, 0, 0, .5), -1px 0 3px rgba(0, 0, 0, .5);
 }
-/* Koniec szarfy: załamanie na listwie tablicy, herb i szpic */
+/* Koniec szarfy (SVG 152×340 = 15,2×34 cqw): uskok w lewo tuż przed listwą (kończy się na jej górnej krawędzi),
+   potem przez listwę i po tablicy z herbem do szpica */
 .cf-sash-end {
-    --sash-dark: color-mix(in srgb, var(--cf-color) 50%, #000);
-    --sash-edge: color-mix(in srgb, var(--cf-color) 80%, #fff 12%);
-    position: absolute; left: 10.2cqw; width: 14.6cqw; top: calc(68% - 1.5cqw); height: calc(16% + 12cqw); z-index: 4;
-    background: linear-gradient(90deg, var(--sash-edge) 0 8%, var(--sash-dark) 8% 92%, var(--sash-edge) 92%);
-    clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5));
+    position: absolute; left: 8.8cqw; width: 15.2cqw; height: 34cqw; top: calc(68% - 5.2cqw); z-index: 4;
+    filter: drop-shadow(0 0.6cqw 0.6cqw rgba(0, 0, 0, .45));
 }
-/* załamanie: cień zagięcia u góry końcówki */
-.cf-fold {
-    position: absolute; left: 0; right: 0; top: 0; height: 5cqw;
-    background: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .15) 60%, rgba(255, 255, 255, .12) 85%, transparent);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 45%);
-}
+.cf-sash-end svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.se-edge { fill: var(--sash-edge); }
+.se-body { fill: var(--sash-dark); }
+.se-crease { fill: rgba(0, 0, 0, .18); }
 .cf-emblem {
-    position: absolute; left: 50%; top: 40%; width: 10cqw; height: 10cqw; transform: translate(-50%, -50%);
+    position: absolute; left: 42.8%; top: 37%; width: 9cqw; height: 9cqw; transform: translate(-50%, -50%);
     display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; background: color-mix(in srgb, var(--cf-color) 35%, #000);
-    box-shadow: inset 0 0 0 0.6cqw var(--sash-edge);
+    border-radius: 50%; border: 0.55cqw solid #f3efe6; background: transparent;
 }
-.cf-emblem svg { width: 70%; height: 70%; fill: #f3efe6; }
+.cf-emblem svg { width: 66%; height: 66%; fill: #f3efe6; }
 .cf-emblem img { width: 85%; height: 85%; object-fit: contain; }
 /* Kółka: siła, szereg, umiejętności – wyśrodkowane na szarfie */
 .cf-circles {
@@ -935,11 +948,11 @@ select:disabled { opacity: .5; }
 .cf-name {
     font: 6.6cqw/1.1 var(--head-font); color: #2a2117; margin: 0; text-align: center;
     height: 2.2em; display: flex; align-items: flex-start; justify-content: center; flex: none;
-    padding-left: 16cqw;
+    padding-left: 19cqw;
 }
 .cf-frame.no-sash .cf-name { padding-left: 0; }
 .cf-frame.is-hero .cf-name { color: #6b4a10; }
-.cf-desc { margin: 0; padding-left: 16cqw; font-size: 4.8cqw; line-height: 1.3; text-align: center; color: #3b3126; }
+.cf-desc { margin: 0; padding-left: 19cqw; font-size: 4.8cqw; line-height: 1.3; text-align: center; color: #3b3126; }
 .cf-frame.no-sash .cf-desc { padding-left: 0; }
 .cf-desc.empty { display: none; }
 .cf-hint { margin: 0; text-align: center; font-size: .85em; color: var(--muted); }
@@ -1102,6 +1115,7 @@ select:disabled { opacity: .5; }
 
 /* Karty bez szarfy: neutralne jednostki oraz karty specjalne i pogody (kółka zostają w lewym górnym rogu) */
 .cf-frame.no-sash .cf-sash, .cf-frame.no-sash .cf-sash-end { display: none; }
+.cf-frame.is-hero .cf-sash { top: 20cqw; height: calc(68% - 24.2cqw); }
 .cf-frame.no-sash .cf-initial { margin-left: 0; }
 /* ornament przy sile tylko na jednostkach; karta specjalna ma samo kółko */
 .cf-frame.is-special .cf-orn { display: none; }
