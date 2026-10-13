@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ryżowy Książę – kalkulator</title>
-    <link rel="stylesheet" href="style.css?v=2026-10-12i">
+    <link rel="stylesheet" href="style.css?v=2026-10-13b">
 </head>
 <body>
     <!-- ============ KONFIGURACJA ============ -->
@@ -54,7 +54,7 @@
         </div>
         <button type="button" id="rules-btn" class="rules-btn">
             <span class="rules-btn-icon" aria-hidden="true">⚙</span>
-            <span>Zasady gry: <b id="rules-status">instrukcja</b></span>
+            <span>Ustawienia umiejętności: <b id="rules-status">instrukcja</b></span>
         </button>
         <p id="setup-hint" class="setup-hint">Wybierz frakcję i dowódcę dla obu graczy.</p>
         <button id="startGameButton" class="btn-primary btn-big">Rozpocznij grę</button>
@@ -253,27 +253,16 @@
         </div>
     </div>
 
-    <!-- Ustawienia zasad (ekran startowy) – wypełnia ui.js -->
+    <!-- Ustawienia umiejętności (ekran startowy) – wypełnia ui.js: lista talii → zdolności talii → edycja zdolności -->
     <div id="rules-dialog" class="modal" hidden>
         <div class="modal-backdrop" data-close-rules></div>
         <div class="modal-panel rules-panel" role="dialog" aria-modal="true" aria-labelledby="rules-title">
-            <h2 id="rules-title">Zasady gry</h2>
-            <div class="rules-presets">
-                <label for="rules-preset">Zestaw</label>
-                <div class="rules-preset-row">
-                    <select id="rules-preset"></select>
-                    <button type="button" id="rules-delete" class="btn-small" title="Usuń zapisany zestaw">Usuń</button>
-                </div>
-                <div class="rules-preset-row">
-                    <input type="text" id="rules-name" maxlength="40" autocomplete="off" placeholder="Nazwa nowego zestawu, np. Test Khorinis">
-                    <button type="button" id="rules-save" class="btn-small">Zapisz</button>
-                </div>
+            <div class="rules-head">
+                <button type="button" id="rules-back" class="btn-small rules-back" hidden>‹ Wróć</button>
+                <h2 id="rules-title">Ustawienia umiejętności</h2>
             </div>
-            <div id="rules-list" class="rules-list"></div>
-            <div class="ability-actions">
-                <button type="button" id="rules-reset">Przywróć instrukcję</button>
-                <button type="button" class="btn-primary" data-close-rules>Gotowe</button>
-            </div>
+            <div id="rules-body" class="rules-body"></div>
+            <div id="rules-foot" class="ability-actions"></div>
         </div>
     </div>
 
@@ -303,8 +292,9 @@
             <!-- Układ jak w instrukcji („Struktura karty”): ramka, siła, postać, szereg, umiejętności, pasek, nazwa, tablica, opis -->
             <div id="cf-frame" class="cf-frame">
                 <div id="cf-art" class="cf-art"></div>
-                <span class="cf-corner" aria-hidden="true"></span>
+                <span class="cf-orn" aria-hidden="true"></span>
                 <span class="cf-sash" aria-hidden="true"></span>
+                <span class="cf-sash-end" aria-hidden="true"><span class="cf-fold"></span><span id="cf-emblem" class="cf-emblem"></span></span>
                 <div class="cf-circles">
                     <span id="cf-power" class="cf-circle cf-power" title="Siła"></span>
                     <span id="cf-row" class="cf-circle cf-row" title="Szereg"></span>
@@ -328,8 +318,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="cards.js?v=2026-10-12i"></script>
-    <script src="script.js?v=2026-10-12i"></script>
-    <script src="ui.js?v=2026-10-12i"></script>
+    <script src="cards.js?v=2026-10-13b"></script>
+    <script src="script.js?v=2026-10-13b"></script>
+    <script src="ui.js?v=2026-10-13b"></script>
 </body>
 </html>

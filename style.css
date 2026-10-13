@@ -823,71 +823,124 @@ select:disabled { opacity: .5; }
     animation: sheet-up .18s ease-out;
 }
 .cf-frame {
+    /* proporcje prawdziwej karty: 63 × 88 mm; wymiary elementów w cqw (% szerokości karty) */
     --cf-color: #777;
-    --cf-iron: #6f6a62;
-    /* proporcje prawdziwej karty: 63 × 88 mm */
+    --metal-1: #8e939a; --metal-2: #e6e9ec; --metal-3: #6c7177;
     position: relative; width: min(100%, calc(64dvh * 63 / 88)); aspect-ratio: 63 / 88; margin: 0 auto;
-    border: 6px solid #0b0a08; border-radius: 10px; overflow: hidden;
-    background: #0b0a08;
+    container-type: inline-size;
+    border: 4.5cqw solid #0e0d0c; border-width: clamp(8px, 4.5cqw, 18px); border-radius: 14px; overflow: hidden;
+    background: #0e0d0c; box-shadow: 0 6px 22px rgba(0, 0, 0, .55);
 }
-.cf-frame.is-hero { border-color: #d9a441; --cf-iron: #d9a441; box-shadow: 0 0 18px rgba(243, 200, 103, .45); }
-/* Postać – górne ~70% karty */
+.cf-frame.is-hero {
+    border-color: #c9962f; --metal-1: #b07f22; --metal-2: #ffe08a; --metal-3: #8a5f12;
+    box-shadow: 0 0 0 1px #6b4a10, 0 0 20px rgba(243, 200, 103, .45);
+}
+/* Postać – górne ~68% karty */
 .cf-art {
-    position: absolute; inset: 0 0 30% 0;
+    position: absolute; inset: 0 0 32% 0; border-radius: 6px 6px 0 0; overflow: hidden;
     background: linear-gradient(160deg, color-mix(in srgb, var(--cf-color) 55%, #0b0a08), color-mix(in srgb, var(--cf-color) 18%, #0b0a08));
     display: flex; align-items: center; justify-content: center;
 }
 .cf-art img { width: 100%; height: 100%; object-fit: cover; }
-.cf-initial { font: 7em/1 var(--head-font); color: #fff; opacity: .22; margin-left: 18%; }
-/* Ramka – złoty trójkąt w lewym górnym rogu tylko u bohatera */
-.cf-corner { display: none; }
-.cf-frame.is-hero .cf-corner {
-    display: block; position: absolute; left: 0; top: 0; width: 26%; height: 18%; z-index: 1;
-    clip-path: polygon(0 0, 100% 0, 0 100%);
-    background: linear-gradient(135deg, #f3c867, #b98629);
+.cf-initial { font: 46cqw/1 var(--head-font); color: #fff; opacity: .2; margin-left: 22cqw; }
+/* Ornament wokół kółka siły (jednostki; złoty u bohatera): metalowy narożnik + pierścień */
+.cf-orn {
+    position: absolute; left: 0; top: 0; width: 44cqw; height: 40cqw; z-index: 2; pointer-events: none;
+    background:
+        linear-gradient(90deg, var(--metal-2), var(--metal-1) 55%, transparent) top left / 100% 1.8cqw no-repeat,
+        linear-gradient(180deg, var(--metal-2), var(--metal-1) 55%, transparent) top left / 1.8cqw 100% no-repeat;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .7));
 }
-/* Pasek – pionowa szarfa w kolorze talii, kończy się grotem na tablicy */
+.cf-orn::after {
+    content: ''; position: absolute; left: 4cqw; top: -0.5cqw; width: 27cqw; height: 27cqw; border-radius: 50%;
+    background:
+        radial-gradient(circle, transparent 0 58%, var(--metal-3) 59%, var(--metal-2) 66%, var(--metal-1) 76%, var(--metal-3) 82%, rgba(0, 0, 0, .55) 86%, transparent 89%);
+}
+/* Pasek – pionowa szarfa w kolorze talii (ciemniejsza, z jaśniejszymi brzegami) */
 .cf-sash {
-    position: absolute; left: 9%; width: 11%; top: 0; bottom: 9%; z-index: 2;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--cf-color) 70%, #000), var(--cf-color), color-mix(in srgb, var(--cf-color) 70%, #000));
-    clip-path: polygon(0 0, 100% 0, 100% 94%, 50% 100%, 0 94%);
-    box-shadow: 0 0 0 1px #000;
+    --sash-dark: color-mix(in srgb, var(--cf-color) 58%, #000);
+    --sash-edge: color-mix(in srgb, var(--cf-color) 85%, #fff 15%);
+    position: absolute; left: 11cqw; width: 13cqw; top: 12cqw; height: calc(68% - 12cqw); z-index: 3;
+    background: linear-gradient(90deg, var(--sash-edge) 0 9%, var(--sash-dark) 9% 18%, color-mix(in srgb, var(--cf-color) 70%, #000) 50%, var(--sash-dark) 82% 91%, var(--sash-edge) 91%);
+    box-shadow: 1px 0 3px rgba(0, 0, 0, .55), -1px 0 3px rgba(0, 0, 0, .55);
 }
-/* Kółka: siła, szereg, umiejętności – na pasku */
-.cf-circles {
-    position: absolute; left: 9%; width: 11%; top: 5%; z-index: 3;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+/* Koniec szarfy: załamanie na listwie tablicy, herb i szpic */
+.cf-sash-end {
+    --sash-dark: color-mix(in srgb, var(--cf-color) 50%, #000);
+    --sash-edge: color-mix(in srgb, var(--cf-color) 80%, #fff 12%);
+    position: absolute; left: 10.2cqw; width: 14.6cqw; top: calc(68% - 1.5cqw); height: calc(16% + 12cqw); z-index: 4;
+    background: linear-gradient(90deg, var(--sash-edge) 0 8%, var(--sash-dark) 8% 92%, var(--sash-edge) 92%);
+    clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5));
 }
-.cf-abilities { display: flex; flex-direction: column; gap: 6px; }
-.cf-circle {
-    width: 42px; height: 42px; border-radius: 50%;
+/* załamanie: cień zagięcia u góry końcówki */
+.cf-fold {
+    position: absolute; left: 0; right: 0; top: 0; height: 5cqw;
+    background: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .15) 60%, rgba(255, 255, 255, .12) 85%, transparent);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 45%);
+}
+.cf-emblem {
+    position: absolute; left: 50%; top: 40%; width: 10cqw; height: 10cqw; transform: translate(-50%, -50%);
     display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(circle at 35% 30%, #fff3c4, #e8c45a 60%, #a8801f);
-    border: 2px solid #3a2a08; color: #1d160c;
-    font: 1.1em/1 var(--head-font); box-shadow: 0 2px 6px rgba(0, 0, 0, .6);
+    border-radius: 50%; background: color-mix(in srgb, var(--cf-color) 35%, #000);
+    box-shadow: inset 0 0 0 0.6cqw var(--sash-edge);
 }
-.cf-circle img { width: 80%; height: 80%; object-fit: contain; }
-.cf-power { width: 48px; height: 48px; font-size: 1.6em; font-variant-numeric: tabular-nums; }
-.cf-power.up { background: radial-gradient(circle at 35% 30%, #d6ffd6, #6cc56c 60%, #2f7a2f); }
-.cf-power.down { background: radial-gradient(circle at 35% 30%, #ffd9d4, #ff6b5e 60%, #a3372b); }
-.cf-row.multi { font-size: .85em; letter-spacing: -1px; }
-/* Tablica – dolne ~30%, żelazna (złota u bohatera) ramka */
+.cf-emblem svg { width: 70%; height: 70%; fill: #f3efe6; }
+.cf-emblem img { width: 85%; height: 85%; object-fit: contain; }
+/* Kółka: siła, szereg, umiejętności – wyśrodkowane na szarfie */
+.cf-circles {
+    position: absolute; left: 11cqw; width: 13cqw; top: 2.5cqw; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; gap: 2cqw;
+}
+.cf-abilities { display: flex; flex-direction: column; align-items: center; gap: 2cqw; }
+.cf-circle {
+    flex: none; width: 18cqw; height: 18cqw; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 8cqw/1 var(--head-font); color: #fff;
+    border: 1.1cqw solid var(--metal-2);
+    box-shadow: 0 0 0 0.5cqw var(--metal-3), 0 1.2cqw 2cqw rgba(0, 0, 0, .6);
+    /* domyślnie: ciemne kółko umiejętności */
+    background: radial-gradient(circle at 40% 35%, #4a4a4a, #1a1a1a 65%, #0b0b0b);
+}
+.cf-circle img { width: 78%; height: 78%; object-fit: contain; }
+/* siła: kamienny/pergaminowy krążek z ciemną liczbą */
+.cf-power {
+    width: 21cqw; height: 21cqw; margin-bottom: 7cqw; font-size: 11cqw; color: #2a2117; font-variant-numeric: tabular-nums;
+    background: radial-gradient(circle at 40% 35%, #fbf6ea, #e3d8bf 60%, #b9aa87);
+}
+.cf-power.up { color: #10500f; background: radial-gradient(circle at 40% 35%, #f1ffe9, #b9e3a6 60%, #6fa75a); }
+.cf-power.down { color: #7a1208; background: radial-gradient(circle at 40% 35%, #fff0ec, #f2b5aa 60%, #c8705f); }
+/* szereg: niebieskie kółko */
+.cf-row { background: radial-gradient(circle at 40% 35%, #8fc2f2, #2f74c0 55%, #173f73); }
+.cf-row.dark { background: radial-gradient(circle at 40% 35%, #4a4a4a, #1a1a1a 65%, #0b0b0b); }
+.cf-row.multi { gap: 0.6cqw; font-size: 6cqw; }
+.cf-row.multi span { line-height: 1; }
+/* Tablica – pergamin z metalową listwą u góry (złotą u bohatera) */
 .cf-plate {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 30%; z-index: 1;
-    padding: 8px 10px 8px calc(9% + 11% + 10px);
-    background: linear-gradient(180deg, #2b2620, #1a1712);
-    border-top: 4px solid var(--cf-iron);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cf-iron) 45%, #000);
-    display: flex; flex-direction: column; justify-content: flex-start; gap: 4px; text-align: center;
-    padding-top: 5px;
+    position: absolute; left: 0; right: 0; bottom: 0; height: 32%; z-index: 1;
+    padding: 4.5cqw 6cqw 4cqw;
+    background:
+        radial-gradient(ellipse at 20% 30%, rgba(255, 255, 255, .35), transparent 55%),
+        radial-gradient(ellipse at 85% 80%, rgba(120, 100, 70, .18), transparent 60%),
+        linear-gradient(180deg, #ece6d6, #d9d0bb);
+    border-radius: 0 0 6px 6px;
+    display: flex; flex-direction: column; justify-content: flex-start; gap: 1.5cqw; text-align: center;
 }
-/* nazwa w stałym polu (1–2 linie), cytat zawsze zaczyna się w tym samym miejscu */
+.cf-plate::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1.2cqw; height: 2.6cqw;
+    background: linear-gradient(180deg, var(--metal-2), var(--metal-1) 45%, var(--metal-3) 80%, #2b2b2b);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+/* nazwa w stałym polu, cytat zawsze w tym samym miejscu – wyśrodkowane na szerokości karty */
 .cf-name {
-    font-size: 1.2em; color: var(--text); line-height: 1.1; margin: 0; text-align: center;
+    font: 6.6cqw/1.1 var(--head-font); color: #2a2117; margin: 0; text-align: center;
     height: 2.2em; display: flex; align-items: flex-start; justify-content: center; flex: none;
+    padding-left: 16cqw;
 }
-.cf-frame.is-hero .cf-name { color: var(--gold-hi); }
-.cf-desc { margin: 0; font-size: .78em; font-style: italic; line-height: 1.25; text-align: center; color: var(--muted); }
+.cf-frame.no-sash .cf-name { padding-left: 0; }
+.cf-frame.is-hero .cf-name { color: #6b4a10; }
+.cf-desc { margin: 0; padding-left: 16cqw; font-size: 4.8cqw; line-height: 1.3; text-align: center; color: #3b3126; }
+.cf-frame.no-sash .cf-desc { padding-left: 0; }
 .cf-desc.empty { display: none; }
 .cf-hint { margin: 0; text-align: center; font-size: .85em; color: var(--muted); }
 .cf-ability-desc { margin: 0; padding-left: 4px; list-style: none; font-size: .85em; color: var(--muted); display: grid; gap: 3px; }
@@ -903,9 +956,6 @@ select:disabled { opacity: .5; }
     .card-view-panel { width: min(660px, 94vw); grid-template-columns: 230px 1fr; align-items: start; }
     .cf-frame { width: min(100%, calc(86dvh * 63 / 88)); }
     .cf-hint { text-align: left; }
-    .cf-circle { width: 34px; height: 34px; font-size: .95em; }
-    .cf-power { width: 40px; height: 40px; font-size: 1.35em; }
-    .cf-circles { gap: 4px; }
 }
 
 /* =========================================================
@@ -948,12 +998,16 @@ select:disabled { opacity: .5; }
 .leader-card.is-used .cf-art { filter: grayscale(.85) brightness(.7); }
 .lc-plate {
     position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
-    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px 8px;
-    background: linear-gradient(180deg, #2b2620, #1a1712);
-    border-top: 4px solid var(--cf-color); text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 10px 8px;
+    background: radial-gradient(ellipse at 20% 30%, rgba(255, 255, 255, .35), transparent 55%), linear-gradient(180deg, #ece6d6, #d9d0bb);
+    text-align: center;
 }
-.lc-name { margin: 0; font-size: 1.1em; line-height: 1.1; color: var(--gold-hi); }
-.lc-caption { margin: 0; font-size: .74em; line-height: 1.3; color: var(--muted); overflow: hidden; }
+.lc-plate::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -4px; height: 8px;
+    background: linear-gradient(180deg, #e6e9ec, #8e939a 45%, #6c7177 80%, #2b2b2b);
+}
+.lc-name { margin: 0; font-size: 1.1em; line-height: 1.1; color: #2a2117; }
+.lc-caption { margin: 0; font-size: .74em; line-height: 1.3; color: #3b3126; overflow: hidden; }
 @media (orientation: landscape) and (max-height: 560px) {
     .ability-panel { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 16px; text-align: left; }
     .ability-panel h2 { text-align: left; }
@@ -999,3 +1053,57 @@ select:disabled { opacity: .5; }
 .switch:checked { background: color-mix(in srgb, var(--gold) 70%, #3a332a); border-color: var(--gold); }
 .switch:checked::after { transform: translateX(22px); background: #fff3c4; }
 .switch:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+/* --- Ustawienia umiejętności: lista talii → talia → edycja --- */
+.rules-panel { --rule-color: var(--gold); border-top: 4px solid var(--rule-color); }
+.rules-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
+.rules-head h2 { grid-column: 2; margin: 0; }
+.rules-back { grid-column: 1; grid-row: 1; min-width: 72px; }
+.rules-back[hidden] { display: none; }
+.rules-body { display: grid; gap: 12px; }
+.rules-sub { margin: 4px 0 0; font-size: 1em; color: var(--gold-hi); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.rules-intro { margin: 0; color: var(--muted); font-size: .85em; line-height: 1.35; }
+.rules-factions { display: grid; gap: 8px; }
+@media (min-width: 520px) { .rules-factions { grid-template-columns: 1fr 1fr; } }
+.rules-faction {
+    display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px;
+    padding: 8px 12px; text-align: left; min-height: 56px;
+    border: 1px solid var(--line); border-left: 6px solid var(--rule-color); border-radius: 10px; background: var(--panel-2);
+}
+.rules-faction.changed { border-color: var(--gold); border-left-color: var(--rule-color); background: color-mix(in srgb, var(--gold) 10%, var(--panel-2)); }
+.rf-name { font-size: 1.1em; color: var(--text); }
+.rf-meta { grid-row: 2; color: var(--muted); font-size: .78em; }
+.rf-go { grid-row: 1 / 3; grid-column: 2; font-size: 1.6em; color: var(--muted); }
+.rule-row.off .rule-text { opacity: .6; }
+.rule-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.rule-tag { font-size: .68em; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--muted); }
+.rule-tag.tag-var { border-color: var(--gold); color: var(--gold-hi); }
+.rule-tag.tag-own { border-color: var(--rule-color); color: var(--text); }
+.rule-params { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .74em; color: var(--muted); }
+.rule-params b { color: var(--gold-hi); font-weight: normal; }
+.rule-ctrl { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; }
+.rule-edit { min-width: 50px; min-height: 34px; padding: 0; font-size: 1.05em; }
+.rules-add { width: 100%; border-style: dashed; }
+.re-field { display: grid; gap: 4px; }
+.re-field > span { color: var(--muted); font-size: .85em; }
+.re-field > span b { color: var(--gold-hi); font-weight: normal; }
+.re-field textarea { resize: vertical; min-height: 90px; line-height: 1.35; }
+.re-bool { grid-template-columns: 1fr auto; align-items: center; }
+.re-params { display: grid; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.re-params input[type="range"] { width: 100%; accent-color: var(--gold); min-height: 32px; }
+.re-hint { margin: -4px 0 0; color: var(--muted); font-size: .76em; }
+.re-preview { padding: 8px 10px; border-left: 3px solid var(--rule-color); background: rgba(0, 0, 0, .25); border-radius: 6px; }
+.re-preview > span { color: var(--muted); font-size: .75em; }
+.re-preview p { margin: 2px 0 0; font-size: .9em; line-height: 1.35; }
+/* okno zdolności talii w grze: kilka zdolności */
+.ab-line { display: block; }
+.ab-line + .ab-line { margin-top: 6px; }
+.ab-line em { color: var(--gold-hi); font-style: normal; font-size: .85em; }
+
+/* Karty bez szarfy: neutralne jednostki oraz karty specjalne i pogody (kółka zostają w lewym górnym rogu) */
+.cf-frame.no-sash .cf-sash, .cf-frame.no-sash .cf-sash-end { display: none; }
+.cf-frame.no-sash .cf-initial { margin-left: 0; }
+/* ornament przy sile tylko na jednostkach; karta specjalna ma samo kółko */
+.cf-frame.is-special .cf-orn { display: none; }
+
+.cf-circle[hidden] { display: none; }

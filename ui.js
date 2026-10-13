@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-12i';
+    const UI_VERSION = '2026-10-13b';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -375,10 +375,10 @@
 
         // Przyciski zdolności talii i dowódcy
         const fb = $(`#faction-btn-${n}`), lbtn = $(`#leader-btn-${n}`);
-        const fInfo = FACTION_ABILITY[pl.faction];
+        const hasSkip = hasAbility(pl, 'klasztor_skip');
         fb.innerHTML = `<span class="ab-icon">⚑</span><span class="ab-name">${esc(pl.faction || '')}</span>`;
-        fb.classList.toggle('can-use', !!(fInfo && fInfo.use && canSkipTurn(pl)));
-        fb.classList.toggle('used', !!(fInfo && fInfo.use && pl.skipUsed));
+        fb.classList.toggle('can-use', hasSkip && canSkipTurn(pl));
+        fb.classList.toggle('used', hasSkip && skipsLeft(pl) === 0);
         const lInfo = leaderInfo(pl.commander);
         lbtn.innerHTML = `<span class="ab-icon">♛</span><span class="ab-name">${esc(pl.commander ? pl.commander.name : '')}</span>`;
         lbtn.classList.toggle('used', !!(pl.commander && pl.commander.isUsed));
@@ -769,18 +769,21 @@
         const use = $('#ability-use');
         let canUse = false, showUse = true, note = '';
         if (kind === 'faction') {
-            const info = FACTION_ABILITY[pl.faction] || { text: '' };
-            $('#ability-kind').textContent = `${pl.name} · zdolność talii`;
+            const list = factionAbilities(pl.faction, RULES).filter(a => a.on);
+            $('#ability-kind').textContent = `${pl.name} · ${list.length > 1 ? 'zdolności' : 'zdolność'} talii`;
             $('#ability-title').textContent = pl.faction;
-            $('#ability-desc').textContent = info.text;
-            showUse = !!info.use;
-            if (info.use) {
+            $('#ability-desc').innerHTML = list.length
+                ? list.map(a => `<span class="ab-line"><b>${esc(a.name)}</b> – ${esc(a.text)}${a.origin === 'propozycja' || a.custom ? ' <em>(wariant)</em>' : ''}</span>`).join('')
+                : '<span class="ab-line">Brak aktywnych zdolności (wyłączone w ustawieniach umiejętności).</span>';
+            const hows = list.map(a => ABILITY_HOW[a.id]).filter(Boolean);
+            showUse = hasAbility(pl, 'klasztor_skip');
+            if (showUse) {
                 canUse = canSkipTurn(pl);
-                note = pl.skipUsed ? `Zdolność została już użyta w tej ${RULES.klasztorSkipPerRound ? 'turze' : 'grze'}.` : canUse ? (RULES.klasztorSkipPerRound ? 'Raz na turę (ustawienia zasad): oddajesz ruch przeciwnikowi bez pasowania.' : info.how)
-                    : 'Teraz nie można jej użyć (nie twój ruch, przeciwnik spasował albo trwa inna akcja).';
-            } else note = info.how || '';
-            const extra = ruleNotesFor(pl.faction);
-            if (extra) note = [note, extra].filter(Boolean).join(' ');
+                const left = skipsLeft(pl), per = abP('klasztor_skip', 'per') === 'round' ? 'turze' : 'grze';
+                note = left === 0 ? `Przeczekanie zostało już wykorzystane w tej ${per}.`
+                    : canUse ? `Przeczekanie: zostało ${left} w tej ${per}. ` + hows.join(' ')
+                    : 'Teraz nie można przeczekać (nie twój ruch, przeciwnik spasował albo trwa inna akcja).';
+            } else note = hows.join(' ');
         } else {
             const c = pl.commander, info = leaderInfo(c);
             $('#ability-kind').textContent = `${pl.name} · karta przewodnia${info.passive ? ' (pasywna)' : ' (aktywowana, raz na grę)'}`;
@@ -788,7 +791,7 @@
             $('#ability-desc').textContent = info.text;
             showUse = !info.passive;
             canUse = showUse && !pl.domElements.activateLeaderButton.disabled;
-            note = c && c.id === 'Beliar_z_nami' ? (RULES.beliarHalvesWeather ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.' : 'Wyłączone w ustawieniach zasad.')
+            note = c && c.id === 'Beliar_z_nami' ? (abOn('orkowie_beliar') ? 'Działa przez całą rozgrywkę – kalkulator liczy to sam.' : 'Wyłączone w ustawieniach umiejętności.')
                 : info.passive ? 'Działa przez całą rozgrywkę – nie wymaga aktywacji.'
                 : c && c.isUsed ? 'Karta przewodnia została już użyta.'
                 : canUse ? 'Efekt wykonaj przy stole – kalkulator zaznaczy użycie.' : 'Teraz nie można jej użyć (nie twój ruch albo trwa inna akcja).';
@@ -901,7 +904,7 @@
         const out = [];
         out.push('Ryżowy Książę – podsumowanie gry');
         if (gameMeta.event) out.push(`Rozgrywka: ${gameMeta.event}`);
-        out.push(`Zasady: ${rulesSummary(RULES)}`);
+        out.push(`Umiejętności: ${rulesSummary(RULES)}`);
         out.push(`Data: ${stamp(new Date())}`);
         out.push('');
         out.push(`Gracz 1: ${line(a)}`);
@@ -983,7 +986,18 @@
         enabled: false,
         card: id => `grafiki/karty/${id}.webp`,          // ilustracja karty
         ability: key => `grafiki/umiejetnosci/${key}.png`, // ikona umiejętności
-        back: faction => `grafiki/rewersy/${faction}.webp`   // rewers talii (okno zdolności talii)
+        back: faction => `grafiki/rewersy/${faction}.webp`,  // rewers talii (okno zdolności talii)
+        emblem: faction => `grafiki/herby/${faction}.png`     // herb talii na końcu szarfy
+    };
+    // Przykładowe herby talii na końcu szarfy (zastępcze – do podmiany na grafiki z CARD_ART.emblem)
+    const EMBLEM_SVG = {
+        Khorinis: '<path d="M5 21V9l2-1V5h2v2h2V5h2v2h2V5h2v3l2 1v12h-5v-5a2 2 0 0 0-4 0v5z"/>',
+        Potwory: '<path d="M6 3c3 4 3 10-1 17 5-4 7-10 5-17zM11 3c3 4 3 10-1 17 5-4 7-10 5-17zM16 3c3 4 3 10-1 17 5-4 7-10 5-17z"/>',
+        Najemnicy: '<path d="M4 3l9 9-2 2L2 5zM20 3l-9 9 2 2 9-9zM6 15l3 3-3 3-3-3zM18 15l3 3-3 3-3-3zM9 13l2 2-3 3-2-2zM15 13l3 3-2 2-3-3z"/>',
+        Klasztor: '<path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3-1-3 0-6 1-9z"/>',
+        Orkowie: '<path d="M11 2h2v20h-2zM13 4c5 0 8 3 8 7s-3 7-8 7zM11 4C6 4 3 7 3 11s3 7 8 7z" fill-rule="evenodd"/>',
+        Bandyci: '<path d="M11 1h2l1 13h-4zM7 14h10v2H7zM11 16h2v4h-2zM10 20h4v3h-4z"/>',
+        Nieumarli: '<path d="M12 2a8 8 0 0 0-8 8c0 3 1 5 3 6v3h2v-2h2v2h2v-2h2v2h2v-3c2-1 3-3 3-6a8 8 0 0 0-8-8zM8.5 9a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm7 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" fill-rule="evenodd"/>'
     };
     const ABILITY_DESC = {
         tight_bond: 'Jedność – siła × liczba kart z tą samą Jednością w rzędzie.',
@@ -1004,7 +1018,7 @@
     };
     // Symbole umiejętności w kółkach (zastępcze, dopóki nie ma grafik)
     const ABILITY_ICON = {
-        tight_bond: '⛓', morale_boost: '⬆', muster: '⚑', medic: '✚', spy: '👁', agile: '⇄',
+        tight_bond: '⛓', morale_boost: '⬆', muster: '⚑', medic: '✚', spy: '👁', agile: '↕',
         scorch_row: '🔥', scorch: '🔥', scorch_strongest: '🔥', horn: '📯', decoy: '🪲',
         avenger: '♻', summon_next_round: '♻', 'Moc': 'ϟ', 'Wyzwolenie siły': '✦'
     };
@@ -1053,7 +1067,9 @@
         const c = info.card.isDecoy ? (getCardDetailsById(info.card.id) || info.card) : info.card;
         const isUnit = c.type === 'Unit';
         const frame = $('#cf-frame');
-        frame.className = 'cf-frame' + (c.isHero ? ' is-hero' : '') + (c.isToken ? ' is-token' : '');
+        // Szarfa tylko na jednostkach talii – neutralne jednostki i karty specjalne/pogody jej nie mają (jak na kartach)
+        const noSash = c.faction === 'Neutral' || !isUnit;
+        frame.className = 'cf-frame' + (c.isHero ? ' is-hero' : '') + (c.isToken ? ' is-token' : '') + (noSash ? ' no-sash' : '') + (isUnit ? '' : ' is-special');
         frame.style.setProperty('--cf-color', FACTION_COLORS[c.faction] || '#777');
         // siła (kółko 1)
         const fin = info.final, base = c.power;
@@ -1063,11 +1079,24 @@
         pw.className = 'cf-circle cf-power' + (isUnit && fin != null && fin > base ? ' up' : isUnit && fin != null && fin < base ? ' down' : '');
         pw.title = isUnit ? `Siła: ${fin ?? base} (bazowa ${base})` : '';
         // szereg (kółko 2)
-        const rows = isUnit ? (Array.isArray(c.row) ? c.row : [c.row]) : (c.type === 'Weather' && c.rowAffected ? c.rowAffected : []);
+        // Jednostka: kółko szeregu. Karta specjalna: jedno kółko z symbolem (pogoda – symbol runy, inne – umiejętność).
+        const rows = isUnit ? (Array.isArray(c.row) ? c.row : [c.row]) : [];
+        // Jednostka mogąca stać w kilku rzędach: obie ikonki w jednym kółku (jak na kartach).
         const rowEl = $('#cf-row');
-        rowEl.textContent = rows.length ? rows.map(r => ROW_ICON[r]).join('') : (c.type === 'Weather' ? (WEATHER_ICON[c.name] || '☁') : '★');
-        rowEl.title = rows.length ? rows.map(r => ROW_LABEL[r]).join(' / ') : (c.type === 'Weather' ? 'wszystkie rzędy' : 'karta specjalna');
+        const specialHasAbility = !isUnit && c.type !== 'Weather' && (c.abilities || []).length > 0;
+        rowEl.hidden = specialHasAbility;
+        rowEl.innerHTML = rows.length ? rows.map(r => `<span>${esc(ROW_ICON[r])}</span>`).join('') : esc(c.type === 'Weather' ? (WEATHER_ICON[c.name] || '☁') : '★');
+        rowEl.title = rows.length ? `Szereg: ${rows.map(r => ROW_LABEL[r]).join(' / ')}`
+            : c.type === 'Weather' ? `${c.name} – ${c.rowAffected && c.rowAffected.length ? c.rowAffected.map(r => ROW_LABEL[r]).join(' / ') : 'wszystkie rzędy'}` : 'karta specjalna';
         rowEl.classList.toggle('multi', rows.length > 1);
+        rowEl.classList.toggle('dark', !isUnit); // karta specjalna / pogoda: ciemne kółko z symbolem
+        // herb na końcu szarfy
+        const em = $('#cf-emblem');
+        em.innerHTML = EMBLEM_SVG[c.faction] ? `<svg viewBox="0 0 24 24" aria-hidden="true">${EMBLEM_SVG[c.faction]}</svg>` : '';
+        if (CARD_ART.enabled && !noSash) {
+            const img = new Image();
+            img.alt = ''; img.onload = () => { em.innerHTML = ''; em.appendChild(img); }; img.src = CARD_ART.emblem(c.faction);
+        }
         // postać
         const art = $('#cf-art');
         art.innerHTML = '';
@@ -1241,116 +1270,320 @@
     });
     $('#resume-discard').addEventListener('click', () => { clearSave(); $('#resume-box').hidden = true; });
 
-    // ---------- Ustawienia zasad (warianty do testów balansu) ----------
-    // Klucze i domyślne wartości są w script.js (RULE_DEFAULTS). Tu: opisy, przełączniki i zapisane zestawy.
-    const RULE_INFO = [
-        { group: 'Zasady z instrukcji', items: [
-            { key: 'beliarHalvesWeather', faction: 'Orkowie', label: 'Beliar z nami', desc: 'Dowódca Orków: zła pogoda dzieli siłę jego jednostek przez 2 (w dół) zamiast obniżać ją do 1.' },
-            { key: 'banditDrawIsLoss', faction: 'Bandyci', label: 'Bandyci: remis to przegrana', desc: 'Po remisie Bandyci też biorą kartę z cmentarza przeciwnika.' },
-            { key: 'klasztorSkipPerRound', faction: 'Klasztor', label: 'Klasztor: przeczekanie raz na turę', desc: 'Wyłączone: raz na grę (instrukcja). Włączone: raz w każdej turze.' }
-        ] },
-        { group: 'Warianty – testy balansu', items: [
-            { key: 'khorinisDrawWinsMatch', faction: 'Khorinis', label: 'Khorinis: wygrany remis = wygrany mecz', desc: 'Gdy Khorinis wygra turę dzięki remisowi, wygrywa całą grę. Gdy obaj gracze grają Khorinis, remis rozstrzyga się normalnie.' },
-            { key: 'undeadMusterFromGraveyard', faction: 'Nieumarli', label: 'Nieumarli: Wezwanie z cmentarza', desc: 'Gdy jednostka z Wezwaniem wraca z cmentarza (Leczenie), razem z nią wracają pozostałe jednostki jej grupy, które leżą na cmentarzu.' },
-            { key: 'klasztorAgileWeather', faction: 'Klasztor', label: 'Klasztor: Mobilność pod pogodą ×2', desc: 'Jednostki z Mobilnością pod złą pogodą mają podwójną siłę po efekcie pogody: 2 zamiast 1 (z Beliarem: połowa siły ×2).' }
-        ] }
-    ];
-    const RULE_BY_KEY = Object.fromEntries(RULE_INFO.flatMap(g => g.items).map(i => [i.key, i]));
+    // ---------- Ustawienia umiejętności talii (warianty do testów balansu) ----------
+    // Definicje i domyślne wartości: ABILITY_DEFS w script.js. Tu: okno z listą talii, stroną talii,
+    // edycją zdolności (nazwa, opis, parametry), własnymi zdolnościami (przypomnienia) i zapisanymi zestawami.
+    const FACTIONS = ['Khorinis', 'Potwory', 'Najemnicy', 'Klasztor', 'Orkowie', 'Bandyci', 'Nieumarli'];
+    const ABILITY_HOW = {
+        khorinis_draw: 'Działa automatycznie przy liczeniu tury.',
+        khorinis_draw_match: 'Działa automatycznie przy liczeniu tury.',
+        potwory_keep: 'Po każdej turze pojawi się okno wyboru (z przyciskiem „Losuj”).',
+        najemnicy_mulligan: 'Dzieje się przy stole – kalkulator przypomina w historii.',
+        orkowie_revive: 'Na starcie tej tury pojawi się okno wyboru (z przyciskiem „Losuj”).',
+        bandyci_steal: 'Po przegranej turze pojawi się okno wyboru z cmentarza przeciwnika.',
+        nieumarli_draw: 'Dzieje się przy stole – kalkulator przypomina w historii.'
+    };
     const PRESETS_KEY = 'rk-rule-presets', RULES_KEY = 'rk-rules';
-    const sameRules = (a, b) => Object.keys(RULE_DEFAULTS).every(k => !!a[k] === !!b[k]);
-    const changedRules = r => Object.keys(RULE_DEFAULTS).filter(k => !!r[k] !== !!RULE_DEFAULTS[k]);
-    function rulesSummary(r) {
-        const ch = changedRules(r);
-        if (!ch.length) return 'instrukcja';
-        return ch.map(k => `${RULE_BY_KEY[k] ? RULE_BY_KEY[k].label : k}: ${r[k] ? 'wł.' : 'wył.'}`).join('; ');
+    const emptyRules = () => ({ abilities: {}, custom: [] });
+    // Zostawia tylko zmiany względem domyślnych (porównywanie i zapis)
+    function normalizeRules(r) {
+        const out = emptyRules();
+        if (!r || typeof r !== 'object' || !r.abilities) return out;
+        ABILITY_DEFS.forEach(d => {
+            const o = r.abilities[d.id];
+            if (!o) return;
+            const n = {};
+            if ('on' in o && !!o.on !== d.on) n.on = !!o.on;
+            if (o.name && o.name.trim() && o.name.trim() !== d.name) n.name = o.name.trim();
+            if (o.desc && o.desc.trim() && o.desc.trim() !== d.desc) n.desc = o.desc.trim();
+            const ps = {};
+            Object.entries(d.params || {}).forEach(([k, p]) => { if (o.params && k in o.params && o.params[k] !== p.value) ps[k] = o.params[k]; });
+            if (Object.keys(ps).length) n.params = ps;
+            if (Object.keys(n).length) out.abilities[d.id] = n;
+        });
+        out.custom = (Array.isArray(r.custom) ? r.custom : []).filter(c => c && c.name && FACTIONS.includes(c.faction))
+            .map(c => ({ id: c.id, faction: c.faction, name: c.name, desc: c.desc || '', trigger: CUSTOM_TRIGGERS[c.trigger] ? c.trigger : 'none', on: c.on !== false }));
+        return out;
     }
-    // Dopisek w oknie zdolności talii, gdy wariant dotyczy tej talii
-    function ruleNotesFor(faction) {
-        const out = [];
-        if (faction === 'Khorinis' && RULES.khorinisDrawWinsMatch) out.push('Wariant: wygrany remis kończy cały mecz.');
-        if (faction === 'Nieumarli' && RULES.undeadMusterFromGraveyard) out.push('Wariant: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza resztę swojej grupy.');
-        if (faction === 'Klasztor' && RULES.klasztorAgileWeather) out.push('Wariant: jednostki z Mobilnością pod złą pogodą ×2.');
-        if (faction === 'Bandyci' && !RULES.banditDrawIsLoss) out.push('Ustawienie: remis nie liczy się jako przegrana.');
-        return out.join(' ');
+    const rulesKey = r => JSON.stringify(normalizeRules(r));
+    const sameRules = (a, b) => rulesKey(a) === rulesKey(b);
+    const fmtParam = (p, v) => p.options ? (p.options[v] || v) : p.type === 'bool' ? (v ? 'tak' : 'nie') : String(v);
+    // Zdolności talii (wbudowane + własne) z tekstem po wstawieniu parametrów
+    function factionAbilities(faction, rules) {
+        const built = ABILITY_DEFS.filter(d => d.faction === faction).map(d => {
+            const st = abilityInfo(d.id, rules);
+            return { ...st, text: fillAbilityText(st.desc, st) };
+        });
+        const custom = (rules.custom || []).filter(c => c.faction === faction).map(c => ({
+            ...c, on: c.on !== false, custom: true, origin: 'własna',
+            text: (c.desc || '') + (c.trigger && c.trigger !== 'none' ? ` (przypomnienie ${CUSTOM_TRIGGERS[c.trigger]})` : '')
+        }));
+        return [...built, ...custom];
     }
+    // Lista zmian względem instrukcji (do statusu, historii i podsumowania)
+    function changesOf(rules) {
+        const r = normalizeRules(rules), out = [];
+        ABILITY_DEFS.forEach(d => {
+            const o = r.abilities[d.id];
+            if (!o) return;
+            const st = abilityInfo(d.id, r), parts = [];
+            if ('on' in o) parts.push(o.on ? 'wł.' : 'wył.');
+            Object.entries(o.params || {}).forEach(([k, v]) => parts.push(`${d.params[k].label.toLowerCase()}: ${fmtParam(d.params[k], v)}`));
+            if (o.name) parts.push('zmieniona nazwa');
+            if (o.desc) parts.push('zmieniony opis');
+            out.push({ faction: d.faction, text: `${d.faction} – ${st.name}: ${parts.join(', ')}` });
+        });
+        r.custom.forEach(c => out.push({ faction: c.faction, text: `${c.faction} – ${c.name}: własna${c.on ? '' : ' (wył.)'}` }));
+        return out;
+    }
+    function rulesSummary(rules) {
+        const ch = changesOf(rules);
+        return ch.length ? ch.map(c => c.text).join('; ') : 'instrukcja';
+    }
+    const changeWord = n => `${n} ${n === 1 ? 'zmiana' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'zmiany' : 'zmian'}`;
     function readPresets() {
         try { const v = JSON.parse(store.get(PRESETS_KEY) || '[]'); return Array.isArray(v) ? v.filter(p => p && p.name && p.rules) : []; }
         catch (e) { return []; }
     }
     const writePresets = list => store.set(PRESETS_KEY, JSON.stringify(list));
-    let currentRules = (() => { try { return { ...RULE_DEFAULTS, ...JSON.parse(store.get(RULES_KEY) || '{}') }; } catch (e) { return { ...RULE_DEFAULTS }; } })();
-    const saveCurrentRules = () => store.set(RULES_KEY, JSON.stringify(currentRules));
+    let currentRules = (() => { try { return normalizeRules(JSON.parse(store.get(RULES_KEY) || 'null')); } catch (e) { return emptyRules(); } })();
+    function setCurrentRules(r) { currentRules = normalizeRules(r); store.set(RULES_KEY, JSON.stringify(currentRules)); }
     function presetNameFor(r) {
-        if (sameRules(r, RULE_DEFAULTS)) return 'instrukcja';
+        if (sameRules(r, emptyRules())) return 'instrukcja';
         const p = readPresets().find(x => sameRules(x.rules, r));
         return p ? p.name : null;
     }
     function refreshRulesButton() {
-        const name = presetNameFor(currentRules), n = changedRules(currentRules).length;
-        $('#rules-status').textContent = name || `własne (${n} ${n === 1 ? 'zmiana' : n < 5 ? 'zmiany' : 'zmian'})`;
+        const name = presetNameFor(currentRules), n = changesOf(currentRules).length;
+        $('#rules-status').textContent = name || `własne (${changeWord(n)})`;
         $('#rules-btn').classList.toggle('changed', n > 0);
     }
+
+    // --- Okno: widoki main → faction → edit ---
     const rulesDlg = $('#rules-dialog');
+    let rulesView = { name: 'main' };
+    let editDraft = null; // kopia edytowanej zdolności
+    const foot = buttons => { $('#rules-foot').innerHTML = buttons.map((b, i) => `<button type="button" data-foot="${i}" class="${b.cls || ''}">${esc(b.label)}</button>`).join(''); footActions = buttons.map(b => b.onClick); };
+    let footActions = [];
+    $('#rules-foot').addEventListener('click', e => { const b = e.target.closest('[data-foot]'); if (b && footActions[+b.dataset.foot]) footActions[+b.dataset.foot](); });
+    function openRules() { rulesView = { name: 'main' }; renderRules(); rulesDlg.hidden = false; }
+    function closeRules() { rulesDlg.hidden = true; editDraft = null; refreshRulesButton(); }
+    function goRules(v) { rulesView = v; renderRules(); $('#rules-body').scrollTop = 0; }
+
     function renderRules() {
-        const presets = readPresets();
-        const sel = $('#rules-preset');
-        const match = sameRules(currentRules, RULE_DEFAULTS) ? '__default' : (presets.find(p => sameRules(p.rules, currentRules)) || {}).name;
-        sel.innerHTML = `<option value="__default">Instrukcja (domyślne)</option>` +
-            presets.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('') +
-            (match ? '' : '<option value="__custom">— własne, niezapisane —</option>');
-        sel.value = match || '__custom';
-        $('#rules-delete').disabled = !match || match === '__default';
-        $('#rules-list').innerHTML = RULE_INFO.map(g => `
-            <section class="rules-group">
-                <h3>${esc(g.group)}</h3>
-                ${g.items.map(i => {
-                    const on = !!currentRules[i.key], changed = on !== !!RULE_DEFAULTS[i.key];
-                    return `<label class="rule-row${changed ? ' changed' : ''}" style="--rule-color:${FACTION_COLORS[i.faction] || '#777'}">
-                        <span class="rule-text"><b>${esc(i.label)}</b><small>${esc(i.desc)}</small></span>
-                        <input type="checkbox" class="switch" role="switch" data-rule="${i.key}"${on ? ' checked' : ''}>
-                    </label>`;
-                }).join('')}
-            </section>`).join('');
+        const v = rulesView;
+        $('#rules-back').hidden = v.name === 'main';
+        const panel = rulesDlg.querySelector('.rules-panel');
+        panel.style.setProperty('--rule-color', v.faction ? (FACTION_COLORS[v.faction] || '#777') : 'var(--gold)');
+        if (v.name === 'main') renderRulesMain();
+        else if (v.name === 'faction') renderRulesFaction(v.faction);
+        else renderRulesEdit();
         refreshRulesButton();
     }
-    $('#rules-btn').addEventListener('click', () => { renderRules(); rulesDlg.hidden = false; });
-    rulesDlg.addEventListener('click', e => { if (e.target.closest('[data-close-rules]')) rulesDlg.hidden = true; });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !rulesDlg.hidden) rulesDlg.hidden = true; });
-    $('#rules-list').addEventListener('change', e => {
-        const k = e.target.dataset.rule;
-        if (!k) return;
-        currentRules[k] = e.target.checked;
-        saveCurrentRules();
-        renderRules();
+    function renderRulesMain() {
+        $('#rules-title').textContent = 'Ustawienia umiejętności';
+        const presets = readPresets();
+        const match = sameRules(currentRules, emptyRules()) ? '__default' : (presets.find(p => sameRules(p.rules, currentRules)) || {}).name;
+        const changes = changesOf(currentRules);
+        $('#rules-body').innerHTML = `
+            <div class="rules-presets">
+                <label for="rules-preset">Zestaw ustawień</label>
+                <div class="rules-preset-row">
+                    <select id="rules-preset">
+                        <option value="__default">Instrukcja (domyślne)</option>
+                        ${presets.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}
+                        ${match ? '' : '<option value="__custom">— własne, niezapisane —</option>'}
+                    </select>
+                    <button type="button" id="rules-delete" class="btn-small"${!match || match === '__default' ? ' disabled' : ''}>Usuń</button>
+                </div>
+                <div class="rules-preset-row">
+                    <input type="text" id="rules-name" maxlength="40" autocomplete="off" placeholder="Nazwa nowego zestawu, np. Test Khorinis">
+                    <button type="button" id="rules-save" class="btn-small">Zapisz</button>
+                </div>
+            </div>
+            <h3 class="rules-sub">Talie</h3>
+            <div class="rules-factions">
+                ${FACTIONS.map(f => {
+                    const list = factionAbilities(f, currentRules), act = list.filter(a => a.on).length;
+                    const n = changes.filter(c => c.faction === f).length;
+                    return `<button type="button" class="rules-faction${n ? ' changed' : ''}" data-faction="${f}" style="--rule-color:${FACTION_COLORS[f]}">
+                        <span class="rf-name">${esc(f)}</span>
+                        <span class="rf-meta">${act} z ${list.length} ${list.length === 1 ? 'zdolności' : 'zdolności'} · ${n ? changeWord(n) : 'instrukcja'}</span>
+                        <span class="rf-go" aria-hidden="true">›</span>
+                    </button>`;
+                }).join('')}
+            </div>`;
+        $('#rules-preset').value = match || '__custom';
+        foot([
+            { label: 'Przywróć instrukcję', onClick: () => { setCurrentRules(emptyRules()); renderRules(); toast('Przywrócono zasady z instrukcji'); } },
+            { label: 'Gotowe', cls: 'btn-primary', onClick: closeRules }
+        ]);
+    }
+    function renderRulesFaction(f) {
+        $('#rules-title').textContent = f;
+        const list = factionAbilities(f, currentRules);
+        $('#rules-body').innerHTML = `
+            <p class="rules-intro">Włącz zdolności, którymi gra ta talia. Zdolności z instrukcji są domyślnie włączone, propozycje – wyłączone. ✎ zmienia nazwę, opis i parametry.</p>
+            <div class="rules-list">
+                ${list.map(a => {
+                    const d = ABILITY_BY_ID[a.id];
+                    const changed = a.custom || (currentRules.abilities[a.id] && Object.keys(currentRules.abilities[a.id]).length);
+                    const params = d && d.params ? Object.entries(d.params).map(([k, p]) => `<span class="rp">${esc(p.label)}: <b>${esc(fmtParam(p, a.params[k]))}</b></span>`).join('') : '';
+                    return `<div class="rule-row${changed ? ' changed' : ''}${a.on ? '' : ' off'}">
+                        <label class="rule-text">
+                            <span class="rule-name"><b>${esc(a.name)}</b><span class="rule-tag tag-${a.custom ? 'own' : a.origin === 'propozycja' ? 'var' : 'orig'}">${esc(a.origin)}</span></span>
+                            <small>${esc(a.text)}</small>
+                            ${params ? `<span class="rule-params">${params}</span>` : ''}
+                        </label>
+                        <div class="rule-ctrl">
+                            <input type="checkbox" class="switch" role="switch" aria-label="${esc(a.name)}" data-ab="${esc(a.id)}"${a.on ? ' checked' : ''}>
+                            <button type="button" class="btn-small rule-edit" data-edit="${esc(a.id)}" title="Edytuj zdolność" aria-label="Edytuj: ${esc(a.name)}">✎</button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+            <button type="button" class="rules-add" id="rules-add">+ Dodaj własną zdolność</button>`;
+        foot([
+            { label: 'Przywróć instrukcję talii', onClick: () => {
+                const r = normalizeRules(currentRules);
+                ABILITY_DEFS.filter(d => d.faction === f).forEach(d => delete r.abilities[d.id]);
+                r.custom = r.custom.filter(c => c.faction !== f);
+                setCurrentRules(r); renderRules();
+            } },
+            { label: 'Gotowe', cls: 'btn-primary', onClick: closeRules }
+        ]);
+    }
+    function setAbilityOn(id, on) {
+        const r = normalizeRules(currentRules);
+        const c = r.custom.find(x => x.id === id);
+        if (c) c.on = on;
+        else {
+            const d = ABILITY_BY_ID[id];
+            r.abilities[id] = { ...(r.abilities[id] || {}), on };
+            // zdolności z tej samej grupy wykluczają się (np. Khorinis: remis = tura albo remis = mecz)
+            if (on && d.group) ABILITY_DEFS.filter(x => x.group === d.group && x.id !== id).forEach(x => { r.abilities[x.id] = { ...(r.abilities[x.id] || {}), on: false }; });
+        }
+        setCurrentRules(r);
+    }
+    function startEdit(id, faction) {
+        if (!id) { editDraft = { custom: true, isNew: true, id: 'own_' + Date.now().toString(36), faction, name: '', desc: '', trigger: 'none', on: true }; }
+        else {
+            const c = currentRules.custom.find(x => x.id === id);
+            if (c) editDraft = { ...c, custom: true };
+            else { const st = abilityInfo(id, currentRules); editDraft = { id, faction: st.faction, name: st.name, desc: st.desc, params: { ...st.params }, on: st.on }; }
+        }
+        goRules({ name: 'edit', faction: editDraft.faction });
+    }
+    function renderRulesEdit() {
+        const e = editDraft, d = e.custom ? null : ABILITY_BY_ID[e.id];
+        $('#rules-title').textContent = e.isNew ? 'Nowa zdolność' : 'Edycja zdolności';
+        const paramHtml = d && d.params ? Object.entries(d.params).map(([k, p]) => {
+            const v = e.params[k];
+            if (p.options) return `<label class="re-field"><span>${esc(p.label)}</span><select data-param="${k}">${Object.entries(p.options).map(([ov, ol]) => `<option value="${ov}"${ov === v ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select></label>`;
+            if (p.type === 'bool') return `<label class="re-field re-bool"><span>${esc(p.label)}</span><input type="checkbox" class="switch" role="switch" data-param="${k}"${v ? ' checked' : ''}></label>`;
+            return `<label class="re-field"><span>${esc(p.label)}: <b class="re-val" data-val="${k}">${v}</b> <small>(instrukcja: ${p.value})</small></span>
+                <input type="range" min="${p.min}" max="${p.max}" step="1" value="${v}" data-param="${k}"></label>`;
+        }).join('') : '';
+        $('#rules-body').innerHTML = `
+            <p class="rules-intro">${esc(e.faction)}${d ? ` · ${esc(d.origin)}` : ' · własna zdolność'}</p>
+            <label class="re-field"><span>Nazwa</span><input type="text" id="re-name" maxlength="50" value="${esc(e.name)}" placeholder="Nazwa zdolności"></label>
+            <label class="re-field"><span>Opis</span><textarea id="re-desc" rows="4" maxlength="400" placeholder="Co robi zdolność">${esc(e.desc)}</textarea></label>
+            ${d && d.params ? `<p class="re-hint">W opisie wstawiane są wartości: ${Object.entries(d.params).map(([k, p]) => `{${k}} – ${esc(p.label.toLowerCase())}`).join(', ')}. Zapis {${Object.keys(d.params)[0]}|kartę|karty|kart} dodaje liczbę z odmianą słowa.</p>` : ''}
+            ${paramHtml ? `<div class="re-params">${paramHtml}</div>` : ''}
+            ${e.custom ? `<label class="re-field"><span>Przypomnienie w historii</span><select id="re-trigger">${Object.entries(CUSTOM_TRIGGERS).map(([k, l]) => `<option value="${k}"${k === e.trigger ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+                <p class="re-hint">Kalkulator nie zna działania własnej zdolności – pokaże ją w oknie talii i przypomni o niej w historii.</p>` : ''}
+            <div class="re-preview"><span>Podgląd</span><p id="re-preview"></p></div>`;
+        updateEditPreview();
+        const actions = [];
+        if (e.custom && !e.isNew) actions.push({ label: 'Usuń zdolność', onClick: () => {
+            const r = normalizeRules(currentRules); r.custom = r.custom.filter(c => c.id !== e.id);
+            setCurrentRules(r); editDraft = null; goRules({ name: 'faction', faction: e.faction }); toast('Usunięto zdolność');
+        } });
+        if (!e.custom) actions.push({ label: 'Przywróć domyślne', onClick: () => {
+            editDraft = { ...e, name: d.name, desc: d.desc, params: Object.fromEntries(Object.entries(d.params || {}).map(([k, p]) => [k, p.value])) };
+            renderRules();
+        } });
+        actions.push({ label: 'Zapisz', cls: 'btn-primary', onClick: saveEdit });
+        foot(actions);
+    }
+    function readEditForm() {
+        const e = editDraft;
+        e.name = $('#re-name').value; e.desc = $('#re-desc').value;
+        if ($('#re-trigger')) e.trigger = $('#re-trigger').value;
+        $('#rules-body').querySelectorAll('[data-param]').forEach(el => {
+            const k = el.dataset.param, p = ABILITY_BY_ID[e.id].params[k];
+            e.params[k] = p.options ? el.value : p.type === 'bool' ? el.checked : +el.value;
+            const out = $(`[data-val="${k}"]`); if (out) out.textContent = e.params[k];
+        });
+    }
+    function updateEditPreview() {
+        const e = editDraft;
+        const st = { id: e.id, params: e.params || {} };
+        const text = e.custom ? (e.desc || '') + (e.trigger !== 'none' ? ` (przypomnienie ${CUSTOM_TRIGGERS[e.trigger]})` : '') : fillAbilityText(e.desc, st);
+        $('#re-preview').innerHTML = `<b>${esc(e.name || '…')}</b> – ${esc(text || '…')}`;
+    }
+    function saveEdit() {
+        readEditForm();
+        const e = editDraft;
+        if (!e.name.trim()) { $('#re-name').focus(); toast('Wpisz nazwę zdolności', true); return; }
+        const r = normalizeRules(currentRules);
+        if (e.custom) {
+            const item = { id: e.id, faction: e.faction, name: e.name.trim(), desc: e.desc.trim(), trigger: e.trigger, on: e.on !== false };
+            const i = r.custom.findIndex(c => c.id === e.id);
+            if (i >= 0) r.custom[i] = item; else r.custom.push(item);
+        } else {
+            r.abilities[e.id] = { ...(r.abilities[e.id] || {}), name: e.name.trim(), desc: e.desc.trim(), params: { ...e.params } };
+        }
+        setCurrentRules(r);
+        editDraft = null;
+        goRules({ name: 'faction', faction: e.faction });
+        toast('Zapisano zdolność');
+    }
+
+    $('#rules-btn').addEventListener('click', openRules);
+    $('#rules-back').addEventListener('click', () => {
+        if (rulesView.name === 'edit') { const f = editDraft && editDraft.faction; editDraft = null; goRules({ name: 'faction', faction: f }); }
+        else goRules({ name: 'main' });
     });
-    $('#rules-preset').addEventListener('change', e => {
-        const v = e.target.value;
-        if (v === '__custom') return;
-        const p = v === '__default' ? { rules: RULE_DEFAULTS } : readPresets().find(x => x.name === v);
-        if (!p) return;
-        currentRules = { ...RULE_DEFAULTS, ...p.rules };
-        saveCurrentRules();
-        renderRules();
+    rulesDlg.addEventListener('click', e => { if (e.target.closest('[data-close-rules]')) closeRules(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !rulesDlg.hidden) closeRules(); });
+    $('#rules-body').addEventListener('click', e => {
+        const fb = e.target.closest('[data-faction]');
+        if (fb) return goRules({ name: 'faction', faction: fb.dataset.faction });
+        const ed = e.target.closest('[data-edit]');
+        if (ed) return startEdit(ed.dataset.edit);
+        if (e.target.closest('#rules-add')) return startEdit(null, rulesView.faction);
+        if (e.target.closest('#rules-save')) {
+            const inp = $('#rules-name'), name = inp.value.trim();
+            if (!name) { inp.focus(); toast('Wpisz nazwę zestawu', true); return; }
+            if (/^instrukcja/i.test(name)) { toast('Ta nazwa jest zajęta', true); return; }
+            const list = readPresets().filter(p => p.name !== name);
+            list.push({ name, rules: normalizeRules(currentRules) });
+            writePresets(list);
+            renderRules();
+            toast(`Zapisano zestaw „${name}”`);
+            return;
+        }
+        if (e.target.closest('#rules-delete')) {
+            const v = $('#rules-preset').value;
+            if (!v || v.startsWith('__')) return;
+            writePresets(readPresets().filter(p => p.name !== v));
+            renderRules();
+            toast(`Usunięto zestaw „${v}”`);
+        }
     });
-    $('#rules-save').addEventListener('click', () => {
-        const inp = $('#rules-name'), name = inp.value.trim();
-        if (!name) { inp.focus(); toast('Wpisz nazwę zestawu', true); return; }
-        if (name === 'instrukcja' || name === 'Instrukcja (domyślne)') { toast('Ta nazwa jest zajęta', true); return; }
-        const list = readPresets().filter(p => p.name !== name);
-        list.push({ name, rules: { ...currentRules } });
-        writePresets(list);
-        inp.value = '';
-        renderRules();
-        toast(`Zapisano zestaw „${name}”`);
+    $('#rules-body').addEventListener('change', e => {
+        if (e.target.id === 'rules-preset') {
+            const v = e.target.value;
+            if (v === '__custom') return;
+            const p = v === '__default' ? { rules: emptyRules() } : readPresets().find(x => x.name === v);
+            if (p) { setCurrentRules(p.rules); renderRules(); }
+            return;
+        }
+        if (e.target.dataset.ab) { setAbilityOn(e.target.dataset.ab, e.target.checked); renderRules(); return; }
+        if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); }
     });
-    $('#rules-delete').addEventListener('click', () => {
-        const v = $('#rules-preset').value;
-        if (!v || v.startsWith('__')) return;
-        writePresets(readPresets().filter(p => p.name !== v));
-        renderRules();
-        toast(`Usunięto zestaw „${v}”`);
-    });
-    $('#rules-reset').addEventListener('click', () => { currentRules = { ...RULE_DEFAULTS }; saveCurrentRules(); renderRules(); });
+    $('#rules-body').addEventListener('input', () => { if (rulesView.name === 'edit') { readEditForm(); updateEditPreview(); } });
     refreshRulesButton();
 
     // ---------- Ekran konfiguracji ----------
@@ -1387,8 +1620,7 @@
         gameMeta.event = eventInput.value.trim();
         store.set('rk-event', gameMeta.event);
         setRules(currentRules);
-        const changed = changedRules(RULES);
-        if (changed.length) setTimeout(() => addLogEntry(`Zasady: ${rulesSummary(RULES)}.`), 0);
+        if (changesOf(RULES).length) setTimeout(() => addLogEntry(`Umiejętności (zmiany względem instrukcji): ${rulesSummary(RULES)}.`), 0);
         gameRunning = true;
         clearSave();
         requestWakeLock();

@@ -1,4 +1,4 @@
-# Ryżowy Książę – kalkulator gry (stan na 2026-10-12, wersja 2026-10-12i)
+# Ryżowy Książę – kalkulator gry (stan na 2026-10-13, wersja 2026-10-13b)
 
 Przeglądarkowy kalkulator punktów do gry fizycznymi kartami, dla dwóch graczy na jednym ekranie. Gracze wybierają karty z arkusza wyboru (brak talii i ręki).
 Pliki: `cards.js` (375 kart wg Karty_RL.xlsx), `script.js` (logika), `ui.js` (warstwa interfejsu pod telefon), `index.html`, `style.css`.
@@ -27,17 +27,32 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
 
-## Zasady gry – ustawienia ogólne (wersja 2026-10-12i)
-Na ekranie startowym przycisk **⚙ Zasady gry: …** otwiera okno z przełącznikami. Domyślnie = instrukcja. Ustawienia są zapamiętywane (`rk-rules`), można je zapisać jako nazwane zestawy (`rk-rule-presets`) i wczytać z listy „Zestaw”. Status na przycisku: „instrukcja”, nazwa zestawu albo „własne (N zmian)”.
-Zasady obowiązują od startu partii do jej końca: są zapisane w zapisie partii (wznowienie ich nie zmienia), wypisane w historii na starcie (jeśli różne od instrukcji) i w podsumowaniu .txt („Zasady: …”). Okno zdolności talii dopisuje aktywny wariant.
-Klucze (`RULE_DEFAULTS` w `script.js`):
-- `beliarHalvesWeather` (wł.) – Beliar z nami, dowódca Orków: zła pogoda dzieli siłę jego jednostek przez 2 (w dół) zamiast do 1. **Wcześniej kalkulator tego nie liczył.**
-- `banditDrawIsLoss` (wł.) – Bandyci: remis = przegrana tura (zdolność talii działa po remisie).
-- `klasztorSkipPerRound` (wył.) – Klasztor: przeczekanie raz na turę zamiast raz na grę.
-- `khorinisDrawWinsMatch` (wył., wariant) – Khorinis wygrywający turę dzięki remisowi wygrywa cały mecz; Khorinis vs Khorinis – zwykły remis.
-- `undeadMusterFromGraveyard` (wył., wariant) – Nieumarli: jednostka z Wezwaniem wskrzeszona z cmentarza (Leczenie) zabiera z cmentarza pozostałe jednostki swojej grupy (te same zasady grup co Wezwanie; bez uruchamiania ich umiejętności; mobilne do rzędu wskrzeszonej karty).
-- `klasztorAgileWeather` (wył., wariant) – Klasztor: jednostki z Mobilnością pod złą pogodą ×2 po efekcie pogody (2 zamiast 1; z Beliarem: połowa ×2). Kolejność liczenia: bazowa → pogoda (1 lub ½ z Beliarem) → Mobilność ×2 → Jedność → Wzmocnienie → Róg.
-Nowa zasada = klucz w `RULE_DEFAULTS` + opis w `RULE_INFO` (`ui.js`) + warunek `RULES.<klucz>` w logice.
+## Kółko szeregu (wersja 2026-10-13b)
+Jak na kartach: jednostka, która może stać w kilku rzędach, ma jedno niebieskie kółko szeregu z obiema ikonkami (wariant z osobnymi kółkami z wersji 13a został wycofany). Rozmiary kółek jak w 12l (siła 21cqw, pozostałe 18cqw). Symbol Mobilności: ↕ (jak na kartach). Herb na końcu szarfy jest okrągły.
+
+## Wygląd karty wg prawdziwych kart (wersja 2026-10-12l)
+Wzorowane na zdjęciu kart: gruba czarna ramka (złota u bohatera), metalowy narożnik i pierścień wokół kółka siły (złote u bohatera; karty specjalne bez ornamentu), siła na jasnym, kamiennym krążku z ciemną liczbą (zielony/czerwony, gdy zmieniona), szereg – niebieskie kółko, umiejętności – ciemne kółka z metalowym pierścieniem. Szarfa: ciemny kolor talii z jaśniejszymi brzegami, schodzi na tablicę z „załamaniem” (cień zagięcia), kończy się herbem talii i szpicem. Herby zastępcze to proste znaczki SVG (`EMBLEM_SVG` w `ui.js`); grafiki: `grafiki/herby/<talia>.png` (`CARD_ART.emblem`). Tablica: pergamin z metalową listwą u góry, ciemna nazwa i cytat. Wymiary elementów w jednostkach `cqw` (procent szerokości karty) – karta skaluje się w całości. Karta przewodnia w oknie dowódcy ma tę samą pergaminową tablicę.
+
+## Wygląd kart bez szarfy (wersja 2026-10-12k)
+Jak na prawdziwych kartach: szarfę w kolorze talii mają tylko jednostki talii. Neutralne jednostki i karty specjalne/pogody (Chrząszcz, Róg wojenny, Deszcz ognia, runy) nie mają szarfy – kółka zostają w lewym górnym rogu, tablica z nazwą na całą szerokość. Karta specjalna ma jedno kółko z symbolem (pogoda – symbol runy, inne – umiejętność). Klasa `.no-sash` na `#cf-frame`.
+
+## Ustawienia umiejętności (wersja 2026-10-12j)
+Na ekranie startowym przycisk **⚙ Ustawienia umiejętności: …** (status: „instrukcja”, nazwa zestawu albo „własne (N zmian)”). Okno ma trzy poziomy:
+1. **Lista talii** + zestawy ustawień (wybór z listy, „Zapisz” pod nową nazwą, „Usuń”, „Przywróć instrukcję”). Przy każdej talii: ile zdolności jest aktywnych i ile zmian.
+2. **Strona talii**: wszystkie zdolności tej talii – z instrukcji (domyślnie wł.), propozycje (domyślnie wył.) i własne – każda z przełącznikiem i przyciskiem ✎. „+ Dodaj własną zdolność”, „Przywróć instrukcję talii”. Zdolności z tej samej grupy wykluczają się (Khorinis: remis = tura / remis = mecz).
+3. **Edycja zdolności**: nazwa, opis, parametry (suwaki / lista / przełącznik), podgląd. W opisie `{klucz}` wstawia wartość, `{klucz|kartę|karty|kart}` liczbę z odmianą. Własne zdolności: kalkulator nie zna ich działania – pokazuje je w oknie talii i przypomina w historii (start gry / start każdej tury / po wygranej / po przegranej / po remisie / bez przypomnienia).
+
+Definicje: `ABILITY_DEFS` w `script.js` (id, talia, pochodzenie, domyślnie wł./wył., nazwa, opis, parametry). Stan: `RULES = { abilities: { id: { on, params, name, desc } }, custom: [...] }` – zapisywane są tylko zmiany względem instrukcji (`rk-rules`, zestawy w `rk-rule-presets`). Pomocnicze: `abilityInfo(id)`, `abOn(id)`, `abP(id, klucz)`, `hasAbility(gracz, id)`, `fillAbilityText`.
+Zdolności i parametry:
+- Khorinis: `khorinis_draw` (instr.) remis = wygrana tury; `khorinis_draw_match` (propozycja) remis = wygrana meczu (Khorinis vs Khorinis – zwykły remis).
+- Potwory: `potwory_keep` – ile kart zostaje (1–3, instr. 1).
+- Najemnicy: `najemnicy_mulligan` – o ile kart więcej przy wymianie (1–3, instr. 1; przypomnienie).
+- Klasztor: `klasztor_skip` – ile razy (1–3) na grę / turę (instr. 1 na grę); `klasztor_agile_weather` (propozycja) – Mobilność pod pogodą × mnożnik (2–4) po efekcie pogody.
+- Orkowie: `orkowie_revive` – ile kart (1–4, instr. 2) i w której turze (2–3, instr. 3); `orkowie_beliar` – dowódca Beliar z nami: pogoda dzieli siłę przez 2 (instr.; wcześniej kalkulator tego nie liczył).
+- Bandyci: `bandyci_steal` – ile kart (1–3, instr. 1), czy remis = przegrana (instr. tak).
+- Nieumarli: `nieumarli_draw` – ile kart po wygranej (1–3, instr. 1; przypomnienie); `nieumarli_muster_grave` (propozycja) – wskrzeszona jednostka z Wezwaniem zabiera z cmentarza resztę swojej grupy.
+Ustawienia są stałe przez całą partię: zapisywane w zapisie partii, wypisane w historii na starcie (gdy różne od instrukcji) i w podsumowaniu .txt („Umiejętności: …”). Okno zdolności talii w grze pokazuje tylko włączone zdolności (z nazwami i opisami z ustawień).
+Nowa zaprogramowana zdolność = wpis w `ABILITY_DEFS` + warunek `hasAbility(...)` w logice (+ ewentualnie `ABILITY_HOW` w `ui.js`).
 
 ## Zmiany 2026-10-12 (wersja 2026-10-12h)
 - **Nazwa rozgrywki:** podtytuł na ekranie startowym to pole tekstowe (`#event-input`, zapamiętywane w `rk-event`), np. „Turniej 2026 – ćwierćfinał”. Trafia do podsumowania („Rozgrywka: …”), do okienka wznowienia i do nazwy pliku. Razem z informacją, czy imiona zostały wpisane, jest zapisywana w zapisie partii (`meta`).
@@ -85,7 +100,7 @@ Khorinis #E69138, Potwory #6AA84F, Najemnicy #4285F4, Klasztor #EA4335, Orkowie 
 - Kolory rzędów (wręcz/dystans/oblężnicze) bez zmian.
 
 ## Wersje plików (ważne przy publikacji)
-- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-12i` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
+- `index.html` ładuje pliki z dopiskiem wersji (`script.js?v=2026-10-13b` itd.), a `script.js` (`APP_VERSION`) i `ui.js` (`UI_VERSION`) mają ten sam numer. Przy każdej zmianie trzeba podbić numer we wszystkich trzech miejscach.
 - Powód: 2026-10-11 po wgraniu nowych plików nie dało się zagrać żadnej karty – przeglądarka/GitHub Pages podawała stary `script.js` z pamięci, a nowy `ui.js` się na nim wywracał (nie powstawał przycisk wyboru karty). Teraz przy niezgodnych wersjach pokazuje się czerwony komunikat „Wczytały się pliki z różnych wersji” z przyciskiem „Odśwież”.
 - Wgrywać zawsze komplet: `index.html`, `cards.js`, `script.js`, `ui.js`, `style.css`.
 

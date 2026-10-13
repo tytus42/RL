@@ -1,28 +1,94 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-12i';
+const APP_VERSION = '2026-10-13b';
 
-// ===== Zasady (ustawienia ogólne) =====
-// Domyślnie = instrukcja. ui.js pozwala je przełączać na ekranie startowym i zapisywać jako zestawy.
-// W trakcie gry zasady się nie zmieniają; zapis partii przechowuje zasady, z którymi ją zaczęto.
-const RULE_DEFAULTS = {
-    // z instrukcji
-    beliarHalvesWeather: true,        // Beliar z nami (Orkowie): pogoda dzieli siłę ich jednostek przez 2 zamiast do 1
-    banditDrawIsLoss: true,           // Bandyci: remis liczy się jako przegrana tura (zdolność talii działa)
-    klasztorSkipPerRound: false,      // Klasztor: przeczekanie raz na turę zamiast raz na grę
-    // warianty (testy balansu)
-    khorinisDrawWinsMatch: false,     // Khorinis: wygrana tury w remisie = wygrana całego meczu
-    undeadMusterFromGraveyard: false, // Nieumarli: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza resztę grupy
-    klasztorAgileWeather: false       // Klasztor: jednostki z Mobilnością pod pogodą mają podwójną siłę (po efekcie pogody)
-};
-let RULES = { ...RULE_DEFAULTS };
-function setRules(r) { RULES = { ...RULE_DEFAULTS, ...(r || {}) }; }
+// ===== Umiejętności talii (ustawienia umiejętności na ekranie startowym) =====
+// Każda talia ma listę zdolności: z instrukcji (domyślnie włączone) i proponowane warianty (domyślnie wyłączone).
+// ui.js pozwala je włączać/wyłączać, zmieniać nazwy, opisy i parametry, dodawać własne zdolności (przypomnienia)
+// i zapisywać całość jako zestawy. W trakcie gry ustawienia się nie zmieniają – zapis partii je przechowuje.
+// W opisach: {klucz} = wartość parametru, {klucz|kartę|karty|kart} = liczba z odmianą.
+const ABILITY_DEFS = [
+    { id: 'khorinis_draw', faction: 'Khorinis', origin: 'instrukcja', on: true, group: 'khorinis_draw',
+      name: 'Zwycięstwo w remisie', desc: 'Remis w turze oznacza wygraną tury dla Khorinis (gdy tylko jeden gracz gra Khorinis).' },
+    { id: 'khorinis_draw_match', faction: 'Khorinis', origin: 'propozycja', on: false, group: 'khorinis_draw',
+      name: 'Remis wygrywa mecz', desc: 'Remis w turze oznacza wygraną całego meczu dla Khorinis. Gdy obaj gracze grają Khorinis, remis rozstrzyga się normalnie.' },
+    { id: 'potwory_keep', faction: 'Potwory', origin: 'instrukcja', on: true,
+      name: 'Karty zostają na planszy', desc: 'Po końcu każdej tury zostawiasz na planszy {count|kartę|karty|kart} Potworów (nie bohaterów, nie neutralne).',
+      params: { count: { label: 'Ile kart zostaje', min: 1, max: 3, value: 1 } } },
+    { id: 'najemnicy_mulligan', faction: 'Najemnicy', origin: 'instrukcja', on: true, reminder: true,
+      name: 'Dodatkowa wymiana', desc: 'Na starcie gry możesz wymienić o {count|kartę|karty|kart} więcej.',
+      params: { count: { label: 'Ile kart więcej', min: 1, max: 3, value: 1 } } },
+    { id: 'klasztor_skip', faction: 'Klasztor', origin: 'instrukcja', on: true, use: true,
+      name: 'Przeczekanie tury', desc: 'Możesz oddać ruch przeciwnikowi bez pasowania – {uses|raz|razy|razy} na {per}.',
+      params: { uses: { label: 'Ile razy', min: 1, max: 3, value: 1 }, per: { label: 'Limit na', options: { game: 'grę', round: 'turę' }, value: 'game' } } },
+    { id: 'klasztor_agile_weather', faction: 'Klasztor', origin: 'propozycja', on: false,
+      name: 'Mobilność pod pogodą', desc: 'Jednostki z Mobilnością pod złą pogodą mają ×{mult} siły po efekcie pogody (zwykle {mult} zamiast 1).',
+      params: { mult: { label: 'Mnożnik', min: 2, max: 4, value: 2 } } },
+    { id: 'orkowie_revive', faction: 'Orkowie', origin: 'instrukcja', on: true,
+      name: 'Powrót poległych', desc: 'Na starcie tury {round} przywracasz z cmentarza na planszę {count|kartę|karty|kart} Orków (nie bohaterów).',
+      params: { count: { label: 'Ile kart wraca', min: 1, max: 4, value: 2 }, round: { label: 'W której turze', min: 2, max: 3, value: 3 } } },
+    { id: 'orkowie_beliar', faction: 'Orkowie', origin: 'instrukcja – dowódca', on: true,
+      name: 'Beliar z nami', desc: 'Gdy grasz dowódcą Beliar z nami: zła pogoda dzieli siłę twoich jednostek przez 2 (w dół) zamiast obniżać ją do 1.' },
+    { id: 'bandyci_steal', faction: 'Bandyci', origin: 'instrukcja', on: true,
+      name: 'Łup z cmentarza', desc: 'Po przegranej turze bierzesz do ręki {count|kartę|karty|kart} z cmentarza przeciwnika (nie bohatera).',
+      params: { count: { label: 'Ile kart', min: 1, max: 3, value: 1 }, drawIsLoss: { label: 'Remis liczy się jako przegrana', type: 'bool', value: true } } },
+    { id: 'nieumarli_draw', faction: 'Nieumarli', origin: 'instrukcja', on: true, reminder: true,
+      name: 'Dobór po zwycięstwie', desc: 'Po wygranej turze dobierasz {count|losową kartę|losowe karty|losowych kart} z talii (nie bohatera).',
+      params: { count: { label: 'Ile kart', min: 1, max: 3, value: 1 } } },
+    { id: 'nieumarli_muster_grave', faction: 'Nieumarli', origin: 'propozycja', on: false,
+      name: 'Wezwanie z cmentarza', desc: 'Gdy jednostka z Wezwaniem wraca z cmentarza (Leczenie), razem z nią wracają pozostałe jednostki jej grupy, które leżą na cmentarzu.' }
+];
+const ABILITY_BY_ID = Object.fromEntries(ABILITY_DEFS.map(d => [d.id, d]));
+// Własne zdolności: kalkulator nie zna ich działania – przypomina o nich w historii w wybranym momencie.
+const CUSTOM_TRIGGERS = { start: 'na starcie gry', round: 'na starcie każdej tury', win: 'po wygranej turze', loss: 'po przegranej turze', draw: 'po remisie', none: 'bez przypomnienia' };
+// RULES: { abilities: { id: { on, params, name, desc } }, custom: [{ id, faction, name, desc, trigger, on }] } – tylko zmiany względem domyślnych
+let RULES = { abilities: {}, custom: [] };
+function setRules(r) {
+    r = r && typeof r === 'object' ? r : {};
+    RULES = { abilities: { ...(r.abilities || {}) }, custom: Array.isArray(r.custom) ? r.custom.map(c => ({ ...c })) : [] };
+}
+// Pełny, scalony stan zdolności (domyślne + zmiany)
+function abilityInfo(id, rules = RULES) {
+    const d = ABILITY_BY_ID[id];
+    if (!d) return null;
+    const o = (rules.abilities || {})[id] || {};
+    const params = {};
+    Object.entries(d.params || {}).forEach(([k, p]) => { params[k] = o.params && k in o.params ? o.params[k] : p.value; });
+    return { ...d, on: 'on' in o ? !!o.on : d.on, params, name: o.name || d.name, desc: o.desc || d.desc };
+}
+const abOn = id => !!abilityInfo(id).on;
+const abP = (id, k) => abilityInfo(id).params[k];
+// Zdolność działa dla gracza: jego talia + włączona
+const hasAbility = (player, id) => !!player && player.faction === ABILITY_BY_ID[id].faction && abOn(id);
+// Opis z wstawionymi parametrami
+function plForm(n, one, few, many) { n = Math.abs(n); return n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many; }
+function fillAbilityText(text, st) {
+    return String(text || '').replace(/\{(\w+)(?:\|([^|}]*)\|([^|}]*)\|([^|}]*))?\}/g, (m, k, a, b, c) => {
+        if (!st.params || !(k in st.params)) return m;
+        let v = st.params[k];
+        const p = (ABILITY_BY_ID[st.id] && ABILITY_BY_ID[st.id].params || {})[k];
+        if (p && p.options) v = p.options[v] || v;
+        if (a !== undefined) return (v === 1 && /^(raz|kartę|karta|losową kartę)$/.test(a)) ? a : `${v} ${plForm(v, a, b, c)}`;
+        return String(v);
+    });
+}
+// Przypomnienia o własnych zdolnościach (moment: start / round / win / loss / draw)
+function customReminders(trigger, player) {
+    (RULES.custom || []).filter(c => c.on !== false && c.trigger === trigger && c.faction === player.faction).forEach(c => {
+        addLogEntry(`${player.name} (${player.faction}) – ${c.name}${c.desc ? `: ${c.desc}` : ''}`);
+    });
+}
 const isAgileCard = c => (c.abilities && c.abilities.includes('agile')) || (Array.isArray(c.row) && c.row.length > 1);
 // Siła jednostki pod pogodą (przed Jednością, Wzmocnieniem i Rogiem).
+function beliarActive(owner) { return abOn('orkowie_beliar') && owner.commander && owner.commander.id === 'Beliar_z_nami'; }
 function weatherPower(owner, card) {
-    const beliar = RULES.beliarHalvesWeather && owner.commander && owner.commander.id === 'Beliar_z_nami';
-    let v = beliar ? Math.floor(card.power / 2) : 1;
-    if (RULES.klasztorAgileWeather && owner.faction === 'Klasztor' && isAgileCard(card)) v *= 2;
+    let v = beliarActive(owner) ? Math.floor(card.power / 2) : 1;
+    if (hasAbility(owner, 'klasztor_agile_weather') && isAgileCard(card)) v *= abP('klasztor_agile_weather', 'mult');
     return v;
+}
+// Klasztor: ile przeczekań zostało
+function skipsLeft(player) {
+    if (!hasAbility(player, 'klasztor_skip')) return 0;
+    return Math.max(0, abP('klasztor_skip', 'uses') - (player.skipCount || 0));
 }
 
 // === Elementy DOM ===
@@ -175,10 +241,13 @@ function explainCardPower(instanceId) {
     let p = card.power;
     const weather = weatherCardsOnBoard.find(w => w.rowAffected && w.rowAffected.includes(rowType));
     if (weather) {
-        const beliar = RULES.beliarHalvesWeather && owner.commander && owner.commander.id === 'Beliar_z_nami';
+        const beliar = beliarActive(owner);
         p = beliar ? Math.floor(card.power / 2) : 1;
         steps.push({ label: beliar ? `Pogoda: ${weather.name} → ½ (Beliar z nami)` : `Pogoda: ${weather.name} → 1`, value: p });
-        if (RULES.klasztorAgileWeather && owner.faction === 'Klasztor' && isAgileCard(card)) { p *= 2; steps.push({ label: 'Klasztor: Mobilność pod pogodą ×2', value: p }); }
+        if (hasAbility(owner, 'klasztor_agile_weather') && isAgileCard(card)) {
+            const m = abP('klasztor_agile_weather', 'mult');
+            p *= m; steps.push({ label: `${abilityInfo('klasztor_agile_weather').name} ×${m}`, value: p });
+        }
     }
     if (card.abilities && card.abilities.includes('tight_bond')) {
         // ten sam klucz grupy co w liczeniu siły (baseId albo początek id)
@@ -275,7 +344,7 @@ function musterMatches(playedCard) {
 // Wariant Nieumarłych: wskrzeszona jednostka z Wezwaniem zabiera z cmentarza pozostałe jednostki swojej grupy.
 // Wracają bez uruchamiania własnych umiejętności (jak przy zwykłym Wezwaniu); mobilne – do rzędu wskrzeszonej karty, jeśli mogą.
 function undeadMusterFromGraveyard(player, card, targetRow) {
-    if (!RULES.undeadMusterFromGraveyard || player.faction !== 'Nieumarli') return;
+    if (!hasAbility(player, 'nieumarli_muster_grave')) return;
     const match = musterMatches(card);
     const back = player.graveyard.filter(c => c.type === 'Unit' && !c.isDecoy && match(c));
     if (!back.length) return;
@@ -285,7 +354,7 @@ function undeadMusterFromGraveyard(player, card, targetRow) {
         const row = rows.includes(targetRow) ? targetRow : rows[0];
         player.board[row].push({ ...data, instanceId: nextInstanceId() });
     });
-    addLogEntry(`Nieumarli: z cmentarza razem z ${card.name} wracają: ${back.map(c => c.name).join(', ')}.`);
+    addLogEntry(`${player.name} (${abilityInfo('nieumarli_muster_grave').name}): z cmentarza razem z ${card.name} wracają: ${back.map(c => c.name).join(', ')}.`);
 }
 
 // Tokeny też trafiają na cmentarz i mogą zostać wskrzeszone.
@@ -716,7 +785,7 @@ function startGame() {
         const leaderId = document.getElementById(`${p === players.player1 ? 'player1' : 'player2'}-leader-select`).value;
         if (!p.faction || !leaderId) { return alert("Proszę wybrać frakcję i dowódcę dla obu graczy!"); }
         p.commander = { ...getCardDetailsById(leaderId), isUsed: false }; // własna kopia dla każdego gracza
-        p.skipUsed = false;
+        p.skipCount = 0;
         p.availableCards = allCards.filter(card => 
             card.type !== 'Leader' && 
             !card.isToken &&
@@ -730,7 +799,12 @@ function startGame() {
     isFirstMoveOfRound = true; activePlayer = null;
     addLogEntry(`Gra rozpoczęta! Tura ${roundNumber}.`);
     [players.player1, players.player2].forEach(p => {
-        if (p.faction === 'Najemnicy') addLogEntry(`${p.name} (Najemnicy): na starcie możesz wymienić o 1 kartę więcej (3 zamiast 2).`);
+        if (hasAbility(p, 'najemnicy_mulligan')) {
+            const n = abP('najemnicy_mulligan', 'count');
+            addLogEntry(`${p.name} (Najemnicy): na starcie możesz wymienić o ${n} ${plForm(n, 'kartę', 'karty', 'kart')} więcej (${2 + n} zamiast 2).`);
+        }
+        customReminders('start', p);
+        customReminders('round', p);
     });
     updateAllControls();
 }
@@ -1010,19 +1084,21 @@ function endRound() {
     const p1Power = calculatePlayerPower(players.player1), p2Power = calculatePlayerPower(players.player2);
     let winner = p1Power > p2Power ? 'player1' : p2Power > p1Power ? 'player2' : 'draw';
     let khorinisMatch = false;
-    // Khorinis: wygrywa turę w przypadku remisu (gdy tylko jeden gracz gra Khorinis).
+    // Khorinis: wygrywa turę (albo – wariant – cały mecz) w przypadku remisu, gdy tylko jeden gracz gra Khorinis.
     if (winner === 'draw') {
         const k1 = players.player1.faction === 'Khorinis', k2 = players.player2.faction === 'Khorinis';
-        if (k1 !== k2) {
+        const kp = k1 ? players.player1 : players.player2;
+        if (k1 !== k2 && (hasAbility(kp, 'khorinis_draw_match') || hasAbility(kp, 'khorinis_draw'))) {
             winner = k1 ? 'player1' : 'player2';
-            addLogEntry(`Remis ${p1Power}:${p2Power} – ${players[winner].name} wygrywa dzięki zdolności talii Khorinis.`);
-            khorinisMatch = !!RULES.khorinisDrawWinsMatch;
+            khorinisMatch = hasAbility(kp, 'khorinis_draw_match');
+            const nm = abilityInfo(khorinisMatch ? 'khorinis_draw_match' : 'khorinis_draw').name;
+            addLogEntry(`Remis ${p1Power}:${p2Power} – ${players[winner].name} wygrywa dzięki zdolności Khorinis (${nm}).`);
         }
     }
     roundResults.push({ round: roundNumber, p1: p1Power, p2: p2Power, winner });
     if (khorinisMatch) {
         players[otherKey(winner)].crystalCount = 0;
-        addLogEntry(`${players[winner].name} wygrywa cały mecz (wariant Khorinis: wygrany remis kończy grę).`);
+        addLogEntry(`${players[winner].name} wygrywa cały mecz (Khorinis: remis wygrywa mecz).`);
         checkGameOver();
         return;
     }
@@ -1031,25 +1107,29 @@ function endRound() {
 
     if (checkGameOver()) return;
 
-    // Nieumarli: dobór 1 losowej karty z talii po wygranej turze (fizycznie przy stole).
-    if (winner !== 'draw' && players[winner].faction === 'Nieumarli') {
-        addLogEntry(`${players[winner].name} (Nieumarli): dobierz 1 losową kartę z talii.`);
+    // Nieumarli: dobór losowej karty z talii po wygranej turze (fizycznie przy stole).
+    if (winner !== 'draw' && hasAbility(players[winner], 'nieumarli_draw')) {
+        const n = abP('nieumarli_draw', 'count');
+        addLogEntry(`${players[winner].name} (Nieumarli): dobierz ${n} ${plForm(n, 'losową kartę', 'losowe karty', 'losowych kart')} z talii.`);
     }
+    // Własne zdolności: przypomnienia po turze
+    if (winner === 'draw') { customReminders('draw', players.player1); customReminders('draw', players.player2); }
+    else { customReminders('win', players[winner]); customReminders('loss', players[otherKey(winner)]); }
 
     // Przegrani tury (remis = przegrana obu) – dla Bandytów.
-    const losers = winner === 'draw' ? (RULES.banditDrawIsLoss ? ['player1', 'player2'] : []) : [otherKey(winner)];
+    const losers = winner === 'draw' ? (abP('bandyci_steal', 'drawIsLoss') ? ['player1', 'player2'] : []) : [otherKey(winner)];
     roundEndFlow = { stage: 'keep', queue: [], kept: { player1: [], player2: [] }, losers };
     // Potwory: po każdej turze jedna karta Potworów zostaje na planszy.
     ['player1', 'player2'].forEach(k => {
-        if (players[k].faction !== 'Potwory') return;
+        if (!hasAbility(players[k], 'potwory_keep')) return;
         const c = monsterKeepCandidates(players[k]);
-        if (c.length) roundEndFlow.queue.push({ kind: 'keep', player: k, count: 1, candidates: c.map(x => x.instanceId) });
+        if (c.length) roundEndFlow.queue.push({ kind: 'keep', player: k, count: Math.min(abP('potwory_keep', 'count'), c.length), candidates: c.map(x => x.instanceId) });
     });
     continueRoundEnd();
 }
 
 function clearBoardsForNextRound(kept) {
-    if (RULES.klasztorSkipPerRound) [players.player1, players.player2].forEach(p => { p.skipUsed = false; });
+    if (abP('klasztor_skip', 'per') === 'round') [players.player1, players.player2].forEach(p => { p.skipCount = 0; });
     const avengersForNextRound = { player1: [], player2: [] };
 
     [players.player1, players.player2].forEach(p => {
@@ -1097,6 +1177,7 @@ function clearBoardsForNextRound(kept) {
     isFirstMoveOfRound = true;
     activePlayer = null;
     addLogEntry(`Rozpoczynamy turę ${roundNumber}!`);
+    [players.player1, players.player2].forEach(p => customReminders('round', p));
 
     [players.player1, players.player2].forEach(p => {
         const playerKey = (p === players.player1) ? 'player1' : 'player2';
@@ -1123,16 +1204,16 @@ function continueRoundEnd() {
         clearBoardsForNextRound(f.kept);
         f.stage = 'post';
         // Orkowie: w trzeciej turze 2 karty poległe Orków wracają na planszę.
-        if (roundNumber === 3) ['player1', 'player2'].forEach(k => {
-            if (players[k].faction !== 'Orkowie') return;
+        if (roundNumber === abP('orkowie_revive', 'round')) ['player1', 'player2'].forEach(k => {
+            if (!hasAbility(players[k], 'orkowie_revive')) return;
             const c = orcReviveCandidates(players[k]);
-            if (c.length) f.queue.push({ kind: 'revive', player: k, count: Math.min(2, c.length), candidates: c.map(x => x.instanceId) });
+            if (c.length) f.queue.push({ kind: 'revive', player: k, count: Math.min(abP('orkowie_revive', 'count'), c.length), candidates: c.map(x => x.instanceId) });
         });
         // Bandyci: po przegranej turze 1 karta z cmentarza przeciwnika do ręki.
         f.losers.forEach(k => {
-            if (players[k].faction !== 'Bandyci') return;
+            if (!hasAbility(players[k], 'bandyci_steal')) return;
             const c = banditStealCandidates(players[k]);
-            if (c.length) f.queue.push({ kind: 'steal', player: k, count: 1, candidates: c.map(x => x.instanceId) });
+            if (c.length) f.queue.push({ kind: 'steal', player: k, count: Math.min(abP('bandyci_steal', 'count'), c.length), candidates: c.map(x => x.instanceId) });
         });
         return continueRoundEnd();
     }
@@ -1145,6 +1226,10 @@ const CHOICE_TEXT = {
     revive: { title: 'Orkowie – które karty wracają z cmentarza?', banner: 'wybierz karty Orków, które wracają z cmentarza' },
     steal: { title: 'Bandyci – którą kartę zabierasz z cmentarza przeciwnika?', banner: 'wybierz kartę z cmentarza przeciwnika' }
 };
+const CHOICE_TEXT_MANY = {
+    keep: { title: 'Potwory – które karty zostają na planszy?', banner: 'wybierz karty Potworów, które zostają na planszy' },
+    steal: { title: 'Bandyci – które karty zabierasz z cmentarza przeciwnika?', banner: 'wybierz karty z cmentarza przeciwnika' }
+};
 // Opis bieżącego wyboru dla interfejsu: karty (obiekty) + ile trzeba wybrać.
 function getPendingChoice() {
     if (!roundEndFlow || !roundEndFlow.queue.length) return null;
@@ -1153,7 +1238,8 @@ function getPendingChoice() {
     const pool = q.kind === 'keep' ? ['melee', 'ranged', 'siege'].flatMap(r => p.board[r])
         : q.kind === 'revive' ? p.graveyard : players[otherKey(q.player)].graveyard;
     const cards = q.candidates.map(id => pool.find(c => c.instanceId === id)).filter(Boolean);
-    return { kind: q.kind, player: p, count: q.count, cards, ...CHOICE_TEXT[q.kind] };
+    const txt = q.count > 1 ? (CHOICE_TEXT_MANY[q.kind] || CHOICE_TEXT[q.kind]) : CHOICE_TEXT[q.kind];
+    return { kind: q.kind, player: p, count: q.count, cards, ...txt };
 }
 function isFactionChoiceActive() { return !!(roundEndFlow && roundEndFlow.queue.length); }
 
@@ -1182,13 +1268,16 @@ function confirmFactionChoice(instanceIds, skipUndo = false) {
         addLogEntry(`${p.name} (Orkowie): z cmentarza wracają ${back.join(', ')}.`);
     } else if (q.kind === 'steal') {
         const opp = players[otherKey(q.player)];
-        const i = opp.graveyard.findIndex(c => c.instanceId === ids[0]);
-        if (i >= 0) {
+        const taken = [];
+        ids.forEach(id => {
+            const i = opp.graveyard.findIndex(c => c.instanceId === id);
+            if (i < 0) return;
             const [card] = opp.graveyard.splice(i, 1);
             const { currentPower, instanceId, ...clean } = card;
             p.availableCards.push(clean);
-            addLogEntry(`${p.name} (Bandyci): zabiera ${card.name} z cmentarza ${opp.name} do ręki.`);
-        }
+            taken.push(card.name);
+        });
+        if (taken.length) addLogEntry(`${p.name} (Bandyci): zabiera ${taken.join(', ')} z cmentarza ${opp.name} do ręki.`);
     }
     roundEndFlow.queue.shift();
     continueRoundEnd();
@@ -1198,7 +1287,7 @@ function confirmFactionChoice(instanceIds, skipUndo = false) {
 // Klasztor: raz na grę można przeczekać swój ruch (bez pasowania).
 function canSkipTurn(player) {
     const opp = player === players.player1 ? players.player2 : players.player1;
-    return player.faction === 'Klasztor' && !player.skipUsed && !isGameOver && !roundEndFlow &&
+    return skipsLeft(player) > 0 && !isGameOver && !roundEndFlow &&
         !isMusterModeActive && !isMedicModeActive && !isAgileResurrectionModeActive &&
         !passedPlayers.includes(player) && !passedPlayers.includes(opp) &&
         (isFirstMoveOfRound || activePlayer === player);
@@ -1207,8 +1296,8 @@ function skipTurn(player) {
     if (!canSkipTurn(player)) return;
     deactivateDecoyMode();
     handlePlayerAction(player, () => {
-        player.skipUsed = true;
-        addLogEntry(`${player.name} przeczekuje ruch (zdolność talii Klasztoru).`);
+        player.skipCount = (player.skipCount || 0) + 1;
+        addLogEntry(`${player.name} przeczekuje ruch (${abilityInfo('klasztor_skip').name}).`);
         return true;
     });
 }
