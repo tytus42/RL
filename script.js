@@ -1,5 +1,5 @@
 // Wersja plików – ui.js sprawdza, czy przeglądarka nie wczytała starego script.js z pamięci.
-const APP_VERSION = '2026-10-13m';
+const APP_VERSION = '2026-10-14a';
 
 // ===== Umiejętności talii (ustawienia umiejętności na ekranie startowym) =====
 // Każda talia ma listę zdolności: z instrukcji (domyślnie włączone) i proponowane warianty (domyślnie wyłączone).
@@ -29,10 +29,10 @@ const ABILITY_DEFS = [
     { id: 'orkowie_beliar', faction: 'Orkowie', origin: 'instrukcja – dowódca', on: true,
       name: 'Beliar z nami', desc: 'Gdy grasz dowódcą Beliar z nami: zła pogoda dzieli siłę twoich jednostek przez 2 (w dół) zamiast obniżać ją do 1.' },
     { id: 'bandyci_steal', faction: 'Bandyci', origin: 'instrukcja', on: true,
-      name: 'Łup z cmentarza', desc: 'Po przegranej turze bierzesz do ręki {count|kartę|karty|kart} z cmentarza przeciwnika (nie bohatera).',
+      name: 'Łup z cmentarza', desc: 'Po przegranej turze dobierasz do ręki {count|losową kartę|losowe karty|losowych kart} z cmentarza przeciwnika – zwykłe jednostki i bohaterów (bez kart specjalnych).',
       params: { count: { label: 'Ile kart', min: 1, max: 3, value: 1 }, drawIsLoss: { label: 'Remis liczy się jako przegrana', type: 'bool', value: true } } },
     { id: 'nieumarli_draw', faction: 'Nieumarli', origin: 'instrukcja', on: true, reminder: true,
-      name: 'Dobór po zwycięstwie', desc: 'Po wygranej turze dobierasz {count|losową kartę|losowe karty|losowych kart} z talii (nie bohatera).',
+      name: 'Dobór po zwycięstwie', desc: 'Po wygranej turze dobierasz {count|kartę|karty|kart} z talii – zwykłe dobranie, może to być każda karta.',
       params: { count: { label: 'Ile kart', min: 1, max: 3, value: 1 } } },
     { id: 'nieumarli_muster_grave', faction: 'Nieumarli', origin: 'propozycja', on: false,
       name: 'Wezwanie z cmentarza', desc: 'Gdy jednostka z Wezwaniem wraca z cmentarza (Leczenie), razem z nią wracają pozostałe jednostki jej grupy, które leżą na cmentarzu.' }
@@ -1265,7 +1265,8 @@ function monsterKeepCandidates(p) {
     return ['melee', 'ranged', 'siege'].flatMap(r => p.board[r]).filter(c => isPlainUnit(c) && c.faction === 'Potwory');
 }
 function orcReviveCandidates(p) { return p.graveyard.filter(c => isPlainUnit(c) && c.faction === 'Orkowie'); }
-function banditStealCandidates(p) { return players[otherKey(playerKeyOf(p))].graveyard.filter(isPlainUnit); }
+// Bandyci: zwykłe dobranie karty poległej – jednostki i bohaterowie, bez kart specjalnych/pogody.
+function banditStealCandidates(p) { return players[otherKey(playerKeyOf(p))].graveyard.filter(c => c.type === 'Unit'); }
 
 function endRound() {
     addLogEntry("Tura zakończona!");

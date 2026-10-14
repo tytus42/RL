@@ -1133,3 +1133,88 @@ select:disabled { opacity: .5; }
 }
 .concept-ab .re-params { opacity: .75; }
 .concept-ab input:disabled, .concept-ab select:disabled { cursor: not-allowed; }
+
+/* =========================================================
+   KREATOR TALII (podstrona ekranu startowego, #talie)
+   ========================================================= */
+.setup-top { display: flex; justify-content: flex-end; max-width: 820px; margin: -8px auto 4px; }
+.top-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border-radius: 999px; font-size: .95em; }
+.ico-deck { width: 1.25em; height: 1.25em; flex: none; }
+.ico-deck rect { fill: var(--panel-2); stroke: currentColor; stroke-width: 1.6; }
+.deck-btn .ico-deck { width: 1.05em; height: 1.05em; }
+.deck-pick-name { margin: 0; font-size: .82em; color: var(--gold-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#deck-builder-screen { --fac: var(--gold); max-width: 900px; padding: 12px 16px 0; }
+.db-head { display: flex; align-items: center; gap: 10px; padding: 4px 0 10px; }
+.db-head h1 { flex: 1; text-align: center; color: var(--gold-hi); font-size: 1.9em; margin-right: 74px; text-shadow: 0 2px 0 #000; }
+.db-back { flex: none; }
+.db-view { display: grid; gap: 12px; }
+.db-rules { margin: 0; color: var(--muted); text-align: center; font-size: .92em; }
+.db-rules b { color: var(--text); font-weight: normal; }
+.db-new { justify-self: center; width: 100%; max-width: 420px; }
+.db-decks { display: grid; gap: 8px; padding-bottom: 24px; }
+.db-empty { color: var(--muted); text-align: center; padding: 18px 0; margin: 0; }
+.db-fac { font-size: 1.1em; margin: 10px 2px 0; color: color-mix(in srgb, var(--fac) 70%, var(--text)); }
+.db-deck {
+    display: flex; align-items: stretch; gap: 6px; padding: 6px;
+    border: 1px solid var(--line); border-left: 4px solid var(--fac); border-radius: 12px; background: var(--panel);
+}
+.db-deck.invalid { border-left-style: dashed; }
+.db-deck-main { flex: 1; min-width: 0; display: grid; text-align: left; gap: 2px; background: transparent; border-color: transparent; padding: 4px 8px; }
+.db-deck-name { font-size: 1.08em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-deck-meta { font-size: .8em; color: var(--muted); }
+.db-deck .btn-small { align-self: center; }
+.db-del.armed { background: var(--danger); border-color: #ff8d80; color: #fff; }
+.bad { color: var(--bad); }
+
+/* edytor */
+.db-meta { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 560px) { .db-meta { grid-template-columns: 3fr 2fr; } }
+.db-field { display: grid; gap: 4px; text-align: left; }
+.db-field > span { color: var(--muted); font-size: .85em; }
+.db-counters {
+    position: sticky; top: 0; z-index: 5;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    padding: 8px 0; padding-top: max(8px, env(safe-area-inset-top));
+    background: linear-gradient(var(--bg) 80%, transparent);
+}
+.db-counter {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; column-gap: 6px;
+    padding: 8px 10px; border-radius: 12px; text-align: center;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-size: .95em;
+}
+.db-counter b { font-size: 1.35em; font-weight: normal; font-variant-numeric: tabular-nums; }
+.db-counter small { flex-basis: 100%; color: var(--muted); font-size: .78em; }
+.db-counter.good { border-color: color-mix(in srgb, var(--good) 60%, var(--line)); }
+.db-counter.good b { color: var(--good); }
+.db-counter.bad { border-color: var(--bad); background: #3a1d17; color: #ffd2cc; }
+.db-counter.bad b { color: var(--bad); }
+.db-tools { display: grid; gap: 8px; }
+.db-cards { display: grid; grid-template-columns: 1fr; gap: 6px; align-content: start; }
+@media (min-width: 640px) { .db-cards { grid-template-columns: 1fr 1fr; } }
+.db-card {
+    display: flex; align-items: center; gap: 4px; padding: 4px; min-height: 54px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+}
+.db-card.hero { border-color: var(--gold); }
+.db-card:not(.in) { opacity: .72; }
+.db-card.in { background: var(--panel-3); border-color: color-mix(in srgb, var(--fac) 55%, var(--line)); }
+.db-card.hero.in { border-color: var(--gold); }
+.db-card-add {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left;
+    background: transparent; border-color: transparent; padding: 2px 4px; min-height: 46px;
+}
+.db-card-add:disabled { opacity: 1; cursor: default; }
+.tile-name .db-neutral { font-style: normal; font-size: .75em; color: var(--muted); font-weight: 400; }
+.db-step { flex: none; display: flex; align-items: center; gap: 4px; }
+.db-step b { min-width: 2.6em; text-align: center; font-weight: normal; font-variant-numeric: tabular-nums; }
+.db-card.in .db-step b { color: var(--gold-hi); }
+.db-step button { width: 40px; min-width: 40px; min-height: 40px; padding: 0; font-size: 1.25em; line-height: 1; }
+.db-foot {
+    position: sticky; bottom: 0; z-index: 5;
+    display: grid; gap: 6px; margin: 0 -16px; padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 1px solid var(--line);
+}
+.db-why { margin: 0; text-align: center; font-size: .88em; color: var(--good); }
+.db-why.bad { color: var(--bad); }
+.db-foot-btns { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }

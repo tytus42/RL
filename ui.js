@@ -6,7 +6,7 @@
 
     // Pliki muszą być z tej samej wersji. Gdy przeglądarka (lub GitHub Pages) poda stary script.js
     // z pamięci podręcznej, interfejs by się nie zbudował i nie dałoby się zagrać karty.
-    const UI_VERSION = '2026-10-13m';
+    const UI_VERSION = '2026-10-14a';
     if (typeof APP_VERSION === 'undefined' || APP_VERSION !== UI_VERSION) {
         const box = document.createElement('div');
         box.className = 'version-error';
@@ -53,8 +53,8 @@
         Najemnicy: { text: 'Możliwość wymiany jednej karty więcej na starcie gry.', how: 'Dzieje się przy stole – kalkulator tylko przypomina.' },
         Klasztor: { text: 'Możliwość przeczekania jednej tury bez konsekwencji.', how: 'Raz na grę: oddajesz ruch przeciwnikowi bez pasowania.', use: true },
         Orkowie: { text: 'W trzeciej turze 2 losowe karty poległe Orków (nie bohaterowie) wracają na planszę.', how: 'Na starcie 3. tury pojawi się okno wyboru (z przyciskiem „Losuj”).' },
-        Bandyci: { text: 'Po przegranej turze dobór 1 losowej karty poległej przeciwnika (nie bohatera).', how: 'Po przegranej turze pojawi się okno wyboru z cmentarza przeciwnika.' },
-        Nieumarli: { text: 'Po wygranej turze dobór 1 losowej karty z talii (nie bohatera).', how: 'Dzieje się przy stole – kalkulator przypomina w historii.' }
+        Bandyci: { text: 'Po przegranej turze dobór 1 losowej karty poległej przeciwnika do ręki (jednostka lub bohater).', how: 'Po przegranej turze pojawi się okno wyboru z cmentarza przeciwnika.' },
+        Nieumarli: { text: 'Po wygranej turze dobór 1 karty z talii (zwykłe dobranie – może to być każda karta).', how: 'Dzieje się przy stole – kalkulator przypomina w historii.' }
     };
     // Karty przewodnie (instrukcja, str. 11–13). passive: działa cały czas, bez aktywacji.
     const LEADER_ABILITY = {
@@ -1259,81 +1259,320 @@
         showCardView(el.dataset.instanceId);
     });
 
-    // ---------- Talia (opcjonalnie): wybór kart, które gracz ma fizycznie ----------
-    const deckKey = (n, faction) => `rk-deck-${n}-${faction}`;
+    // ---------- Talie: kreator talii (podstrona) + wybór talii dla gracza ----------
+    // Zapis: rk-decks = [{ id, name, faction, cards: [id karty…], updated }]; wybór gracza: rk-deck-pick-<n> = { <frakcja>: idTalii }.
+    // Zasady składu (instrukcja, str. 6 i 20): min. 22 jednostki (bohaterowie się liczą), max. 10 kart specjalnych
+    // (efekty/runy/pogoda – nie liczą się do 22). Karty doborowe (isToken) w ogóle nie trafiają do talii.
+    const DECK_MIN_UNITS = 22, DECK_MAX_SPECIALS = 10;
+    const DECK_FACTIONS = ['Khorinis', 'Potwory', 'Najemnicy', 'Klasztor', 'Orkowie', 'Bandyci', 'Nieumarli'];
     const deckPool = faction => allCards.filter(c => c.type !== 'Leader' && !c.isToken && (c.faction === faction || c.faction === 'Neutral'));
-    function readDeck(n, faction) {
-        try { const v = JSON.parse(localStorage.getItem(deckKey(n, faction)) || 'null'); return Array.isArray(v) && v.length ? v : null; }
-        catch (e) { return null; }
+    const isDeckUnit = c => c.type === 'Unit';
+    function deckStats(deck) {
+        const pool = deckPool(deck.faction);
+        const cards = pool.filter(c => deck.cards.includes(c.id));
+        const units = cards.filter(isDeckUnit).length;
+        const heroes = cards.filter(c => isDeckUnit(c) && c.isHero).length;
+        const specials = cards.length - units;
+        return { units, heroes, specials, total: cards.length, ok: units >= DECK_MIN_UNITS && specials <= DECK_MAX_SPECIALS, ids: cards.map(c => c.id) };
     }
-    // script.js pyta o talię przy starcie gry (null = wszystkie karty).
-    window.getDeckSelection = (playerKey, faction) => readDeck(playerKey === 'player1' ? 1 : 2, faction);
+    function loadDecks() {
+        try { const v = JSON.parse(localStorage.getItem('rk-decks') || '[]'); return Array.isArray(v) ? v.filter(d => d && d.id && d.faction && Array.isArray(d.cards)) : []; }
+        catch (e) { return []; }
+    }
+    function saveDecks(list) { store.set('rk-decks', JSON.stringify(list)); }
+    const readPick = n => { try { return JSON.parse(localStorage.getItem(`rk-deck-pick-${n}`) || '{}') || {}; } catch (e) { return {}; } };
+    const writePick = (n, faction, id) => { const p = readPick(n); if (id) p[faction] = id; else delete p[faction]; store.set(`rk-deck-pick-${n}`, JSON.stringify(p)); };
+    function pickedDeck(n, faction) {
+        const id = readPick(n)[faction];
+        const d = id && loadDecks().find(x => x.id === id && x.faction === faction);
+        return d && deckStats(d).ok ? d : null;
+    }
+    // Stare wybory kart (rk-deck-<n>-<frakcja>) zamieniamy na zapisane talie.
+    function migrateOldDecks() {
+        try {
+            const list = loadDecks();
+            let changed = false;
+            Object.keys(localStorage).forEach(k => {
+                const m = /^rk-deck-([12])-(.+)$/.exec(k);
+                if (!m) return;
+                let ids = null;
+                try { ids = JSON.parse(localStorage.getItem(k)); } catch (e) { /* uszkodzony wpis */ }
+                localStorage.removeItem(k);
+                if (!Array.isArray(ids) || !ids.length || !DECK_FACTIONS.includes(m[2])) return;
+                const d = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: `Talia gracza ${m[1]} – ${m[2]}`, faction: m[2], cards: ids, updated: Date.now() };
+                list.push(d);
+                changed = true;
+                if (deckStats(d).ok) writePick(+m[1], m[2], d.id);
+            });
+            if (changed) saveDecks(list);
+        } catch (e) { /* brak dostępu do pamięci */ }
+    }
+    // script.js pyta o talię przy starcie gry (null = wszystkie karty frakcji + neutralne).
+    window.getDeckSelection = (playerKey, faction) => {
+        const d = pickedDeck(playerKey === 'player1' ? 1 : 2, faction);
+        return d ? deckStats(d).ids : null;
+    };
     function refreshDeckButtons() {
         [1, 2].forEach(n => {
             const btn = $(`#deck-btn-${n}`);
+            const nameEl = $(`#deck-name-${n}`);
             const faction = $(`#player${n}-faction-select`).value;
             const badge = btn.querySelector('.deck-count');
             btn.disabled = !faction;
             btn.classList.remove('custom');
             badge.hidden = true;
+            nameEl.hidden = true;
             if (!faction) { btn.title = 'Talia: wybierz najpierw frakcję'; btn.setAttribute('aria-label', btn.title); return; }
-            const pool = deckPool(faction), deck = readDeck(n, faction);
-            const cnt = deck ? pool.filter(c => deck.includes(c.id)).length : pool.length;
-            btn.title = deck ? `Talia: ${cnt} z ${pool.length} kart – zmień` : `Talia: wszystkie karty (${pool.length}) – ustaw`;
+            const d = pickedDeck(n, faction);
+            if (d) {
+                const st = deckStats(d);
+                btn.classList.add('custom');
+                badge.textContent = st.total; badge.hidden = false;
+                btn.title = `Talia: ${d.name} (${st.total} kart) – zmień`;
+                nameEl.textContent = `Talia: ${d.name}`; nameEl.hidden = false;
+            } else btn.title = `Talia: wszystkie karty (${deckPool(faction).length}) – wybierz talię`;
             btn.setAttribute('aria-label', btn.title);
-            if (deck) { btn.classList.add('custom'); badge.textContent = cnt; badge.hidden = false; }
         });
     }
-    function openDeckEditor(n) {
+    // Wybór talii dla gracza (arkusz): wszystkie karty albo jedna z zapisanych talii tej frakcji.
+    function openDeckPicker(n) {
         const faction = $(`#player${n}-faction-select`).value;
         if (!faction) return;
-        const pool = deckPool(faction);
-        const saved = readDeck(n, faction);
-        const sameName = {}, seen = {};
-        pool.forEach(c => { sameName[c.name] = (sameName[c.name] || 0) + 1; });
-        const items = pool.map(c => {
-            seen[c.name] = (seen[c.name] || 0) + 1;
-            const label = sameName[c.name] > 1 ? `${c.name} (${seen[c.name]}/${sameName[c.name]})` : c.name;
-            return cardItem(c, { key: c.id, name: label });
-        }).sort((a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.name.localeCompare(b.name, 'pl'));
+        const decks = loadDecks().filter(d => d.faction === faction);
+        const cur = pickedDeck(n, faction);
+        const items = [{ key: '', name: 'Wszystkie karty', meta: `${deckPool(faction).length} kart – kalkulator nie ogranicza ręki`, badge: '∞', group: 'unit' }]
+            .concat(decks.map(d => {
+                const st = deckStats(d);
+                return { key: d.id, name: d.name, badge: st.total, group: 'unit', disabled: !st.ok,
+                    meta: `jednostki ${st.units}/${DECK_MIN_UNITS} · specjalne ${st.specials}/${DECK_MAX_SPECIALS}${st.ok ? '' : ' · niekompletna'}` };
+            }));
         const cfg = {
-            kind: 'deck',
-            title: `Talia gracza ${n} – ${faction}`,
-            searchable: true, sortable: true, abilityFilters: true,
-            multi: true,
-            groupLabels: GROUP_LABELS,
-            filters: [
-                { key: 'all', label: 'Wszystkie' }, { key: 'melee', label: ROW_ICON.melee + ' Wręcz' },
-                { key: 'ranged', label: ROW_ICON.ranged + ' Dystans' }, { key: 'siege', label: ROW_ICON.siege + ' Obl.' },
-                { key: 'hero', label: 'Bohaterowie' }, { key: 'special', label: 'Specjalne' }, { key: 'weather', label: 'Pogoda' }
-            ],
-            selected: new Set(saved ? saved.filter(id => pool.some(c => c.id === id)) : pool.map(c => c.id)),
-            items,
-            footer: () => {
-                const all = cfg.selected.size === items.length;
-                return [
-                    {
-                        label: all ? 'Odznacz wszystkie' : 'Zaznacz wszystkie', cls: 'btn-small', onClick: () => {
-                            if (cfg.selected.size === items.length) cfg.selected.clear(); else items.forEach(it => cfg.selected.add(it.key));
-                            renderSheetList(); renderSheetFoot();
-                        }
-                    },
-                    {
-                        label: `Gotowe (${cfg.selected.size})`, cls: 'btn-primary', disabled: cfg.selected.size === 0, onClick: () => {
-                            try {
-                                if (cfg.selected.size === items.length) localStorage.removeItem(deckKey(n, faction));
-                                else localStorage.setItem(deckKey(n, faction), JSON.stringify([...cfg.selected]));
-                            } catch (e) { /* brak miejsca / dostępu */ }
-                            closeSheet();
-                            refreshDeckButtons();
-                        }
-                    }
-                ];
-            }
+            kind: 'deck-pick', title: `Talia gracza ${n} – ${faction}`, multi: true, max: 1,
+            selected: new Set([cur ? cur.id : '']), items,
+            emptyText: 'Brak talii.',
+            footer: () => [
+                { label: 'Kreator talii', cls: 'btn-small', onClick: () => { closeSheet(); openDeckBuilder({ faction }); } },
+                { label: 'Wybierz', cls: 'btn-primary', disabled: cfg.selected.size !== 1, onClick: () => {
+                    writePick(n, faction, [...cfg.selected][0] || null);
+                    closeSheet(); refreshDeckButtons();
+                } }
+            ]
         };
         openSheet(cfg);
     }
-    [1, 2].forEach(n => $(`#deck-btn-${n}`).addEventListener('click', () => openDeckEditor(n)));
+    [1, 2].forEach(n => $(`#deck-btn-${n}`).addEventListener('click', () => openDeckPicker(n)));
+
+    // --- Kreator talii ---
+    const dbScreen = $('#deck-builder-screen');
+    const db = { draft: null, filter: 'all', returnTo: null };
+    const DB_FILTERS = [
+        { key: 'all', label: 'Wszystkie' }, { key: 'in', label: 'W talii' },
+        { key: 'unit', label: 'Jednostki' }, { key: 'hero', label: 'Bohaterowie' },
+        { key: 'special', label: 'Specjalne' }, { key: 'faction', label: 'Frakcyjne' }, { key: 'neutral', label: 'Neutralne' }
+    ];
+    // Te same karty (np. Motłoch ×3) pokazujemy w jednym wierszu z licznikiem kopii.
+    function deckGroups(faction) {
+        const map = new Map();
+        deckPool(faction).forEach(c => {
+            const key = `${c.faction}|${c.name}|${c.type}|${c.power ?? ''}|${(c.abilities || []).join(',')}|${c.isHero ? 1 : 0}`;
+            if (!map.has(key)) map.set(key, { key, card: c, ids: [] });
+            map.get(key).ids.push(c.id);
+        });
+        const order = { hero: 0, unit: 1, special: 2, weather: 3 };
+        const grp = c => c.type === 'Unit' ? (c.isHero ? 'hero' : 'unit') : c.type === 'Weather' ? 'weather' : 'special';
+        return [...map.values()].map(g => Object.assign(g, { group: grp(g.card) }))
+            .sort((a, b) => (order[a.group] - order[b.group]) || (a.card.faction === 'Neutral') - (b.card.faction === 'Neutral') || a.card.name.localeCompare(b.card.name, 'pl'));
+    }
+    function showDbView(view) {
+        $('#db-list-view').hidden = view !== 'list';
+        $('#db-edit-view').hidden = view !== 'edit';
+        $('#db-title').textContent = view === 'edit' ? (db.draft && db.draft.isNew ? 'Nowa talia' : 'Edycja talii') : 'Talie';
+        window.scrollTo(0, 0);
+    }
+    function openDeckBuilder(opts = {}) {
+        gameSetupScreen.style.display = 'none';
+        dbScreen.hidden = false;
+        if (location.hash !== '#talie') { try { history.pushState({ rk: 'decks' }, '', '#talie'); } catch (e) { /* plik lokalny */ } }
+        renderDeckList();
+        if (opts.faction) startDraft({ faction: opts.faction, isNew: true });
+        else showDbView('list');
+    }
+    function closeDeckBuilder(fromPop) {
+        dbScreen.hidden = true;
+        db.draft = null;
+        gameSetupScreen.style.display = '';
+        refreshDeckButtons();
+        if (!fromPop && location.hash === '#talie') { try { history.back(); } catch (e) { /* nic */ } }
+    }
+    window.addEventListener('popstate', () => { if (!dbScreen.hidden && location.hash !== '#talie') closeDeckBuilder(true); });
+    $('#decks-open').addEventListener('click', () => openDeckBuilder());
+    $('#db-back').addEventListener('click', () => {
+        if (!$('#db-edit-view').hidden) { db.draft = null; renderDeckList(); showDbView('list'); }
+        else closeDeckBuilder();
+    });
+    $('#db-new').addEventListener('click', () => startDraft({ faction: DECK_FACTIONS[0], isNew: true }));
+
+    function renderDeckList() {
+        const box = $('#db-decks');
+        const decks = loadDecks();
+        if (!decks.length) { box.innerHTML = '<p class="db-empty">Nie masz jeszcze żadnej talii. Utwórz pierwszą – później wybierzesz ją przyciskiem obok frakcji.</p>'; return; }
+        box.innerHTML = DECK_FACTIONS.map(f => {
+            const fd = decks.filter(d => d.faction === f);
+            if (!fd.length) return '';
+            return `<h3 class="db-fac" style="--fac:${FACTION_COLORS[f]}">${f}</h3>` + fd.map(d => {
+                const st = deckStats(d);
+                return `<div class="db-deck${st.ok ? '' : ' invalid'}" style="--fac:${FACTION_COLORS[f]}" data-id="${esc(d.id)}">
+                    <button type="button" class="db-deck-main" data-act="edit">
+                        <span class="db-deck-name">${esc(d.name)}</span>
+                        <span class="db-deck-meta"><span class="${st.units < DECK_MIN_UNITS ? 'bad' : ''}">Jednostki ${st.units}/${DECK_MIN_UNITS}</span> · <span class="${st.specials > DECK_MAX_SPECIALS ? 'bad' : ''}">Specjalne ${st.specials}/${DECK_MAX_SPECIALS}</span>${st.ok ? '' : ' · <b class="bad">niekompletna</b>'}</span>
+                    </button>
+                    <button type="button" class="btn-small" data-act="copy" title="Duplikuj">Kopia</button>
+                    <button type="button" class="btn-small db-del" data-act="del" title="Usuń talię">Usuń</button>
+                </div>`;
+            }).join('');
+        }).join('');
+    }
+    $('#db-decks').addEventListener('click', e => {
+        const b = e.target.closest('[data-act]');
+        if (!b) return;
+        const id = b.closest('.db-deck').dataset.id;
+        const list = loadDecks();
+        const d = list.find(x => x.id === id);
+        if (!d) return;
+        if (b.dataset.act === 'edit') startDraft({ ...d, cards: [...d.cards] });
+        else if (b.dataset.act === 'copy') startDraft({ faction: d.faction, name: `${d.name} (kopia)`, cards: [...d.cards], isNew: true });
+        else if (b.dataset.act === 'del') {
+            if (!b.dataset.armed) {
+                b.dataset.armed = '1'; b.textContent = 'Na pewno?'; b.classList.add('armed');
+                setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Usuń'; b.classList.remove('armed'); } }, 3500);
+                return;
+            }
+            saveDecks(list.filter(x => x.id !== id));
+            [1, 2].forEach(n => { const p = readPick(n); if (p[d.faction] === id) writePick(n, d.faction, null); });
+            renderDeckList();
+            toast(`Usunięto talię „${d.name}”.`);
+        }
+    });
+
+    function startDraft(d) {
+        db.draft = { id: d.id || null, name: d.name || '', faction: d.faction, cards: new Set(d.cards || []), isNew: !!d.isNew || !d.id };
+        db.filter = 'all';
+        $('#db-name').value = db.draft.name;
+        $('#db-faction').innerHTML = DECK_FACTIONS.map(f => `<option value="${f}"${f === d.faction ? ' selected' : ''}>${f}</option>`).join('');
+        $('#db-search').value = '';
+        $('#db-filters').innerHTML = DB_FILTERS.map(f => `<button type="button" class="chip" data-f="${f.key}" aria-pressed="${f.key === 'all'}">${f.label}</button>`).join('');
+        showDbView('edit');
+        renderDraft();
+    }
+    $('#db-filters').addEventListener('click', e => {
+        const b = e.target.closest('[data-f]');
+        if (!b) return;
+        db.filter = b.dataset.f;
+        $('#db-filters').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        renderDraftCards();
+    });
+    $('#db-search').addEventListener('input', () => renderDraftCards());
+    $('#db-name').addEventListener('input', e => { if (db.draft) { db.draft.name = e.target.value; renderDraftCounters(); } });
+    $('#db-faction').addEventListener('change', e => {
+        if (!db.draft) return;
+        const f = e.target.value;
+        // karty starej frakcji wypadają, neutralne zostają
+        const keep = new Set(deckPool(f).map(c => c.id));
+        const before = db.draft.cards.size;
+        db.draft.cards = new Set([...db.draft.cards].filter(id => keep.has(id)));
+        db.draft.faction = f;
+        if (db.draft.cards.size < before) toast(`Usunięto ${before - db.draft.cards.size} kart poprzedniej frakcji – neutralne zostały.`);
+        renderDraft();
+    });
+    function draftStats() { return deckStats({ faction: db.draft.faction, cards: [...db.draft.cards] }); }
+    function renderDraft() {
+        $('#deck-builder-screen').style.setProperty('--fac', FACTION_COLORS[db.draft.faction] || 'var(--gold)');
+        renderDraftCounters();
+        renderDraftCards();
+    }
+    function renderDraftCounters() {
+        const st = draftStats();
+        const u = $('#db-units'), s = $('#db-specials');
+        u.innerHTML = `Jednostki <b>${st.units}/${DECK_MIN_UNITS}</b>${st.heroes ? ` <small>(w tym bohaterowie: ${st.heroes})</small>` : ''}`;
+        s.innerHTML = `Karty specjalne <b>${st.specials}/${DECK_MAX_SPECIALS}</b>`;
+        u.classList.toggle('bad', st.units < DECK_MIN_UNITS);
+        u.classList.toggle('good', st.units >= DECK_MIN_UNITS);
+        s.classList.toggle('bad', st.specials > DECK_MAX_SPECIALS);
+        const why = [];
+        if (st.units < DECK_MIN_UNITS) why.push(`brakuje ${DECK_MIN_UNITS - st.units} ${plForm(DECK_MIN_UNITS - st.units, 'jednostki', 'jednostek', 'jednostek')}`);
+        if (st.specials > DECK_MAX_SPECIALS) why.push(`o ${st.specials - DECK_MAX_SPECIALS} za dużo kart specjalnych`);
+        if (!db.draft.name.trim()) why.push('podaj nazwę talii');
+        $('#db-why').textContent = why.length ? `Nie można zapisać: ${why.join(', ')}.` : `Gotowe do zapisu – ${st.total} kart.`;
+        $('#db-why').classList.toggle('bad', why.length > 0);
+        $('#db-save').disabled = why.length > 0;
+    }
+    function renderDraftCards() {
+        const q = $('#db-search').value.trim().toLocaleLowerCase('pl');
+        const f = db.filter;
+        const groups = deckGroups(db.draft.faction).filter(g => {
+            const c = g.card, inN = g.ids.filter(id => db.draft.cards.has(id)).length;
+            if (q && !c.name.toLocaleLowerCase('pl').includes(q)) return false;
+            if (f === 'in') return inN > 0;
+            if (f === 'unit') return c.type === 'Unit' && !c.isHero;
+            if (f === 'hero') return c.type === 'Unit' && c.isHero;
+            if (f === 'special') return c.type !== 'Unit';
+            if (f === 'faction') return c.faction !== 'Neutral';
+            if (f === 'neutral') return c.faction === 'Neutral';
+            return true;
+        });
+        const labels = { hero: 'Bohaterowie', unit: 'Jednostki', special: 'Karty specjalne', weather: 'Pogoda' };
+        let last = null, html = '';
+        groups.forEach(g => {
+            if (g.group !== last) { last = g.group; html += `<h4 class="sheet-group">${labels[g.group]}</h4>`; }
+            const it = cardItem(g.card);
+            const inN = g.ids.filter(id => db.draft.cards.has(id)).length, max = g.ids.length;
+            html += `<div class="db-card tile${it.hero ? ' hero' : ''}${inN ? ' in' : ''}" data-key="${esc(g.key)}">
+                <button type="button" class="db-card-add" data-op="add" ${inN >= max ? 'disabled' : ''} aria-label="Dodaj ${esc(g.card.name)}">
+                    <span class="tile-power">${it.badge}</span>
+                    <span class="tile-main"><span class="tile-name">${esc(g.card.name)}${g.card.faction === 'Neutral' ? ' <em class="db-neutral">neutralna</em>' : ''}</span>
+                    <span class="tile-meta">${esc(it.meta)}</span></span>
+                </button>
+                <span class="db-step">
+                    <button type="button" data-op="sub" ${inN ? '' : 'disabled'} aria-label="Usuń jedną">−</button>
+                    <b>${inN}/${max}</b>
+                    <button type="button" data-op="add" ${inN >= max ? 'disabled' : ''} aria-label="Dodaj jedną">+</button>
+                </span>
+            </div>`;
+        });
+        $('#db-cards').innerHTML = html || '<p class="sheet-empty">Brak kart.</p>';
+    }
+    $('#db-cards').addEventListener('click', e => {
+        const b = e.target.closest('[data-op]');
+        if (!b || b.disabled || !db.draft) return;
+        const key = b.closest('.db-card').dataset.key;
+        const g = deckGroups(db.draft.faction).find(x => x.key === key);
+        if (!g) return;
+        if (b.dataset.op === 'add') { const id = g.ids.find(x => !db.draft.cards.has(x)); if (id) db.draft.cards.add(id); }
+        else { const id = [...g.ids].reverse().find(x => db.draft.cards.has(x)); if (id) db.draft.cards.delete(id); }
+        renderDraftCounters();
+        renderDraftCards();
+    });
+    $('#db-cancel').addEventListener('click', () => { db.draft = null; renderDeckList(); showDbView('list'); });
+    $('#db-save').addEventListener('click', () => {
+        const dr = db.draft;
+        if (!dr) return;
+        const st = draftStats();
+        if (!st.ok || !dr.name.trim()) { renderDraftCounters(); return; } // licznik na czerwono – takiej talii nie zapisujemy
+        const list = loadDecks();
+        const rec = { id: dr.id || 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: dr.name.trim(), faction: dr.faction, cards: st.ids, updated: Date.now() };
+        const i = list.findIndex(x => x.id === rec.id);
+        if (i >= 0) {
+            // zmiana frakcji zapisanej talii – zdejmij ją z wyboru graczy dla starej frakcji
+            const old = list[i];
+            if (old.faction !== rec.faction) [1, 2].forEach(n => { const p = readPick(n); if (p[old.faction] === rec.id) writePick(n, old.faction, null); });
+            list[i] = rec;
+        } else list.push(rec);
+        saveDecks(list);
+        toast(`Zapisano talię „${rec.name}”.`);
+        db.draft = null;
+        renderDeckList();
+        showDbView('list');
+    });
 
     // ---------- Wznowienie zapisanej partii ----------
     function showResumeBox() {
@@ -1663,8 +1902,10 @@
     }
     gameSetupScreen.addEventListener('change', () => setTimeout(() => { refreshSetup(); applyFactionColors(); refreshDeckButtons(); }, 0));
     refreshSetup();
+    migrateOldDecks();
     refreshDeckButtons();
     showResumeBox();
+    if (location.hash === '#talie') { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* nic */ } }
 
     // Przechwycenie przed startGame(): imiona + blokada niepełnej konfiguracji
     // (oryginalny return w forEach nie zatrzymywał startu gry).

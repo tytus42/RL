@@ -27,6 +27,15 @@ To NIE jest gra komputerowa, tylko **kalkulator przy stole** do grania fizycznym
 - Koniec rundy: wszystkie karty z pola (też bohaterowie, róg, Chrząszcz, szpiedzy przeciwnika) idą na cmentarz gracza, na którego polu leżały.
 - Poprawione blokady tury (medyk po paście przeciwnika, pasowanie w trybie Chrząszcza) i kolizje ID instancji.
 
+## Kreator talii (wersja 2026-10-14a)
+- Przycisk **Talie** w prawym górnym rogu ekranu startowego otwiera podstronę (adres `#talie`, działa przycisk „wstecz” przeglądarki).
+- Lista zapisanych talii pogrupowana wg frakcji: edycja, kopia, usuwanie (dwa dotknięcia). Zapis w `localStorage` pod `rk-decks`.
+- Edytor: nazwa, frakcja (zmiana frakcji usuwa karty starej frakcji, neutralne zostają), wyszukiwarka, filtry (W talii / Jednostki / Bohaterowie / Specjalne / Frakcyjne / Neutralne), wiersz na kartę z licznikiem kopii `− n/max +`.
+- Liczniki „Jednostki X/22” i „Karty specjalne Y/10” (przyklejone u góry). Jednostki < 22 albo specjalne > 10 → licznik czerwony i przycisk **Zapisz** zablokowany; pod spodem powód. Bohaterowie liczą się do jednostek, karty doborowe (tokeny) nie trafiają do talii.
+- Przycisk talii obok frakcji wybiera talię gracza: „Wszystkie karty” albo zapisana, kompletna talia tej frakcji (`rk-deck-pick-<n>`). Pod frakcją widać nazwę wybranej talii. Na start gry ręka = karty z talii.
+- Stare wybory kart (`rk-deck-<n>-<frakcja>`) są przenoszone do listy talii jako „Talia gracza n – frakcja”.
+- Opisy zdolności: Nieumarli – zwykłe dobranie karty z talii (może być bohater); Bandyci – dobranie losowej poległej karty przeciwnika do ręki, jednostki **i bohaterowie** (bez kart specjalnych).
+
 ## Wskrzeszanie a umiejętności (wersja 2026-10-13m)
 Przy wskrzeszeniu Leczeniem działają: Leczenie (łańcuch), Szeregowy deszcz ognia, Deszcz ognia, Szpieg, Mobilność; Jedność/Wzmocnienie/Róg/Moc liczą się same. Wezwanie po wskrzeszeniu nie przyzywa z ręki i talii; dla Nieumarłych jest wariant „Wezwanie z cmentarza” (reszta grupy wraca z cmentarza). Kuchnia polowa i zdolność Orków kładą karty bez uruchamiania umiejętności. (Dodana w 13l osobna opcja „Wezwanie po wskrzeszeniu” z ręki i talii została usunięta – decyzja 2026-10-13: chodziło o wariant z cmentarza.)
 
